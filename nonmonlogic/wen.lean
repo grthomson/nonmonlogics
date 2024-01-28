@@ -7,12 +7,12 @@ namespace Syntax
 universe u
 
 -- Define the Atom datatype with constructors Int and String
-inductive Atom : Type
-| Int : Atom
-| String : Atom
+inductive Atomic : Type
+| Int : Atomic
+| String : Atomic
 
 inductive MyProp : Type u
-| El : Atom → MyProp
+| El : Atomic → MyProp
 | imp : MyProp → MyProp → MyProp
 infixr: 6 "⇒" => MyProp.imp
 
@@ -74,9 +74,7 @@ def concat_lists {α : Type} : List α → List α → List α
 end HeteroProperties
 
 
-
-
-/--/
+/-
 -- Define the ++ˡ function
 def concat_lists {α : Type} : List α → List α → List α
 | [], ys => ys
@@ -86,7 +84,7 @@ def concat_lists {α : Type} : List α → List α → List α
 def concat_subset {as bs cs : List A} (h : as ⊆ bs) : as ⊆ (concat_lists cs bs) :=
   h
 
--/
+
 -- Define the function w'
 --def w' : Syntax.ND_ Γ ⊢ B → Syntax.ND_ (list.cons A Γ) ⊢ B :=
  -- λ f struct (++⁺ˡ _ ⊆-refl) f
@@ -98,10 +96,7 @@ def concat_subset {as bs cs : List A} (h : as ⊆ bs) : as ⊆ (concat_lists cs 
 
   -- Example usage
   #eval concatenateLists [1, 2, 3] [4, 5, 6] -- Result: [1, 2, 3, 4, 5, 6]
-
-
-
-end Syntax
 -/
 
 
+end Syntax
