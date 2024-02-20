@@ -89,7 +89,7 @@ def concat_subset {as bs cs : List A} (h : as ⊆ bs) : as ⊆ (concat_lists cs 
 --def w' : Syntax.ND_ Γ ⊢ B → Syntax.ND_ (list.cons A Γ) ⊢ B :=
  -- λ f struct (++⁺ˡ _ ⊆-refl) f
 
-  /-import data.list
+import data.list
 
   def concatenateLists {α : Type} : list α → list α → list α :=
     list.append
@@ -97,6 +97,3 @@ def concat_subset {as bs cs : List A} (h : as ⊆ bs) : as ⊆ (concat_lists cs 
   -- Example usage
   #eval concatenateLists [1, 2, 3] [4, 5, 6] -- Result: [1, 2, 3, 4, 5, 6]
 -/
-
-
-end Syntax
