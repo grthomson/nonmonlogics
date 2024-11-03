@@ -21,6 +21,11 @@ inductive Sequent : Type u
 | Proof : List MyProp → MyProp → Sequent
 infixr: 6 "⊢" => Sequent.Proof
 
+-- Define the Multisequent datatype
+inductive MultiSequent : Type u
+| Proof : List MyProp → List MyProp → MultiSequent
+-- or Finset instead of List
+
 variable {A B C: MyProp}
 variable {Γ Γ' : List MyProp}
 variable {S : Sequent}
@@ -42,6 +47,14 @@ inductive SC_ : Sequent → Type u
 | cut : SC_ (Γ ⊢ A) → SC_ (A :: Γ ⊢ B) → SC_ (Γ ⊢ B)
 | imp_l : SC_ (Γ ⊢ A) → SC_ (B :: Γ ⊢ C) → SC_ ((A ⇒ B) :: Γ ⊢ C)
 | imp_r : SC_ (A :: Γ ⊢ B) → SC_ (Γ ⊢ A ⇒ B)
+
+/--
+inductive MultiSC : MultiSequent → Type u
+| ax : A ∈ Γ → A ∈ Δ → MultiSC (Γ ⊢ Δ)  -- note both Γ and Δ are lists/sets
+| imp_l : MultiSC (Γ ⊢ A :: Δ) → MultiSC (B :: Γ ⊢ Δ) →
+          MultiSC ((A ⇒ B) :: Γ ⊢ Δ)
+| imp_r : MultiSC (A :: Γ ⊢ B :: Δ) → MultiSC (Γ ⊢ (A ⇒ B) :: Δ)
+--/
 
 -- Declare the precedence for the SC_ operator
 infix: 3 "SC_" => SC_
