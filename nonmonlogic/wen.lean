@@ -25,9 +25,10 @@ infixr: 6 "⊢" => Sequent.Proof
 inductive MultiSequent : Type u
 | Proof : List MyProp → List MyProp → MultiSequent
 -- or Finset instead of List
+infixr: 6 "⊩" => MultiSequent.Proof
 
-variable {A B C: MyProp}
-variable {Γ Γ' : List MyProp}
+variable {A B C : MyProp}
+variable {Γ Γ' Δ : List MyProp}
 variable {S : Sequent}
 
 -- Define the ND_ datatype for Minimal Prop Logic
@@ -48,13 +49,34 @@ inductive SC_ : Sequent → Type u
 | imp_l : SC_ (Γ ⊢ A) → SC_ (B :: Γ ⊢ C) → SC_ ((A ⇒ B) :: Γ ⊢ C)
 | imp_r : SC_ (A :: Γ ⊢ B) → SC_ (Γ ⊢ A ⇒ B)
 
-/--
+
 inductive MultiSC_ : MultiSequent → Type u
-| ax : A ∈ Γ → MultiSC_ (Γ ⊢ A)  -- note both Γ and Δ are lists/sets
-| imp_l : MultiSC (Γ ⊢ A :: Δ) → MultiSC (B :: Γ ⊢ Δ) →
-          MultiSC ((A ⇒ B) :: Γ ⊢ Δ)
-| imp_r : MultiSC (A :: Γ ⊢ B :: Δ) → MultiSC (Γ ⊢ (A ⇒ B) :: Δ)
+| ax : Δ ⊆ Γ → MultiSC_ (Γ ⊩ Δ)  -- note both Γ and Δ are lists/sets
+| imp_l : MultiSC_ (Γ ⊩ A :: Δ) → MultiSC_ (B :: Γ ⊩ Δ) →
+          MultiSC_ ((A ⇒ B) :: Γ ⊩ Δ)
+| imp_r : MultiSC_ (A :: Γ ⊩ B :: Δ) → MultiSC_ (Γ ⊩ (A ⇒ B) :: Δ)
+
+
+inductive EmpiricalProp : Type u
+| atom : Atomic → EmpiricalProp
+| conj : EmpiricalProp → EmpiricalProp → EmpiricalProp  -- non-monotonic "and"
+| impl : EmpiricalProp → EmpiricalProp → EmpiricalProp  -- non-monotonic "→"
+
+inductive MathProp : Type u
+| base : EmpiricalProp → MathProp  -- allow embedding of empirical props as base cases
+| conj : MathProp → MathProp → MathProp  -- monotonic "and"
+| impl : MathProp → MathProp → MathProp  -- monotonic "→"
 --/
+
+/--
+NOTES: DO I EVEN WANT CUT. AM I GOING TO NEED TO DEFINE A HIERARCHY OF CONSEQUENCE RELATIONS?
+OR A CONTEXT-DEPENDENT (PREMISE - PARAMETERISED) CONSEQUENCE RELATION?
+AND WHERE DOES THE NOTION OF A CONSERVATIVEC EXTENSION COME IN HERE?
+I WANT TO SAY THAT MATHEMATICAL LANGUAGE IS A CONSERVATIVE EXTENSION (AND MONOTONIC FRAGMENT)
+OF DEFEASIBLE REASONING
+OF COURSE, THERE'S ALWAYS THE QUESTGION... WHY THIS PARTICULAR CONSERVATIVE EXTENSION?!
+CONSERVATIVENESS IS MY FULCRUM
+-/
 
 -- Declare the precedence for the SC_ operator
 infix: 3 "SC_" => SC_
