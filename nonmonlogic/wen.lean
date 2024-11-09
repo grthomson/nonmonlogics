@@ -49,8 +49,8 @@ inductive SC_ : Sequent → Type u
 | imp_r : SC_ (A :: Γ ⊢ B) → SC_ (Γ ⊢ A ⇒ B)
 
 /--
-inductive MultiSC : MultiSequent → Type u
-| ax : A ∈ Γ → A ∈ Δ → MultiSC (Γ ⊢ Δ)  -- note both Γ and Δ are lists/sets
+inductive MultiSC_ : MultiSequent → Type u
+| ax : A ∈ Γ → MultiSC_ (Γ ⊢ A)  -- note both Γ and Δ are lists/sets
 | imp_l : MultiSC (Γ ⊢ A :: Δ) → MultiSC (B :: Γ ⊢ Δ) →
           MultiSC ((A ⇒ B) :: Γ ⊢ Δ)
 | imp_r : MultiSC (A :: Γ ⊢ B :: Δ) → MultiSC (Γ ⊢ (A ⇒ B) :: Δ)
