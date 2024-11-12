@@ -43,13 +43,14 @@ inductive ND_ : Sequent → Type
 -- Declare the precedence for the ND_ operator
 infix: 3 "ND_" => ND_
 
+--WHICH LOGIC IS THIS
 inductive SC_ : Sequent → Type u
 | ax : A ∈ Γ → SC_ (Γ ⊢ A)
 | cut : SC_ (Γ ⊢ A) → SC_ (A :: Γ ⊢ B) → SC_ (Γ ⊢ B)
 | imp_l : SC_ (Γ ⊢ A) → SC_ (B :: Γ ⊢ C) → SC_ ((A ⇒ B) :: Γ ⊢ C)
 | imp_r : SC_ (A :: Γ ⊢ B) → SC_ (Γ ⊢ A ⇒ B)
 
-
+--WHICH LOGIC IS THIS
 inductive MultiSC_ : MultiSequent → Type u
 | ax : Δ ⊆ Γ → MultiSC_ (Γ ⊩ Δ)  -- note both Γ and Δ are lists/sets
 | imp_l : MultiSC_ (Γ ⊩ A :: Δ) → MultiSC_ (B :: Γ ⊩ Δ) →

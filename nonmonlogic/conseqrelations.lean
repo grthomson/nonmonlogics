@@ -1,14 +1,52 @@
 import Mathlib.Data.Finset.Basic
+import Mathlib.Data.Multiset.Basic
 
 #check set
 
 -- A set is defined as a predicate,
 -- i.e. a function α → Prop
 
-structure MultiConseqRel (α : Type) where
+
+/--structure ConseqRel (α : Type) where
   antecedents : Finset α
   consequents : Finset α
   conseq_rel : (Finset α) → (Finset α) → Prop
+--/
+
+--Or perhaps better...
+inductive Atomic : Type
+--| Int : Atomic
+| String : Atomic
+inductive MyProp : Type u
+| El : Atomic → MyProp
+| imp : MyProp → MyProp → MyProp
+infixr: 6 "⇒" => MyProp.imp
+
+--Type Alias
+def ConseqRel := Finset MyProp → Finset MyProp → Prop
+--def MultiConseqRel (α : Type) := Multiset α → Multiset α → Prop
+--def is_conservative_extension_MCR (R R' : MultiConseqRel α) (L : Multiset α) : Prop :=
+--∀ (Γ Δ : Multiset α), R' Γ Δ → (∀ A ∈ Δ, A ∈ L) → R Γ Δ
+
+--Structure
+--Type for relations defined over pairs of multisets
+structure MultiConseqRel (α : Type) :=
+  (rel : Multiset α → Multiset α → Prop)
+
+-- Helper function to apply the consequence relation
+def holds {α : Type} (R : MultiConseqRel α) (Γ Δ : Multiset α) : Prop :=
+  R.rel Γ Δ
+infix: 50 "R⊢ " => holds
+
+-- Define specific consequence relation on MyProp
+def my_CR : MultiConseqRel MyProp :=
+  { rel := λ Γ Δ => ((MyProp.El (Atomic.String) ∈ Γ) → (MyProp.El (Atomic.String) ∈ Δ)) }
+
+-- Define is_conservative_extension_MCR to check if one consequence relation is a
+--conservative extension of another
+def is_conservative_extension_MCR (R X : MultiConseqRel α) (L : Multiset α) : Prop :=
+∀ (Γ Δ : Multiset α), (Γ R⊢ Δ) → (∀ A ∈ Δ, A ∈ L) → X.rel Γ Δ
+
 
 structure Category (Obj : Type) (Hom : Obj → Obj → Type) :=
   (identity : Π (A : Obj), Hom A A)
