@@ -6,6 +6,9 @@ namespace Syntax
 
 universe u
 
+-- FIELD AS TO SHOW CONSERVATIVENESS WITH RESPECT TO PHYSICS
+-- I JUST NEED TO SHOW CONSERVATIVENESS WITH RESPECT TO BRANDOMIAN NONMON REASONING
+
 -- Define the Atom datatype with constructors Int and String
 inductive Atomic : Type
 | Int : Atomic
