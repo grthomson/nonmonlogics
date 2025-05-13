@@ -33,6 +33,9 @@ def ConseqRel := Finset MyProp → Finset MyProp → Prop
 structure MultiConseqRel (α : Type) :=
   (rel : Multiset α → Multiset α → Prop)
 
+-- THIS IS JUST AN ORDERED PAIR OF MULTISETS! WE NEED REFLEXIVITY
+-- AND ALSO SOME FORM OF CUT (RESTRICTED CUT) BUT NOT WEAKENING
+
 -- Helper function to apply the consequence relation
 def holds {α : Type} (R : MultiConseqRel α) (Γ Δ : Multiset α) : Prop :=
   R.rel Γ Δ
@@ -47,6 +50,9 @@ def my_CR : MultiConseqRel MyProp :=
 def is_conservative_extension_MCR (R X : MultiConseqRel α) (L : Multiset α) : Prop :=
 ∀ (Γ Δ : Multiset α), (Γ R⊢ Δ) → (∀ A ∈ Δ, A ∈ L) → X.rel Γ Δ
 
+--07/01/25 cockett seely
+-- tensor connective is just comma, no struct rules
+-- but they assume a cut rule
 
 structure Category (Obj : Type) (Hom : Obj → Obj → Type) :=
   (identity : Π (A : Obj), Hom A A)
@@ -69,3 +75,13 @@ structure Category (Obj : Type) (Hom : Obj → Obj → Type) :=
 -- what if we can NOW generate contradiction? see hlobil
 -- ". It is trivially the case that A ` A, and also if A `
 -- B and B ` C then A ` C ." -- Awodey on transitivity.. BUT SEE HLOBIL ON CUT?
+
+-- MONOTONICITY AS A TYPE REFINEMENT?!
+-- ANDREJ IS SAYING THAT SUBOBJECT IS THE USUAL NOTION OF ENTAILMENT IN CATEGORICAL
+-- SEMANTICS
+-- I NEED SOMETHING TO CAPTURE THE IDEA THAT ENTAILMENT ISN'T AS SIMPLE
+-- TBH THE 2-CATEGORICAL SEMANTICS COULD DO THIS
+-- move from X |-- A to | -- X --> A seems to be key in categorical semantics
+-- do deduction theorems always fail for nonmonotonic logics?
+--
+-- "The subobjects in a 2-category are fully faithful inclusions."
