@@ -15,9 +15,28 @@
 \usepackage{tikz}
 
 \begin{document}
-This note outlines a proposal for a novel mathematical treatment of a phenomenon which is well-recognised in formal semantics (understood as a subfield of linguistics) but which has increasing relevance for denotational semantics (understood as a tool for the analysis and design of programming languages). The discussion here is at a high level and the formal aspects are not developed in any detail, but I refer throughout to relevant mathematical literature and draw heavily on Avron (date), Zeilberger (date), (SUBSTRUCTURAL GUYS), and...
+This note contains a sketch of a novel treatment of a concept which is well-recognised in formal semantics (understood as a subfield of linguistics) and which is of increasing importance for denotational semantics (understood as a tool for programming language design and analysis of formal systems more generally). The discussion here is at a high level and the formal aspects are not developed in any detail, but I refer throughout to relevant mathematical literature, drawing especially on Avron (date), Zeilberger (date), (SUBSTRUCTURAL GUYS), and (Harper, Pfenning, Dosen)... (Coecke, Spivak). (JAPANESE STUDENT)
 
-This phenomenon can be roughly described by two claims: i) everyday reasoning as expressed in a natural language such as English is \emph{defeasible}, in the sense that conclusions derived from a set of true premises by a sequence of acceptable rules of inference should sometimes be withheld as new evidence is uncovered and as our premise-set grows and ii) there is a special fragment of reasoning, which we call \emph{deductive} reasoning, characterised by the fact that 
+This idea can be roughly described in two parts: i) everyday reasoning as expressed in a natural language such as English is \emph{defeasible}, in the sense that conclusions derived from true premises may no longer be assertible as new evidence is uncovered; ii) there is a distinct mode of reasoning which informally we call \emph{deductive} reasoning and which is characterised by the fact that conclusions derived from true premises are \emph{never} withheld as new evidence is uncovered.
+
+If we model valid reasoning formally in terms of a sequent calculus, then the deductive and defeasible modes of reasoning may be differentiated by the (in-)admissibility of a structural rule of \emph{Weakening}.
+
+is expressed in a sequent calculus:
+
+SEQUENT CALCULI here
+
+SOMETIMES CALLED MONOTONICITY
+IMPORTANT HERE -- AND I HAVEN'T FIGURED THIS OUT -- IN WHAT SENSE IS DEDUCTIVE REASONING A FRAGMENT OF A BROADER NONMONOTONIC RELATION? BECAUSE THE CONSEQUENCE RELATION IS GENERAL AND IS UNDERSTOOD THAT GIVEN THE ASSERTIBILITY OF A AND B AND C... THEN D
+TO SAY THAT WEAKENING FAILS IS TO SAY THAT WE CAN'T IN GENERAL MAKE SUCH AN INFERENCE
+WE MIGHT NEED TO BRING IN DEDUCTION THEOREM HERE. I WONDER IF THERE IS A CATEGORICAL CONCEPT OF DEDUCTION THEOREM.
+
+Consequence relations of deductive reasoning  \emph{monotonic} in the sense that if $\Gamma \vdash \phi$ then $\Gamma, \psi \vdash \phi$ for any formula $\psi$. In contrast, a defeasible consequence relation is \emph{non-monotonic} in the sense that if $\Gamma \vdash \phi$ then it is not the case that $\Gamma, \psi \vdash \phi$ for any formula $\psi$.
+
+There are a number of quibbles that one may raise here. The distinction should not be between deductive and defeasible reasoning, but deductive and inductive reasoning. ... ONE OF MY ISSUES HERE IS THAT INDUCTIVE REASONING IS OFTEN ASSUMED TO BE PROBABILISTIC AND IS LOADED WITH ASSUMPTIONS ABOUT "PRIMACY" OF INDUCTIVE VS DEDUCTIVE REASONING, LATTER OFTEN SEEN AS A LIMITING CASE OR IDEALISATION OF THE FORMER. HERE I OFFER A DIFFERENT PERSPECTIVE.
+
+
+
+The first claim is well-known and has been the subject of much research in the field of non-monotonic logic, which is a subfield of formal semantics. The second claim is less well-known but has been the subject of some research in the field of denotational semantics.
 
 THE RELEVANT MATHEMATICAL IDEAS ARE : SUBSTRUCTURAL LOGICS, CATEGORICAL SEMANTICS, 2-CATEGORY THEORY
 \end{document}

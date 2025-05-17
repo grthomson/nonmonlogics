@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2023.11.12)  13 MAY 2025 18:38
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2023.11.12)  17 MAY 2025 14:05
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -732,7 +732,25 @@ Package minitoc(hints) Info: I0049
 (minitoc(hints))             ==> You requested the hints option. 
 (minitoc(hints))             Some hints are eventually given below.
 
-Overfull \hbox (9.37138pt too wide) in paragraph at lines 22--23
+Overfull \hbox (6.48189pt too wide) in paragraph at lines 28--32
+[]\OT1/cmr/m/n/10.95 SOMETIMES CALLED MONO-TONIC-ITY IM-POR-TANT HERE -- AND
+ []
+
+LaTeX Font Info:    Trying to load font information for U+msa on input line 33.
+(c:/texlive/2023/texmf-dist/tex/latex/amsfonts/umsa.fd
+File: umsa.fd 2013/01/14 v3.01 AMS symbols A
+)
+LaTeX Font Info:    Trying to load font information for U+msb on input line 33.
+ (c:/texlive/2023/texmf-dist/tex/latex/amsfonts/umsb.fd
+File: umsb.fd 2013/01/14 v3.01 AMS symbols B
+)
+LaTeX Font Info:    Trying to load font information for U+wasy on input line 33.
+ (c:/texlive/2023/texmf-dist/tex/latex/wasysym/uwasy.fd
+File: uwasy.fd 2020/01/19 v2.4 Wasy-2 symbol font definitions
+) [1
+
+{c:/texlive/2023/texmf-var/fonts/map/pdftex/updmap/pdftex.map}]
+Overfull \hbox (9.37138pt too wide) in paragraph at lines 41--42
 []\OT1/cmr/m/n/10.95 THE REL-E-VANT MATH-E-MAT-I-CAL IDEAS ARE : SUB-STRUC-TURAL
  []
 
@@ -744,9 +762,7 @@ Package minitoc Info: I0009
 Package minitoc(hints) Info: I0019
 (minitoc(hints))             No hints have been written 
 (minitoc(hints))             in the notes.log file..
-[1
-
-{c:/texlive/2023/texmf-var/fonts/map/pdftex/updmap/pdftex.map}] (./notes.aux)
+[2] (./notes.aux)
  ***********
 LaTeX2e <2023-11-01>
 L3 programming layer <2023-11-01>
@@ -755,18 +771,18 @@ Package rerunfilecheck Info: File `notes.out' has not changed.
 (rerunfilecheck)             Checksum: D41D8CD98F00B204E9800998ECF8427E;0.
  ) 
 Here is how much of TeX's memory you used:
- 27417 strings out of 475386
- 514799 string characters out of 5771978
- 1929533 words of memory out of 5000000
- 49033 multiletter control sequences out of 15000+600000
- 558715 words of font info for 38 fonts, out of 8000000 for 9000
+ 27505 strings out of 475386
+ 516143 string characters out of 5771978
+ 1936533 words of memory out of 5000000
+ 49087 multiletter control sequences out of 15000+600000
+ 566490 words of font info for 67 fonts, out of 8000000 for 9000
  430 hyphenation exceptions out of 8191
- 116i,5n,121p,655b,487s stack positions out of 10000i,1000n,20000p,200000b,200000s
-<c:/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb><c:/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb>
-Output written on notes.pdf (1 page, 33832 bytes).
+ 116i,5n,121p,730b,488s stack positions out of 10000i,1000n,20000p,200000b,200000s
+<c:/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb><c:/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb><c:/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb><c:/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb>
+Output written on notes.pdf (2 pages, 57324 bytes).
 PDF statistics:
- 26 PDF objects out of 1000 (max. 8388607)
- 18 compressed objects within 1 object stream
- 2 named destinations out of 1000 (max. 500000)
+ 40 PDF objects out of 1000 (max. 8388607)
+ 27 compressed objects within 1 object stream
+ 3 named destinations out of 1000 (max. 500000)
  13 words of extra memory for PDF output out of 10000 (max. 10000000)
 
