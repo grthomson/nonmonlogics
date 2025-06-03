@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2023.11.12)  17 MAY 2025 14:05
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2023.11.12)  3 JUN 2025 19:50
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -732,25 +732,25 @@ Package minitoc(hints) Info: I0049
 (minitoc(hints))             ==> You requested the hints option. 
 (minitoc(hints))             Some hints are eventually given below.
 
-Overfull \hbox (6.48189pt too wide) in paragraph at lines 28--32
+Overfull \hbox (6.48189pt too wide) in paragraph at lines 33--37
 []\OT1/cmr/m/n/10.95 SOMETIMES CALLED MONO-TONIC-ITY IM-POR-TANT HERE -- AND
  []
 
-LaTeX Font Info:    Trying to load font information for U+msa on input line 33.
+LaTeX Font Info:    Trying to load font information for U+msa on input line 38.
 (c:/texlive/2023/texmf-dist/tex/latex/amsfonts/umsa.fd
 File: umsa.fd 2013/01/14 v3.01 AMS symbols A
 )
-LaTeX Font Info:    Trying to load font information for U+msb on input line 33.
+LaTeX Font Info:    Trying to load font information for U+msb on input line 38.
  (c:/texlive/2023/texmf-dist/tex/latex/amsfonts/umsb.fd
 File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 )
-LaTeX Font Info:    Trying to load font information for U+wasy on input line 33.
+LaTeX Font Info:    Trying to load font information for U+wasy on input line 38.
  (c:/texlive/2023/texmf-dist/tex/latex/wasysym/uwasy.fd
 File: uwasy.fd 2020/01/19 v2.4 Wasy-2 symbol font definitions
 ) [1
 
 {c:/texlive/2023/texmf-var/fonts/map/pdftex/updmap/pdftex.map}]
-Overfull \hbox (9.37138pt too wide) in paragraph at lines 41--42
+Overfull \hbox (9.37138pt too wide) in paragraph at lines 46--47
 []\OT1/cmr/m/n/10.95 THE REL-E-VANT MATH-E-MAT-I-CAL IDEAS ARE : SUB-STRUC-TURAL
  []
 
@@ -777,9 +777,9 @@ Here is how much of TeX's memory you used:
  49087 multiletter control sequences out of 15000+600000
  566490 words of font info for 67 fonts, out of 8000000 for 9000
  430 hyphenation exceptions out of 8191
- 116i,5n,121p,730b,488s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 116i,5n,121p,604b,488s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <c:/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb><c:/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb><c:/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb><c:/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmti10.pfb>
-Output written on notes.pdf (2 pages, 57324 bytes).
+Output written on notes.pdf (2 pages, 57426 bytes).
 PDF statistics:
  40 PDF objects out of 1000 (max. 8388607)
  27 compressed objects within 1 object stream
