@@ -1,0 +1,64 @@
+\documentclass[a4paper,11pt]{report}
+\usepackage{amsmath,amsfonts,amssymb,amsthm,hyperref, marvosym, accents}
+%\usepackage{fullpage}
+\usepackage{bm}
+\usepackage{cleveref}
+\usepackage{mdframed}
+\usepackage{csquotes}
+\usepackage[super]{natbib}
+\usepackage{minitoc}
+\usepackage{wasysym}
+\usepackage{setspace}
+\usepackage{enumerate}
+\usepackage{enumitem}
+\usepackage{tikz-cd}
+\usepackage{tikz}
+
+\begin{document}
+Logic first approach to both nonmonotonic and monotonic entailment
+
+considerations: 
+
+
+``There should be a way back:
+conclusions reached in the simpler context, where the unessential is
+forgotten, should be applicable to the original, more complicated,
+context. Controlled forgetting, such as we have in abstraction, is
+certainly a major characteristic of mathematical rationality, and an
+embodiment of it is found in the concept of adjunction"
+
+``The symbolic [13] and distributional [36] theories of meaning are somewhat orthogonal with competing pros and cons: the former is compositional but only qualitative, the latter is non-compositional but quantitative."
+
+recall the "arbitrary substitution of expression" approach to logicality. this is captured by the lambda calculus of course
+
+can I RECOVER a lambda calculus as the limiting behaviour of the nonmonotonic space?
+
+``. You can define a notion of "Hopf object" in arbitrary symmetric monoidal categories, where you also need to specify the existence of a coproduct map. It's a matter of taste, but I think this general definition should actually be called "group object", so that Hopf algebras would be group objects in the category of vector spaces. The basic observation is that in a cartesian category, every object have a unique coalgebra structure given by the "diagonal" map so this part of the structure is forced in that case, so that those definitions are compatible."
+
+Relevance can be seen as non-monotonicity of the inference connector of the system. Linear logic is relevant, in that the provability of $\vdash A \multimap B $
+ does not imply the provability of $\vdash X \otimes A \multimap B $
+. Relevance is a sort of inner non-monotonicity of the logic.
+
+On the other side, what people call non-monotonic logics are systems where the provability itself of the system is not monotone: adding a new element to the set of formulas changes the set of provable formulas. It is a form of meta non-monotonicity, because it concerns provability and not the connector of inference. Linear logic is monotone: you can add whatever you want to the set of formulas, and any new axiom or inference rule to the system, but if you had a proof of the sequent $\Gamma \vdash M : A $
+ before, you will still have it now, for you have not changed the other inference rules of the sequent calculus.
+
+As far as I know, (real) non-monotonic logics are hard to put down in a sequent calculus form enjoying cut-elimination, or any other type of proof system with an equivalent notion of terminating proof-reduction. This is why the tradition categorical semantic approaches hardly would work for them.
+\[
+\frac{\Gamma \vdash \Delta}{\Gamma, A \vdash \Delta} \quad \text{(Weakening L)}
+\]
+
+% Weakening Right
+\[
+\frac{\Gamma \vdash \Delta}{\Gamma \vdash \Delta, A} \quad \text{(Weakening R)}
+\]
+
+% Cut Rule
+\[
+\frac{\Gamma \vdash \Delta, A \quad A, \Gamma' \vdash \Delta'}{\Gamma, \Gamma' \vdash \Delta, \Delta'} \quad \text{(Cut)}
+\]
+
+
+``This way, the forgetting of the forgetful functor is controlled.
+Some conclusions we may reach by reasoning in B can be transferred
+back to A." 
+\end{document}
