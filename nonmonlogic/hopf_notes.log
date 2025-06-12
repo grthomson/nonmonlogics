@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2023.11.12)  12 JUN 2025 15:30
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2023.11.12)  12 JUN 2025 17:08
 entering extended mode
  restricted \write18 enabled.
  file:line:error style messages enabled.
@@ -745,6 +745,10 @@ File: uwasy.fd 2020/01/19 v2.4 Wasy-2 symbol font definitions
 ) [1
 
 {c:/texlive/2023/texmf-var/fonts/map/pdftex/updmap/pdftex.map}]
+Overfull \hbox (4.63544pt too wide) in paragraph at lines 67--68
+\OT1/cmr/m/n/10.95 ther-more have some con-cept of "plug-ging in" or ab-strac-tion to give a lambda(-
+ []
+
 Package minitoc Info: I0009
 (minitoc)             Listing minitoc auxiliary files. 
 (minitoc)             Creating the hopf_notes.maf file.
@@ -753,7 +757,7 @@ Package minitoc Info: I0009
 Package minitoc(hints) Info: I0019
 (minitoc(hints))             No hints have been written 
 (minitoc(hints))             in the hopf_notes.log file..
- [2] (./hopf_notes.aux)
+[2] (./hopf_notes.aux)
  ***********
 LaTeX2e <2023-11-01>
 L3 programming layer <2023-11-01>
@@ -762,15 +766,15 @@ Package rerunfilecheck Info: File `hopf_notes.out' has not changed.
 (rerunfilecheck)             Checksum: D41D8CD98F00B204E9800998ECF8427E;0.
  ) 
 Here is how much of TeX's memory you used:
- 27505 strings out of 475386
- 516316 string characters out of 5771978
+ 27506 strings out of 475386
+ 516332 string characters out of 5771978
  1937533 words of memory out of 5000000
- 49088 multiletter control sequences out of 15000+600000
+ 49089 multiletter control sequences out of 15000+600000
  566144 words of font info for 66 fonts, out of 8000000 for 9000
  430 hyphenation exceptions out of 8191
  116i,6n,121p,679b,497s stack positions out of 10000i,1000n,20000p,200000b,200000s
 <c:/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb><c:/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb><c:/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb><c:/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy8.pfb><c:/texlive/2023/texmf-dist/fonts/type1/public/amsfonts/symbols/msam10.pfb>
-Output written on hopf_notes.pdf (2 pages, 59822 bytes).
+Output written on hopf_notes.pdf (2 pages, 63568 bytes).
 PDF statistics:
  45 PDF objects out of 1000 (max. 8388607)
  30 compressed objects within 1 object stream
