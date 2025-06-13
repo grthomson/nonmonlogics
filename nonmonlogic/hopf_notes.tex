@@ -83,4 +83,55 @@ this is arguably the most relevant paper -- note, i want not just logicality but
 
 see also: https://arxiv.org/pdf/1810.10297
 
+
+
+Let \((C, \Delta, \varepsilon)\) be a \(k\)-coalgebra, and \((A, \mu, \eta)\) a \(k\)-algebra. Inside the \(k\)-vector space of linear maps from \(C\) to \(A\), i.e., inside \(\mathrm{Hom}_k(C, A)\), we define a bilinear multiplication between \(f, g \in \mathrm{Hom}_k(C, A)\) through:
+
+\[
+C \xrightarrow{\Delta} C \otimes C \xrightarrow{f \otimes g} A \otimes A \xrightarrow{\mu} A
+\]
+
+In other words, for any \(f, g \in \mathrm{Hom}_k(C, A)\), we define:
+\[
+f \star g = \mu \circ (f \otimes g) \circ \Delta
+\]
+
+Or equivalently, in Sweedler's notation:
+\[
+(f \star g)(c) = \sum f(c_{(1)}) g(c_{(2)})
+\quad \text{for any } c \in C
+\]
+
+The multiplication \(\star\) defined above is clearly bilinear, and one can easily verify that \(f \star g \in \mathrm{Hom}_k(C, A)\). This multiplication \(\star\) is called the **convolution product**.
+
+Now, it is relatively easy to show that the \(k\)-vector space \(\mathrm{Hom}_k(C, A)\), equipped with the convolution product, becomes a \(k\)-algebra. Associativity follows from a straightforward computation, while the unit element is \(\eta \circ \varepsilon \in \mathrm{Hom}_k(C, A)\).
+
+\bigskip
+
+Let us now pass to a concrete example of the above construction. Let \(H\) be a \(k\)-bialgebra. Denote by \(H_c\) the underlying \(k\)-coalgebra and by \(H_a\) the underlying \(k\)-algebra. Inside the \(k\)-vector space \(\mathrm{Hom}_k(H_c, H_a)\), i.e., inside \(\mathrm{End}_k(H)\), we consider the convolution product and the corresponding algebra structure defined above. Note that the identity map \(\mathrm{Id}_H: H \to H\) is an element of this algebra.
+
+\textbf{Definition.} Let \(H\) be a \(k\)-bialgebra. A linear map \(S: H \to H\) is called an **antipode** of the \(k\)-bialgebra \(H\) if \(S\) is the inverse of the identity map \(\mathrm{Id}_H: H \to H\) with respect to the convolution product. In other words, if:
+\[
+S \star \mathrm{Id}_H = \mathrm{Id}_H \star S = \eta \circ \varepsilon
+\]
+or equivalently,
+\[
+\mu \circ (S \otimes \mathrm{Id}) \circ \Delta = \mu \circ (\mathrm{Id} \otimes S) \circ \Delta = \eta \circ \varepsilon
+\]
+or equivalently, using Sweedler's notation:
+\[
+\sum S(h_{(1)}) h_{(2)} = \sum h_{(1)} S(h_{(2)}) = \varepsilon(h) 1_H
+\quad \text{for any } h \in H
+\]
+
+Note that according to the above definition, a given bialgebra does not necessarily possess an antipode. However, if it does, it is easy to show that the antipode is unique (the proof is analogous to the uniqueness of inverses in a group).
+
+Intuitively, the antipode can be viewed as a generalization of the inverse element in a group. This interpretation is supported by the fact that for group Hopf algebras—which are among the first and most studied examples of Hopf algebras—the antipode map is given by:
+\[
+S(g) = g^{-1}
+\]
+
+The importance of the antipode, from the perspective of representation theory, lies in the fact that the presence of an antipode (i.e., the Hopf algebra structure) allows one to construct dual representations in a manner reminiscent of group representation theory. See, for instance, Chapter 9, Section 9.3, page 442 for more details.
+
+
 \end{document}
