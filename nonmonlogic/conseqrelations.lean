@@ -14,24 +14,109 @@ import Mathlib.Data.Multiset.Basic
 --/
 
 --Or perhaps better...
-inductive Atomic : Type
+--inductive Atomic : Type
 --| Int : Atomic
-| String : Atomic
-inductive MyProp : Type u
-| El : Atomic → MyProp
-| imp : MyProp → MyProp → MyProp
-infixr: 6 "⇒" => MyProp.imp
+--| String : Atomic
+--inductive MyProp : Type u
+--| El : Atomic → MyProp
+--| imp : MyProp → MyProp → MyProp
+--infixr: 6 "⇒" => MyProp.imp
+
+--05/10/25
+-- parametrise atom type so letter variables can be used
+inductive Atom : Type
+| var : String → Atom
+deriving DecidableEq
+
+inductive Formula : Type
+| atom : Atom → Formula
+| imp  : Formula → Formula → Formula
+deriving DecidableEq
+
+-- infixr: 6 " ⇒ " => Formula.imp
+/-- make ⇒ bind tighter than ∈ to avoid A ⇒ B ∈ Γ parsing as A ⇒ (B ∈ Γ) -/
+infixr: 60 " ⇒ " => Formula.imp   -- was 6; now 60
+
+/-- Contexts: multisets of formulas (exchange yes, no contraction/weakening). -/
+abbrev Ctx := Multiset Formula
+
+/-- A consequence relation is a relation between two contexts. -/
+abbrev ConseqRel := Ctx → Ctx → Prop
+
+/-- Notation: Γ ⊢[R] Δ means R (Γ , Δ) i.e..
+if all formulas in Γ are true, then at least one formula in Δ is true.
+-/
+notation:50 Γ " ⊢[" R:50 "] " Δ => R Γ Δ
+
+/-
+STEP 4: (Sanity-check relation #1)
+The identity relation: Γ ⊢ Δ iff Γ = Δ.
+This is useless as a logic, but good to test the plumbing and notation.
+-/
+def idRel : ConseqRel :=
+  fun Γ Δ => Γ = Δ
+
+-- Example formulas for quick checks:
+open Formula
+def A : Formula := atom (.var "p")
+def B : Formula := atom (.var "q")
+
+-- Typechecks: {A} entails {A} under idRel, because they’re equal.
+#check ({A} : Ctx) ⊢[idRel] {A}
+
+
+/-- A tiny “modus ponens step” toy relation:
+    if Γ contains A and (A ⇒ B), then Δ must contain B. -/
+def implStepRel : ConseqRel :=
+  fun Γ Δ =>
+    ∀ (A B : Formula), A ∈ Γ → ((A ⇒ B) ∈ Γ) → (B ∈ Δ)
+
+-- Usage idea (no proof, just the shape): from {A, A ⇒ B} you can “get” B on the right.
+#check ({A, A ⇒ B} : Ctx) ⊢[implStepRel] {B}
+
+
+open Multiset
+
+/-- Handy notation for a singleton multiset context `{A}` (as a multiset, *not* a finset). -/
+notation "⟦" A "⟧" => (A ::ₘ (0 : Ctx))
+
+/-- Structural / metalogical properties for a consequence relation R.
+    We *do not* include weakening or contraction. -/
+structure Structural (R : ConseqRel) : Prop :=
+  /-- Identity: A ⊢ A (with empty side-contexts). -/
+  (id  : ∀ {A : Formula}, (⟦A⟧ ⊢[R] ⟦A⟧))
+  /-- Cut: if Γ ⊢ A,Δ and A,Γ ⊢ Δ then Γ ⊢ Δ. -/
+  (cut :
+    ∀ {Γ Δ : Ctx} {A : Formula},
+      (Γ ⊢[R] (A ::ₘ Δ)) →
+      ((A ::ₘ Γ) ⊢[R] Δ) →
+      (Γ ⊢[R] Δ))
+
+/-
+STEP 7: (Conservativity)
+“X is conservative over R w.r.t. a language L”:
+whenever R proves Γ ⊢ Δ and every formula in Δ is in L,
+then X also proves Γ ⊢ Δ.
+
+We model the ‘language’ as a predicate L : Formula → Prop.
+-/
+def conservativeOver (R X : ConseqRel) (L : Formula → Prop) : Prop :=
+  ∀ Γ Δ, (Γ ⊢[R] Δ) → (∀ A ∈ Δ, L A) → (Γ ⊢[X] Δ)
+
+
+
+
 
 --Type Alias
-def ConseqRel := Finset MyProp → Finset MyProp → Prop
+--def ConseqRel := Finset Formula → Finset Formula → Prop
 --def MultiConseqRel (α : Type) := Multiset α → Multiset α → Prop
 --def is_conservative_extension_MCR (R R' : MultiConseqRel α) (L : Multiset α) : Prop :=
 --∀ (Γ Δ : Multiset α), R' Γ Δ → (∀ A ∈ Δ, A ∈ L) → R Γ Δ
 
 --Structure
 --Type for relations defined over pairs of multisets
-structure MultiConseqRel (α : Type) :=
-  (rel : Multiset α → Multiset α → Prop)
+--structure MultiConseqRel (α : Type) :=
+ -- (rel : Multiset α → Multiset α → Prop)
 
 -- THIS IS JUST AN ORDERED PAIR OF MULTISETS! WE NEED REFLEXIVITY
 -- AND ALSO SOME FORM OF CUT (RESTRICTED CUT) BUT NOT WEAKENING
@@ -47,8 +132,8 @@ def my_CR : MultiConseqRel MyProp :=
 
 -- Define is_conservative_extension_MCR to check if one consequence relation is a
 --conservative extension of another
-def is_conservative_extension_MCR (R X : MultiConseqRel α) (L : Multiset α) : Prop :=
-∀ (Γ Δ : Multiset α), (Γ R⊢ Δ) → (∀ A ∈ Δ, A ∈ L) → X.rel Γ Δ
+--def is_conservative_extension_MCR (R X : MultiConseqRel α) (L : Multiset α) : Prop :=
+--∀ (Γ Δ : Multiset α), (Γ R⊢ Δ) → (∀ A ∈ Δ, A ∈ L) → X.rel Γ Δ
 
 --07/01/25 cockett seely
 -- tensor connective is just comma, no struct rules
