@@ -1,7 +1,7 @@
 import Mathlib.Data.Finset.Basic
 import Mathlib.Data.Multiset.Basic
 
-#check set
+#check Set
 
 -- A set is defined as a predicate,
 -- i.e. a function α → Prop
