@@ -16,6 +16,7 @@
 
 % Optional but nice:
 \usepackage[margin=1in]{geometry}
+\setlength{\parskip}{0.5em}
 
 \title{Black boxes, bitter lessons, and compositional semantics}
 \author{G.T.} 
@@ -25,7 +26,17 @@
 \maketitle
 
 \section{Motivation}
-Sutton's \emph{Bitter Lesson} is the observation that most significant advances in artifical intelligence are made by leveraging increases in processing power, rather than through the development of novel algorithms to implement the domain-specific knowledge of humans. Wang-Ma\'{s}cianica (2023) points out that in the case of Natural Language Processing, is is formal semantics understood as subfield of linguistics that has most been embarrassed by the Bitter Lesson -- the traditional logic-based and compositional 
+Sutton's \emph{Bitter Lesson} is the observation that most significant advances in artificial intelligence have been made by leveraging increases in processing power rather than by the development of novel algorithms to implement specialised or domain-specific knowledge. Wang-Ma\'{s}cianica (2023) points out that in the case of Natural Language Processing, it is formal semantics -- understood here as a subfield of linguistics -- that has most been embarrassed by the Bitter Lesson. The traditional logic-based and compositional approach to the analysis of natural language is conspicuously absent in the story of Large Language Models:
+
+\begin{quote} The tragedy goes like this:
+there's a group of people who investigate language - from syntax and semantics to pragmatics and analogies and storytelling and slang - who treat their subject with formal rigour and have been at it for many centuries. Their role in the story of LLMs is remarkable because it doesn't exist. 
+\begin{flushright} Wang-Ma\'{s}cianica (2023, p.13)\end{flushright}
+\end{quote}
+
+\noindent In this essay I discuss the relationship between LLMs understood as a tool for generating meaningful linguistic items, and formal semantics understood as a mathematical-logical model of language. I describe current \emph{distributional semantics} for LLMs and explain why that model is in tension with formal or logical semantics. I further argue that LLM methodology is not incommensurable with formal semantics, but that the mathematical framework of formal semantics must be enriched if we are to renconcile our best theories of linguistic meaning with the probabilistic or frequency-based methods of LLMs. 
+
+The structure of the essay is as follows. I first describe the common desiderata for a formal semantics as understood in linguistics and philosophy of language, and I explain how these desiderata are met by both reference-based and inference-based approaches. Here I discuss briefly the relationship between formal semantics in linguistics, and semantics for logics and for programming languages. I then describe a BERT-style semantics for language models and explain why this fails to meet the common desiderata. In this section I introduce also the philosophical idea of a ``theory of meaning" -- I explain how traditional formal semantics are amenable to a substantive idea of meaning whereas distributional semantics is not straightforwardly amenable to any human-friendly theory of meaning. In the final sections I discuss the status of ``nonmonotonic" reasoning -- reasoning which is not expressible by the inferences or proof steps of a deductive logic -- in formal semantics. I sketch a novel mathematical framework for nonmonotonic natural language semantics which is compatible with LLM operations. Here I draw on the tools of Hopf Algebras and (higher) category theory. I reference recent work by Chomsky and Marcolli (2023) which defines a Loday-Ronco Hopf Algebra of syntax, and earlier work by D\v{o}sen (1999) on categories and cut elimination in logic. On the Hopf algebra side, the Loday-Ronco algebra is used to model the splitting and merging of proof trees for a nonmonotonic sequent calculus.  On the category-theoretic side, I define the ``syntactic" category $\mathbf{Tree_{NonMon}}$ of nonmonotonic proof trees and the ``semantic" category $\mathbf{V_{Embed}}$ of LLM vector space embeddings. A category-theoretic definition of the structural rule \emph{Cautious Cut} is given and proven admissible for $\mathbf{Tree_{NonMon}}$. I then define an adjunction between the syntactic and semantic categories which models the relationship between nonmonotonic natural language semantics and distributional semantics for LLMs. A guiding principle here is the ``lossy'' mapping between LLM semantics and natural language semantics - this is modelled by i) composition of the Hopf algebra antipode with an embedding morphism, and ii) an adjunction between $\mathbf{Tree_{NonMon}}$ and $\mathbf{V_{Embed}}$. The mathematical framework sketched is naturally understood as compatible with a proof-theoretic or inferential theory of meaning. 
+
 
 \section{Hopf algebras of proof trees}
 Text...
