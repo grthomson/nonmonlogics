@@ -2,6 +2,8 @@ import Mathlib.Data.Multiset.Basic
 import Mathlib.Data.Multiset.ZeroCons
 import Mathlib.Data.List.Basic
 
+#check List
+
 namespace Syntax
 
 universe u
@@ -50,8 +52,8 @@ notation:55 Γ " ∣∼ " Δ => MultiSequent.mk Γ Δ
 
 /-! ## Variables -/
 
-variable {A B : MyProp}
-variable {Γ Θ : Multiset MyProp}
+--variable {A B : MyProp}
+--variable {Γ Θ : Multiset MyProp}
 
 /-!
 `BaseRel` is the primitive defeasible / material consequence relation
@@ -73,41 +75,50 @@ Rules included here:
 -/
 inductive NMMS (base : BaseRel) : MultiSequent → Type u
 | baseAx
+    {Γ Θ : Multiset MyProp}
     (h : base Γ Θ) :
     NMMS base (Γ ∣∼ Θ)
 
 | imp_l
+    {A B : MyProp} {Γ Θ : Multiset MyProp}
     (d₁ : NMMS base (Γ ∣∼ A ::ₘ Θ))
     (d₂ : NMMS base (B ::ₘ Γ ∣∼ Θ)) :
     NMMS base ((A ⇒ B) ::ₘ Γ ∣∼ Θ)
 
 | imp_r
+    {A B : MyProp} {Γ Θ : Multiset MyProp}
     (d : NMMS base (A ::ₘ Γ ∣∼ B ::ₘ Θ)) :
     NMMS base (Γ ∣∼ (A ⇒ B) ::ₘ Θ)
 
 | conj_l
+    {A B : MyProp} {Γ Θ : Multiset MyProp}
     (d : NMMS base (A ::ₘ B ::ₘ Γ ∣∼ Θ)) :
     NMMS base ((A & B) ::ₘ Γ ∣∼ Θ)
 
 | conj_r
+    {A B : MyProp} {Γ Θ : Multiset MyProp}
     (d₁ : NMMS base (Γ ∣∼ A ::ₘ Θ))
     (d₂ : NMMS base (Γ ∣∼ B ::ₘ Θ)) :
     NMMS base (Γ ∣∼ (A & B) ::ₘ Θ)
 
 | disj_l
+    {A B : MyProp} {Γ Θ : Multiset MyProp}
     (d₁ : NMMS base (A ::ₘ Γ ∣∼ Θ))
     (d₂ : NMMS base (B ::ₘ Γ ∣∼ Θ)) :
     NMMS base ((A ∨ B) ::ₘ Γ ∣∼ Θ)
 
 | disj_r
+    {A B : MyProp} {Γ Θ : Multiset MyProp}
     (d : NMMS base (Γ ∣∼ A ::ₘ B ::ₘ Θ)) :
     NMMS base (Γ ∣∼ (A ∨ B) ::ₘ Θ)
 
 | neg_l
+    {A : MyProp} {Γ Θ : Multiset MyProp}
     (d : NMMS base (Γ ∣∼ A ::ₘ Θ)) :
     NMMS base ((¬A) ::ₘ Γ ∣∼ Θ)
 
 | neg_r
+    {A : MyProp} {Γ Θ : Multiset MyProp}
     (d : NMMS base (A ::ₘ Γ ∣∼ Θ)) :
     NMMS base (Γ ∣∼ (¬A) ::ₘ Θ)
 
@@ -182,7 +193,7 @@ This includes the tree itself as the first element.
 -/
 def subtrees : PTree → List PTree
 | t@(leaf _)      => [t]
-| t@(node _ _ cs) => t :: (cs.bind subtrees)
+| t@(node _ _ cs) => t :: (cs.flatMap subtrees)
 
 end PTree
 
@@ -193,35 +204,37 @@ namespace NMMS
 /--
 Forget the dependent derivation object and retain only its rooted tree shape,
 rule labels, and node sequents.
+
+
 -/
-def toTree {base : BaseRel} :
-    {s : MultiSequent} → NMMS base s → PTree
-| _, baseAx _ =>
-    PTree.leaf s
+def toTree {base : BaseRel} {s : MultiSequent} (d : NMMS base s) : PTree :=
+  match d with
+  | @NMMS.baseAx _ Γ Θ h =>
+      PTree.leaf (Γ ∣∼ Θ)
 
-| _, imp_l d₁ d₂ =>
-    PTree.node RuleTag.imp_l s [toTree d₁, toTree d₂]
+  | @NMMS.imp_l _ A B Γ Θ d₁ d₂ =>
+      PTree.node RuleTag.imp_l (((A ⇒ B) ::ₘ Γ) ∣∼ Θ) [toTree d₁, toTree d₂]
 
-| _, imp_r d =>
-    PTree.node RuleTag.imp_r s [toTree d]
+  | @NMMS.imp_r _ A B Γ Θ d =>
+      PTree.node RuleTag.imp_r (Γ ∣∼ ((A ⇒ B) ::ₘ Θ)) [toTree d]
 
-| _, conj_l d =>
-    PTree.node RuleTag.conj_l s [toTree d]
+  | @NMMS.conj_l _ A B Γ Θ d =>
+      PTree.node RuleTag.conj_l (((A & B) ::ₘ Γ) ∣∼ Θ) [toTree d]
 
-| _, conj_r d₁ d₂ =>
-    PTree.node RuleTag.conj_r s [toTree d₁, toTree d₂]
+  | @NMMS.conj_r _ A B Γ Θ d₁ d₂ =>
+      PTree.node RuleTag.conj_r (Γ ∣∼ ((A & B) ::ₘ Θ)) [toTree d₁, toTree d₂]
 
-| _, disj_l d₁ d₂ =>
-    PTree.node RuleTag.disj_l s [toTree d₁, toTree d₂]
+  | @NMMS.disj_l _ A B Γ Θ d₁ d₂ =>
+      PTree.node RuleTag.disj_l (((A ∨ B) ::ₘ Γ) ∣∼ Θ) [toTree d₁, toTree d₂]
 
-| _, disj_r d =>
-    PTree.node RuleTag.disj_r s [toTree d]
+  | @NMMS.disj_r _ A B Γ Θ d =>
+      PTree.node RuleTag.disj_r (Γ ∣∼ ((A ∨ B) ::ₘ Θ)) [toTree d]
 
-| _, neg_l d =>
-    PTree.node RuleTag.neg_l s [toTree d]
+  | @NMMS.neg_l _ A Γ Θ d =>
+      PTree.node RuleTag.neg_l (((¬A) ::ₘ Γ) ∣∼ Θ) [toTree d]
 
-| _, neg_r d =>
-    PTree.node RuleTag.neg_r s [toTree d]
+  | @NMMS.neg_r _ A Γ Θ d =>
+      PTree.node RuleTag.neg_r (Γ ∣∼ ((¬A) ::ₘ Θ)) [toTree d]
 
 end NMMS
 
