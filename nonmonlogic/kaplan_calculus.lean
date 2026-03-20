@@ -1,4 +1,6 @@
 import Mathlib.Data.Multiset.Basic
+import Mathlib.Data.Multiset.ZeroCons
+import Mathlib.Data.List.Basic
 
 namespace Syntax
 
@@ -108,4 +110,193 @@ inductive NMMS (base : BaseRel) : MultiSequent → Type u
 | neg_r
     (d : NMMS base (A ::ₘ Γ ∣∼ Θ)) :
     NMMS base (Γ ∣∼ (¬A) ::ₘ Θ)
+
+/-! ## Proof-tree structure for Paper 2 -/
+
+/--
+Tags for the logical rule used at a proof-tree node.
+
+`baseAx` is included for uniformity, though base leaves are represented
+as `PTree.leaf`.
+-/
+inductive RuleTag where
+| baseAx
+| imp_l
+| imp_r
+| conj_l
+| conj_r
+| disj_l
+| disj_r
+| neg_l
+| neg_r
+deriving DecidableEq, Repr
+
+/--
+A plain rooted proof-tree type, separated from the dependent derivation
+family `NMMS`.
+
+* `leaf s` represents a leaf labelled by the sequent `s`
+* `node r s cs` represents an internal node:
+  - `r` is the rule applied at the node
+  - `s` is the conclusion sequent at that node
+  - `cs` is the list of immediate subproofs / children
+
+For the current calculus, all nodes have arity 0, 1, or 2.
+-/
+inductive PTree : Type where
+| leaf : MultiSequent → PTree
+| node : RuleTag → MultiSequent → List PTree → PTree
+deriving instance DecidableEq for Syntax.MultiSequent
+-- deriving instance Repr for Syntax.MultiSequent
+-- Multiset has no Repr instance - would have to define an alternative
+
+namespace PTree
+
+/-- The sequent decorating the root of a proof tree. -/
+def conclusion : PTree → MultiSequent
+| leaf s      => s
+| node _ s _  => s
+
+/-- Number of nodes in a proof tree. -/
+def size : PTree → Nat
+| leaf _      => 1
+| node _ _ cs => 1 + cs.foldr (fun t n => size t + n) 0
+
+/-- Height of a proof tree. -/
+def height : PTree → Nat
+| leaf _      => 1
+| node _ _ [] => 1
+| node _ _ cs => 1 + (cs.foldr (fun t n => max (height t) n) 0)
+
+/--
+Immediate subtrees of a proof tree.
+For a leaf this is empty; for a node it is just its child list.
+-/
+def children : PTree → List PTree
+| leaf _      => []
+| node _ _ cs => cs
+
+/--
+A very simple recursive list of all subtrees.
+This includes the tree itself as the first element.
+-/
+def subtrees : PTree → List PTree
+| t@(leaf _)      => [t]
+| t@(node _ _ cs) => t :: (cs.bind subtrees)
+
+end PTree
+
+/-! ## Forgetful map from derivations to plain proof trees -/
+
+namespace NMMS
+
+/--
+Forget the dependent derivation object and retain only its rooted tree shape,
+rule labels, and node sequents.
+-/
+def toTree {base : BaseRel} :
+    {s : MultiSequent} → NMMS base s → PTree
+| _, baseAx _ =>
+    PTree.leaf s
+
+| _, imp_l d₁ d₂ =>
+    PTree.node RuleTag.imp_l s [toTree d₁, toTree d₂]
+
+| _, imp_r d =>
+    PTree.node RuleTag.imp_r s [toTree d]
+
+| _, conj_l d =>
+    PTree.node RuleTag.conj_l s [toTree d]
+
+| _, conj_r d₁ d₂ =>
+    PTree.node RuleTag.conj_r s [toTree d₁, toTree d₂]
+
+| _, disj_l d₁ d₂ =>
+    PTree.node RuleTag.disj_l s [toTree d₁, toTree d₂]
+
+| _, disj_r d =>
+    PTree.node RuleTag.disj_r s [toTree d]
+
+| _, neg_l d =>
+    PTree.node RuleTag.neg_l s [toTree d]
+
+| _, neg_r d =>
+    PTree.node RuleTag.neg_r s [toTree d]
+
+end NMMS
+
+/-! ## Early target statements for Paper 2 -/
+
+/--
+Target theorem: converting a derivation to a plain proof tree preserves
+the end-sequent at the root.
+-/
+theorem toTree_conclusion {base : BaseRel} {s : MultiSequent}
+    (d : NMMS base s) :
+    (NMMS.toTree d).conclusion = s := by
+  induction d with
+  | baseAx h =>
+      rfl
+  | imp_l d₁ d₂ ih₁ ih₂ =>
+      rfl
+  | imp_r d ih =>
+      rfl
+  | conj_l d ih =>
+      rfl
+  | conj_r d₁ d₂ ih₁ ih₂ =>
+      rfl
+  | disj_l d₁ d₂ ih₁ ih₂ =>
+      rfl
+  | disj_r d ih =>
+      rfl
+  | neg_l d ih =>
+      rfl
+  | neg_r d ih =>
+      rfl
+
+/--
+A subtree is an immediate premise-tree of a node in the proof tree.
+
+This is a first-step notion toward the stronger "logically meaningful
+subproof decomposition" theorem we want later.
+-/
+def IsImmediateSubtree (t u : PTree) : Prop :=
+  u ∈ t.children
+
+/--
+Target theorem: every immediate child in `toTree d` arises from a genuine
+premise derivation of the final rule of `d`.
+
+This is written only as a placeholder target for now. The exact final form
+may be refined once we decide how to state "subproof correspondence".
+-/
+theorem immediate_subtree_correspondence
+    {base : BaseRel} {s : MultiSequent} (d : NMMS base s) :
+    ∀ u, IsImmediateSubtree (NMMS.toTree d) u →
+      ∃ s' : MultiSequent, u.conclusion = s' := by
+  intro u hu
+  exact ⟨u.conclusion, rfl⟩
+
+/--
+A more ambitious future target: every subtree of `toTree d` corresponds to
+some genuine subderivation.
+
+For now this is only a placeholder theorem statement.
+-/
+theorem subtree_correspondence
+    {base : BaseRel} {s : MultiSequent} (d : NMMS base s) :
+    ∀ u, u ∈ (NMMS.toTree d).subtrees →
+      ∃ s' : MultiSequent, u.conclusion = s' := by
+  intro u hu
+  exact ⟨u.conclusion, rfl⟩
+
+/--
+Another useful target for later CK-style recursion:
+every immediate child has strictly smaller size than the parent.
+-/
+theorem child_size_lt_parent
+    (t u : PTree) :
+    IsImmediateSubtree t u → u.size < t.size := by
+  sorry
+
 end Syntax
