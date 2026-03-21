@@ -310,6 +310,213 @@ every immediate child has strictly smaller size than the parent.
 theorem child_size_lt_parent
     (t u : PTree) :
     IsImmediateSubtree t u → u.size < t.size := by
-  sorry
+  intro h
+  unfold IsImmediateSubtree at h
+  cases t with
+  | leaf s =>
+      simp [PTree.children] at h
+  | node r s cs =>
+      simp [PTree.children] at h
+      simp [PTree.size]
+      induction cs with
+      | nil => simp at h
+      | cons c rest ih =>
+          simp only [List.foldr]
+          simp [List.mem_cons] at h
+          cases h with
+          | inl heq =>
+              subst heq
+              omega
+          | inr hmem =>
+              have := ih hmem
+              omega
 
-end Syntax
+/-! ## CK-oriented combinatorial layer on proof trees -/
+
+/--
+A forest is just a list of proof trees.
+This is the natural container for the "pruned" part of a CK cut.
+-/
+abbrev Forest := List PTree
+
+/--
+A node address is a path of child indices from the root.
+
+Examples:
+* `[]`       = the root
+* `[0]`      = the first child of the root
+* `[1, 0]`   = second child, then first child
+-/
+abbrev Address := List Nat
+
+namespace PTree
+
+/--
+Retrieve the subtree at a given address, if it exists.
+
+* `[]` returns the whole tree
+* descending past a leaf fails
+* descending via an out-of-bounds child index fails
+-/
+def subtreeAt : PTree → Address → Option PTree
+  | t, [] => some t
+  | leaf _, _ :: _ => none
+  | node _ _ cs, i :: rest =>
+      if h : i < cs.length then
+        subtreeAt (cs[i]) rest
+      else
+        none
+
+/--
+Boolean test for whether an address is valid in a given tree.
+-/
+def validAddress (t : PTree) (a : Address) : Bool :=
+  Option.isSome (subtreeAt t a)
+
+/--
+Propositional version of address validity.
+This is usually easier to use in theorem statements.
+-/
+def ValidAddress (t : PTree) (a : Address) : Prop :=
+  validAddress t a = true
+
+/--
+An address `a` is an ancestor of address `b` if `a` is a prefix of `b`.
+This includes the case `a = b`.
+-/
+def isAncestorOf (a b : Address) : Prop :=
+  ∃ c : Address, b = a ++ c
+
+/--
+Two addresses are comparable if one lies on the path to the other.
+Equivalently, one is an ancestor of the other.
+-/
+def comparable (a b : Address) : Prop :=
+  isAncestorOf a b ∨ isAncestorOf b a
+
+/--
+A cut is admissible if:
+
+1. every address in it is valid in the tree, and
+2. no two distinct addresses are comparable.
+
+So the cut addresses form an antichain in the tree order.
+-/
+structure IsAdmissibleCut (t : PTree) where
+  nodes : List Address
+  valid : ∀ a, a ∈ nodes → ValidAddress t a
+  antichain :
+    ∀ a, a ∈ nodes →
+    ∀ b, b ∈ nodes →
+    a ≠ b → ¬ comparable a b
+
+end PTree
+
+/-! ## Small sanity lemmas / targets -/
+
+namespace PTree
+
+theorem subtreeAt_root (t : PTree) :
+    subtreeAt t [] = some t := by
+  rfl
+
+theorem validAddress_root (t : PTree) :
+    validAddress t [] = true := by
+  simp [validAddress, subtreeAt]
+
+/--
+If `subtreeAt t a = some u`, then `a` is a valid address in `t`.
+-/
+theorem subtreeAt_some_implies_valid
+    (t u : PTree) (a : Address)
+    (h : subtreeAt t a = some u) :
+    ValidAddress t a := by
+  unfold ValidAddress validAddress
+  simp [h]
+
+/--
+A useful converse target: valid addresses are exactly those with a subtree.
+You can prove this later if needed.
+-/
+theorem valid_iff_exists_subtree
+    (t : PTree) (a : Address) :
+    ValidAddress t a ↔ ∃ u, subtreeAt t a = some u := by
+  unfold ValidAddress validAddress
+  constructor
+  · intro h
+    cases hsub : subtreeAt t a with
+    | none =>
+        simp [hsub] at h
+    | some u =>
+        use u
+  · intro hex
+    rcases hex with ⟨u, hu⟩
+    simp [hu]
+
+/--
+Reflexivity of the ancestor relation.
+-/
+theorem isAncestorOf_refl (a : Address) :
+    isAncestorOf a a := by
+  refine ⟨[], ?_⟩
+  simp
+
+/--
+Every address is comparable with itself.
+-/
+theorem comparable_refl (a : Address) :
+    comparable a a := by
+  left
+  exact isAncestorOf_refl a
+
+/--
+The root address is an ancestor of every address.
+-/
+theorem root_isAncestorOf (a : Address) :
+    isAncestorOf [] a := by
+  refine ⟨a, ?_⟩
+  simp
+
+/--
+If `a` is an ancestor of `b`, then `a` and `b` are comparable.
+-/
+theorem comparable_of_isAncestorOf {a b : Address}
+    (h : isAncestorOf a b) :
+    comparable a b := by
+  exact Or.inl h
+
+end PTree
+
+/--
+Replace every node at a cut address with a leaf (carrying its sequent),
+retaining everything above the cut. This is the "remainder" — the part
+containing the root.
+-/
+mutual
+  def remainderGo (c : List Address) (addr : Address) (t : PTree) : PTree :=
+    match t with
+    | PTree.leaf s => PTree.leaf s
+    | PTree.node r s cs =>
+        if addr ∈ c then PTree.leaf s
+        else PTree.node r s (remainderChildren c addr cs 0)
+
+  def remainderChildren (c : List Address) (addr : Address) :
+      List PTree → Nat → List PTree
+    | [], _ => []
+    | child :: rest, i =>
+        remainderGo c (addr ++ [i]) child ::
+        remainderChildren c addr rest (i + 1)
+end
+
+def remainder (t : PTree) (cut : IsAdmissibleCut t) : PTree :=
+  remainderGo cut.nodes [] t
+
+/--
+Collect the subtrees rooted at each cut node.
+These are the "pruned off" pieces — the forest above the cut
+(in the CK convention where the root is at the bottom).
+-/
+def pruned (t : PTree) (c : IsAdmissibleCut t) : Forest :=
+  c.nodes.filterMap (subtreeAt t)
+
+end PTree
