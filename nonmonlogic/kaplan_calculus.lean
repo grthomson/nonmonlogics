@@ -485,28 +485,26 @@ theorem comparable_of_isAncestorOf {a b : Address}
     comparable a b := by
   exact Or.inl h
 
-end PTree
-
 /--
 Replace every node at a cut address with a leaf (carrying its sequent),
 retaining everything above the cut. This is the "remainder" — the part
 containing the root.
 -/
-mutual
-  def remainderGo (c : List Address) (addr : Address) (t : PTree) : PTree :=
-    match t with
-    | PTree.leaf s => PTree.leaf s
-    | PTree.node r s cs =>
-        if addr ∈ c then PTree.leaf s
-        else PTree.node r s (remainderChildren c addr cs 0)
 
-  def remainderChildren (c : List Address) (addr : Address) :
-      List PTree → Nat → List PTree
-    | [], _ => []
-    | child :: rest, i =>
-        remainderGo c (addr ++ [i]) child ::
-        remainderChildren c addr rest (i + 1)
-end
+def remainderGo (c : List Address) (addr : Address) (t : PTree) : PTree :=
+  match t with
+  | PTree.leaf s => PTree.leaf s
+  | PTree.node r s cs =>
+      if addr ∈ c then PTree.leaf s
+      else PTree.node r s (cs.attach.mapIdx (fun i ⟨child, hmem⟩ =>
+        remainderGo c (addr ++ [i]) child))
+termination_by t.size
+decreasing_by
+  have hlt := child_size_lt_parent (PTree.node r s cs) child (by
+    unfold IsImmediateSubtree PTree.children
+    exact hmem)
+  unfold PTree.size at *
+  exact hlt
 
 def remainder (t : PTree) (cut : IsAdmissibleCut t) : PTree :=
   remainderGo cut.nodes [] t
@@ -516,7 +514,184 @@ Collect the subtrees rooted at each cut node.
 These are the "pruned off" pieces — the forest above the cut
 (in the CK convention where the root is at the bottom).
 -/
-def pruned (t : PTree) (c : IsAdmissibleCut t) : Forest :=
-  c.nodes.filterMap (subtreeAt t)
+def pruned (t : PTree) (cut : IsAdmissibleCut t) : Forest :=
+  cut.nodes.filterMap (subtreeAt t)
+end PTree
+
+namespace PTree
+
+/--
+Computable prefix check — `a` is a prefix of `b`.
+-/
+def isPrefixOf : Address → Address → Bool
+  | [], _ => true
+  | _, [] => false
+  | a :: as, b :: bs => a == b && isPrefixOf as bs
+
+/--
+Computable comparability check.
+Two addresses are comparable if one is a prefix of the other.
+-/
+def comparableBool (a b : Address) : Bool :=
+  isPrefixOf a b || isPrefixOf b a
+
+/--
+All valid addresses in a tree, represented as a list.
+We track the full path from the root as we descend.
+-/
+def allAddressesGo : Nat → PTree → Address → List Address
+  | 0, _, _ => []
+  | n + 1, leaf _, addr => [addr]
+  | n + 1, node _ _ cs, addr =>
+      let childResults := cs.mapIdx (fun i child =>
+        allAddressesGo n child (addr ++ [i]))
+      addr :: childResults.flatten
+
+def allAddresses (t : PTree) : List Address :=
+  allAddressesGo t.size t []
+
+/--
+Check if a list of addresses is an antichain:
+no two distinct addresses are comparable.
+-/
+
+def isAntichainBool (addrs : List Address) : Bool :=
+  addrs.mapIdx (fun i a =>
+    addrs.mapIdx (fun j b =>
+      i == j || !comparableBool a b)
+    |>.all id)
+  |>.all id
+
+/--
+All sublists of a list.
+-/
+def sublists : List α → List (List α)
+  | [] => [[]]
+  | x :: xs =>
+      let rest := sublists xs
+      rest ++ rest.map (x :: ·)
+
+/--
+All admissible cuts of a tree.
+An admissible cut is an antichain of valid addresses in the tree.
+-/
+def allAdmissibleCuts (t : PTree) : List (List Address) :=
+  (sublists (allAddresses t)).filter (fun cut =>
+    cut.all (fun a => validAddress t a) &&
+    isAntichainBool cut)
+
+/--
+A single coproduct term: a (Forest, PTree) pair
+corresponding to one admissible cut.
+-/
+def coproductTerm (t : PTree) (cut : List Address) : Forest × PTree :=
+  (cut.filterMap (subtreeAt t), remainderGo cut [] t)
+
+/--
+The Connes-Kreimer coproduct on a proof tree.
+
+Returns a list of (Forest × PTree) pairs, one per admissible cut.
+This is the combinatorial coproduct before lifting to the algebra.
+
+In the full algebraic treatment this lifts to
+ForestAlgebra k ⊗[k] ForestAlgebra k.
+-/
+def coproduct (t : PTree) : List (Forest × PTree) :=
+  (allAdmissibleCuts t).map (coproductTerm t)
+
+namespace Syntax
+namespace PTree
+
+/-- `[]` is always one of the sublists of a list. -/
+theorem nil_mem_sublists {α : Type} (xs : List α) :
+    [] ∈ sublists xs := by
+  induction xs with
+  | nil =>
+      simp [sublists]
+  | cons x xs ih =>
+      simp [sublists, ih]
+
+/-- The empty cut always passes the boolean antichain/validity test. -/
+theorem empty_cut_mem_allAdmissibleCuts (t : PTree) :
+    [] ∈ allAdmissibleCuts t := by
+  unfold allAdmissibleCuts
+  refine List.mem_filter.2 ?_
+  constructor
+  · exact nil_mem_sublists (allAddresses t)
+  · unfold isAntichainBool
+    simp
+
+/-- If the function ignores the index, `mapIdx` is just `map`. -/
+theorem mapIdx_const {α β : Type} (f : α → β) (xs : List α) :
+    xs.mapIdx (fun _ x => f x) = xs.map f := by
+  induction xs with
+  | nil =>
+      simp
+  | cons x xs ih =>
+      rw [List.mapIdx_cons]
+      simp [ih]
+
+/-- Mapping `Subtype.val` over `attach.mapIdx` gives back the original list. -/
+theorem attach_mapIdx_val_eq (cs : List PTree) :
+    cs.attach.mapIdx (fun _ x => x.1) = cs := by
+  rw [mapIdx_const (fun x => x.1) cs.attach]
+  simp
+
+/--
+If the cut is empty, `remainderGo` does nothing.
+We prove this by strong induction on tree size.
+-/
+theorem remainderGo_nil (t : PTree) (addr : Address) :
+    remainderGo [] addr t = t := by
+  let P : Nat → Prop :=
+    fun n => ∀ t : PTree, t.size = n → ∀ addr, remainderGo [] addr t = t
+
+  have hP : ∀ n, (∀ m < n, P m) → P n := by
+    intro n ih t hsize addr
+    cases t with
+    | leaf s =>
+        simp [remainderGo]
+    | node r s cs =>
+        simp [remainderGo]
+        have hchild :
+            ∀ (i : Nat) (x : {x // x ∈ cs}),
+              remainderGo [] (addr ++ [i]) x.1 = x.1 := by
+          intro i x
+          have hlt : x.1.size < (PTree.node r s cs).size := by
+            exact child_size_lt_parent (PTree.node r s cs) x.1 (by
+              unfold IsImmediateSubtree PTree.children
+              exact x.2)
+          have hx : P x.1.size := ih x.1.size (by simpa [hsize] using hlt)
+          exact hx x.1 rfl (addr ++ [i])
+        simpa [hchild] using attach_mapIdx_val_eq cs
+
+  have hstrong : ∀ n, P n := by
+    intro n
+    refine Nat.strong_induction_on n ?_
+    intro n ih
+    exact hP n ih
+
+  exact hstrong t.size t rfl addr
+
+/-- The coproduct term for the empty cut is exactly `([], t)`. -/
+theorem coproductTerm_nil (t : PTree) :
+    coproductTerm t [] = ([], t) := by
+  unfold coproductTerm
+  simp [remainderGo_nil]
+
+/-- Sanity check: the empty cut always appears, giving `([], t)`. -/
+theorem coproduct_contains_unit_term (t : PTree) :
+    ([], t) ∈ coproduct t := by
+  unfold coproduct
+  apply List.mem_map.2
+  refine ⟨[], ?_, ?_⟩
+  · exact empty_cut_mem_allAdmissibleCuts t
+  · simpa [coproductTerm_nil]
+
+/-- The coproduct is never empty. -/
+theorem coproduct_nonempty (t : PTree) :
+    0 < (coproduct t).length := by
+  exact List.length_pos_of_mem (coproduct_contains_unit_term t)
 
 end PTree
+end Syntax
