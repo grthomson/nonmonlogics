@@ -1266,4 +1266,306 @@ noncomputable def delta : HopfCarrier →ₗ[ℤ] (HopfCarrier ⊗[ℤ] HopfCarr
   change (Finsupp.linearCombination ℤ epsilonWord) (Finsupp.single (0 : Multiset PTree) 1) = 1
   simp [epsilonWord]
 
+/-! ## Counit axioms -/
+
+open scoped TensorProduct
+
+lemma epsilon_single_empty :
+    (Finsupp.linearCombination ℤ epsilonWord)
+      (Finsupp.single (0 : Multiset PTree) 1) = 1 := by
+  simp [Finsupp.linearCombination_single, epsilonWord]
+
+lemma epsilon_single_nonempty (f : Forest) (h : f ≠ []) :
+    (Finsupp.linearCombination ℤ epsilonWord)
+      (Finsupp.single (forestToProofForest f) 1) = 0 := by
+  simp [Finsupp.linearCombination_single, epsilonWord, forestToProofForest, h]
+
+@[simp] lemma epsilon_forestMon (f : Forest) :
+    epsilon (forestMon f) = if f = [] then 1 else 0 := by
+  by_cases h : f = []
+  · subst h
+    change (Finsupp.linearCombination ℤ epsilonWord)
+      (Finsupp.single (0 : Multiset PTree) 1) = 1
+    exact epsilon_single_empty
+  · simp [h]
+    change (Finsupp.linearCombination ℤ epsilonWord)
+      (Finsupp.single (forestToProofForest f) 1) = 0
+    exact epsilon_single_nonempty f h
+
+lemma epsilon_forestMon_eq_one_iff (f : Forest) :
+    epsilon (forestMon f) = 1 ↔ f = [] := by
+  by_cases h : f = []
+  · subst h
+    simp
+  · simp [epsilon_forestMon, h]
+
+private theorem mapIdx_go_eq_map_append
+    {α β : Type _} (f : α → β) :
+    ∀ (xs : List α) (acc : Array β),
+      List.mapIdx.go (fun _ x => f x) xs acc = acc.toList ++ xs.map f := by
+  intro xs
+  induction xs with
+  | nil =>
+      intro acc
+      simp [List.mapIdx.go]
+  | cons x xs ih =>
+      intro acc
+      simp only [List.mapIdx.go, List.map]
+      simpa [List.append_assoc] using ih (acc.push (f x))
+
+private theorem mapIdx_eq_map
+    {α β : Type _} (xs : List α) (f : α → β) :
+    List.mapIdx (fun _ x => f x) xs = xs.map f := by
+  simpa [List.mapIdx] using
+    mapIdx_go_eq_map_append f xs (#[] : Array β)
+
+private theorem map_attach_val (cs : List PTree) :
+    cs.attach.map (fun x => x.1) = cs := by
+  induction cs with
+  | nil =>
+      rfl
+  | cons t ts ih =>
+      simp [ih]
+
+private theorem mapIdx_attach_val (cs : List PTree) :
+    List.mapIdx (fun _ (x : {x // x ∈ cs}) => x.1) cs.attach = cs := by
+  calc
+    List.mapIdx (fun _ (x : {x // x ∈ cs}) => x.1) cs.attach
+        = cs.attach.map (fun x => x.1) := by
+            simpa using mapIdx_eq_map cs.attach (fun x : {x // x ∈ cs} => x.1)
+    _ = cs := map_attach_val cs
+
+@[simp] theorem remainderGo_nil (addr : Address) (t : PTree) :
+    remainderGo [] addr t = t := by
+  have hmain :
+      ∀ n : Nat, ∀ t : PTree, t.size = n → ∀ addr : Address,
+        remainderGo [] addr t = t := by
+    intro n
+    induction n using Nat.strong_induction_on with
+    | h n ih =>
+        intro t hsize addr
+        cases t with
+        | leaf s =>
+            simp [remainderGo]
+        | node r s cs =>
+            have hcut : addr ∉ ([] : List Address) := by
+              simp
+            simp [remainderGo, hcut]
+            have hmap :
+                List.mapIdx
+                  (fun i x => remainderGo [] (addr ++ [i]) x.1)
+                  cs.attach =
+                List.mapIdx
+                  (fun _ x => x.1)
+                  cs.attach := by
+              apply mapIdx_congr' cs.attach
+                (fun i x => remainderGo [] (addr ++ [i]) x.1)
+                (fun _ x => x.1)
+              intro i x hx
+              have hlt_node : x.1.size < (PTree.node r s cs).size := by
+                apply child_size_lt_parent (PTree.node r s cs) x.1
+                unfold IsImmediateSubtree PTree.children
+                simpa using x.2
+              have hlt : x.1.size < n := by
+                simpa [hsize] using hlt_node
+              simpa using ih x.1.size hlt x.1 rfl (addr ++ [i])
+            have hmaps :
+                List.mapIdx
+                  (fun i x => remainderGo [] (addr ++ [i]) x.1)
+                  cs.attach = cs := by
+              calc
+                List.mapIdx
+                  (fun i x => remainderGo [] (addr ++ [i]) x.1)
+                  cs.attach
+                    =
+                List.mapIdx
+                  (fun _ x => x.1)
+                  cs.attach := hmap
+                _ = cs := mapIdx_attach_val cs
+            simpa [hmaps]
+  exact hmain t.size t rfl addr
+
+@[simp] lemma coproductTerm_fst_nil (t : PTree) :
+    (coproductTerm t []).1 = [] := by
+  simp [coproductTerm]
+
+@[simp] lemma coproductTerm_nil (t : PTree) :
+    coproductTerm t [] = ([], t) := by
+  simp [coproductTerm, remainderGo_nil]
+
+@[simp] lemma coproductTerm_snd_nil (t : PTree) :
+    (coproductTerm t []).2 = t := by
+  simp [coproductTerm, remainderGo_nil]
+
+lemma coproductTerm_fst_eq_nil_iff
+    (t : PTree) (cut : List Address)
+    (hcut : cut ∈ allAdmissibleCuts t) :
+    (coproductTerm t cut).1 = [] ↔ cut = [] := by
+  unfold coproductTerm
+  constructor
+  · intro h
+    cases cut with
+    | nil =>
+        rfl
+    | cons a cut =>
+        -- from admissibility, a is valid
+        have hvalid :
+            ValidAddress t a := by
+          -- extract from filter
+          have hmem := List.mem_filter.mp hcut
+          have hcond := hmem.2
+          -- manually unpack the boolean
+          rw [Bool.and_eq_true] at hcond
+          have hall : (a :: cut).all (fun a => validAddress t a) = true := hcond.1
+          have := List.all_eq_true.mp hall
+          exact this a (by simp)
+
+        -- get actual subtree
+        rcases (valid_iff_exists_subtree t a).mp hvalid with ⟨u, hu⟩
+
+        -- contradiction: nonempty list = []
+        simp [List.filterMap, hu] at h
+  · intro h
+    subst h
+    simp
+
+private theorem sublists_eq_nil_cons_not_mem {α : Type} (xs : List α) :
+    ∃ rest, sublists xs = [] :: rest ∧ [] ∉ rest := by
+  induction xs with
+  | nil =>
+      refine ⟨[], ?_, ?_⟩
+      · simp [sublists]
+      · simp
+  | cons x xs ih =>
+      rcases ih with ⟨rest, hrest, hnot⟩
+      refine ⟨rest ++ ([] :: rest).map (fun ys => x :: ys), ?_, ?_⟩
+      · simp [sublists, hrest, List.append_assoc]
+      · intro hmem
+        rw [List.mem_append] at hmem
+        cases hmem with
+        | inl hmem_rest =>
+            exact hnot hmem_rest
+        | inr hmem_map =>
+            rw [List.mem_map] at hmem_map
+            rcases hmem_map with ⟨ys, hy, hEq⟩
+            cases hEq
+
+private theorem allAdmissibleCuts_eq_nil_cons_not_mem (t : PTree) :
+    ∃ rest, allAdmissibleCuts t = [] :: rest ∧ [] ∉ rest := by
+  rcases sublists_eq_nil_cons_not_mem (allAddresses t) with ⟨rest, hrest, hnot⟩
+  refine ⟨rest.filter (fun cut =>
+      cut.all (fun a => validAddress t a) &&
+      isAntichainBool cut), ?_, ?_⟩
+  · unfold allAdmissibleCuts
+    rw [hrest]
+    simp [isAntichainBool]
+  · intro hmem
+    apply hnot
+    exact List.mem_of_mem_filter hmem
+
+private theorem foldr_add_eq_zero
+    {α β : Type _} [AddMonoid β] (f : α → β) :
+    ∀ (L : List α), (∀ x, x ∈ L → f x = 0) →
+      L.foldr (fun x acc => f x + acc) 0 = 0 := by
+  intro L hL
+  induction L with
+  | nil =>
+      simp
+  | cons x xs ih =>
+      have hx : f x = 0 := hL x (by simp)
+      have hxs : ∀ y, y ∈ xs → f y = 0 := by
+        intro y hy
+        exact hL y (by simp [hy])
+      simp [hx, ih hxs]
+
+/-- Left counit: (ε ⊗ id) ∘ Δ = id on generators -/
+theorem counit_left (t : PTree) :
+    (TensorProduct.lid ℤ HopfCarrier)
+      ((LinearMap.rTensor HopfCarrier epsilon) (deltaTree t)) =
+    treeGen t := by
+  classical
+  rcases allAdmissibleCuts_eq_nil_cons_not_mem t with ⟨rest, hcuts, hnot⟩
+  unfold deltaTree coproduct
+  rw [hcuts]
+  simp only [List.map_cons, List.foldr_cons, map_add,
+    LinearMap.rTensor_tmul, TensorProduct.lid_tmul]
+
+  have hhead :
+      epsilon (forestMon (coproductTerm t []).1) • treeGen (coproductTerm t []).2 =
+      treeGen t := by
+    simpa [coproductTerm_nil] using (one_smul ℤ (treeGen t))
+
+  have hzero :
+      ∀ cut, cut ∈ rest →
+        epsilon (forestMon (coproductTerm t cut).1) • treeGen (coproductTerm t cut).2 = 0 := by
+    intro cut hmem
+    have hmem' : cut ∈ allAdmissibleCuts t := by
+      rw [hcuts]
+      simp [hmem]
+    have hne : cut ≠ [] := by
+      intro hc
+      exact hnot (hc ▸ hmem)
+    have hfstne : (coproductTerm t cut).1 ≠ [] := by
+      intro hf
+      exact hne ((coproductTerm_fst_eq_nil_iff t cut hmem').mp hf)
+    simp [epsilon_forestMon, hfstne]
+
+  have htail_aux :
+      ∀ L : List (List Address),
+        (∀ cut ∈ L,
+          epsilon (forestMon (coproductTerm t cut).1) • treeGen (coproductTerm t cut).2 = 0) →
+        (TensorProduct.lid ℤ HopfCarrier)
+          ((LinearMap.rTensor HopfCarrier epsilon)
+            (List.foldr (fun fr acc => forestMon fr.1 ⊗ₜ[ℤ] treeGen fr.2 + acc) 0
+              (List.map (coproductTerm t) L))) = 0 := by
+    intro L hL
+    induction L with
+    | nil =>
+        simp
+    | cons cut rest ih =>
+        simp only [List.map_cons, List.foldr_cons, map_add,
+          LinearMap.rTensor_tmul, TensorProduct.lid_tmul]
+        have hz :
+            epsilon (forestMon (coproductTerm t cut).1) •
+              treeGen (coproductTerm t cut).2 = 0 := by
+          exact hL cut (by simp)
+        have hz' :
+            (if (coproductTerm t cut).1 = [] then
+               1 • treeGen (coproductTerm t cut).2
+             else
+               0 • treeGen (coproductTerm t cut).2) = 0 := by
+          simpa [epsilon_forestMon] using hz
+        have hrest :
+            ∀ cut' ∈ rest,
+              epsilon (forestMon (coproductTerm t cut').1) • treeGen (coproductTerm t cut').2 = 0 := by
+          intro cut' hmem
+          exact hL cut' (by simp [hmem])
+        have ih' :
+            (TensorProduct.lid ℤ HopfCarrier)
+              ((LinearMap.rTensor HopfCarrier epsilon)
+                (List.foldr (fun fr acc => forestMon fr.1 ⊗ₜ[ℤ] treeGen fr.2 + acc) 0
+                  (List.map (coproductTerm t) rest))) = 0 := by
+          exact ih hrest
+        simpa [hz', ih']
+
+  have htail' :
+      (TensorProduct.lid ℤ HopfCarrier)
+        ((LinearMap.rTensor HopfCarrier epsilon)
+          (List.foldr (fun fr acc => forestMon fr.1 ⊗ₜ[ℤ] treeGen fr.2 + acc) 0
+            (List.map (coproductTerm t) rest))) = 0 := by
+    apply htail_aux rest
+    intro cut hmem
+    exact hzero cut hmem
+
+  calc
+    epsilon (forestMon (coproductTerm t []).1) • treeGen (coproductTerm t []).2 +
+        (TensorProduct.lid ℤ HopfCarrier)
+          ((LinearMap.rTensor HopfCarrier epsilon)
+            (List.foldr (fun fr acc => forestMon fr.1 ⊗ₜ[ℤ] treeGen fr.2 + acc) 0
+              (List.map (coproductTerm t) rest)))
+        =
+      treeGen t + 0 := by rw [hhead, htail']
+    _ = treeGen t := by simp
+
+
 end Syntax
