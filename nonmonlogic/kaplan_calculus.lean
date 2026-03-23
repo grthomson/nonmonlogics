@@ -1,7 +1,10 @@
 import Mathlib.Data.Multiset.Basic
 import Mathlib.Data.Multiset.ZeroCons
 import Mathlib.Data.List.Basic
-
+import Mathlib.Algebra.MonoidAlgebra.Basic
+import Mathlib.Algebra.FreeMonoid.Basic
+import Mathlib.LinearAlgebra.TensorProduct.Basic
+import Mathlib.RingTheory.TensorProduct.Basic
 #check List
 
 namespace Syntax
@@ -916,6 +919,9 @@ private theorem mapIdx_go_congr'
         exact h (i + 1) y (by simp [hy])
       simpa [Array.size_push, Nat.add_assoc, Nat.add_left_comm, Nat.add_comm] using hy'
 
+#check @List.mapIdx
+#check @List.attach
+
 /--
 A small congruence lemma for `List.mapIdx`.
 -/
@@ -982,15 +988,15 @@ theorem remainderGo_restrictCut_eq
     remainderGo cut [i] t := by
   simpa [restrictCutAt] using
     remainderGo_restrictCutAt_eq cut [i] [] t
-/--
-The remainder of a base-admissible cut applied to `toTree d`
-is a derivation of the same end-sequent `s`.
 
-Key improvement: the remainder derives exactly `s`, not just some
-existential sequent. This allows the inductive step to reconstruct
-derivations using the original rule — each premise derivation has
-exactly the right sequent type.
--/
+private theorem mapIdx_attach_singleton (f : Nat → PTree → PTree) (t : PTree) :
+    List.mapIdx (fun i (x : {x // x ∈ [t]}) => f i x.1) [t].attach = [f 0 t] := by
+  rfl
+
+private theorem mapIdx_attach_pair (f : Nat → PTree → PTree) (t u : PTree) :
+    List.mapIdx (fun i (x : {x // x ∈ [t, u]}) => f i x.1) [t, u].attach = [f 0 t, f 1 u] := by
+  rfl
+
 theorem remainderGo_toTree_is_toTree
     {base : BaseRel} {s : MultiSequent}
     (d : NMMS base s) (cut : List Address)
@@ -1008,15 +1014,15 @@ theorem remainderGo_toTree_is_toTree
     have hrem : remainderGo cut [] (NMMS.toTree d) =
         PTree.leaf s := by
       cases d with
-      | baseAx h => simp [NMMS.toTree, remainderGo, hroot]
-      | imp_l d₁ d₂ => simp [NMMS.toTree, remainderGo, hroot]
-      | imp_r d => simp [NMMS.toTree, remainderGo, hroot]
-      | conj_l d => simp [NMMS.toTree, remainderGo, hroot]
+      | baseAx h     => simp [NMMS.toTree, remainderGo, hroot]
+      | imp_l d₁ d₂  => simp [NMMS.toTree, remainderGo, hroot]
+      | imp_r d      => simp [NMMS.toTree, remainderGo, hroot]
+      | conj_l d     => simp [NMMS.toTree, remainderGo, hroot]
       | conj_r d₁ d₂ => simp [NMMS.toTree, remainderGo, hroot]
       | disj_l d₁ d₂ => simp [NMMS.toTree, remainderGo, hroot]
-      | disj_r d => simp [NMMS.toTree, remainderGo, hroot]
-      | neg_l d => simp [NMMS.toTree, remainderGo, hroot]
-      | neg_r d => simp [NMMS.toTree, remainderGo, hroot]
+      | disj_r d     => simp [NMMS.toTree, remainderGo, hroot]
+      | neg_l d      => simp [NMMS.toTree, remainderGo, hroot]
+      | neg_r d      => simp [NMMS.toTree, remainderGo, hroot]
     exact ⟨NMMS.baseAx hb, by rw [hrem]; simp [NMMS.toTree]⟩
   · cases d with
     | baseAx h =>
@@ -1038,9 +1044,10 @@ theorem remainderGo_toTree_is_toTree
         obtain ⟨d₂', hd₂⟩ :=
           remainderGo_toTree_is_toTree d₂ (restrictCut cut 1) hbase₂
         refine ⟨NMMS.imp_l d₁' d₂', ?_⟩
-        simp only [NMMS.toTree, remainderGo, hroot, ite_false, List.nil_append]
-        congr 1
-        simp [remainderGo_restrictCut_eq, hd₁, hd₂, NMMS.toTree]
+        simp only [NMMS.toTree, remainderGo, hroot, ite_false, List.nil_append,
+          mapIdx_attach_pair, ← remainderGo_restrictCut_eq]
+        simpa [hd₁, hd₂]
+
     | imp_r d =>
         have hbase₁ : IsBaseAdmissible base d.toTree
             (restrictCut cut 0) := by
@@ -1050,9 +1057,11 @@ theorem remainderGo_toTree_is_toTree
         obtain ⟨d', hd⟩ :=
           remainderGo_toTree_is_toTree d (restrictCut cut 0) hbase₁
         refine ⟨NMMS.imp_r d', ?_⟩
-        simp only [NMMS.toTree, remainderGo, hroot, ite_false, List.nil_append]
+        simp only [NMMS.toTree, remainderGo, hroot, ite_false, List.nil_append,
+          mapIdx_attach_singleton, ← remainderGo_restrictCut_eq]
         congr 1
-        simp [remainderGo_restrictCut_eq, hd, NMMS.toTree]
+        exact congrArg List.singleton hd
+
     | conj_l d =>
         have hbase₁ : IsBaseAdmissible base d.toTree
             (restrictCut cut 0) := by
@@ -1062,9 +1071,11 @@ theorem remainderGo_toTree_is_toTree
         obtain ⟨d', hd⟩ :=
           remainderGo_toTree_is_toTree d (restrictCut cut 0) hbase₁
         refine ⟨NMMS.conj_l d', ?_⟩
-        simp only [NMMS.toTree, remainderGo, hroot, ite_false, List.nil_append]
+        simp only [NMMS.toTree, remainderGo, hroot, ite_false, List.nil_append,
+          mapIdx_attach_singleton, ← remainderGo_restrictCut_eq]
         congr 1
-        simp [remainderGo_restrictCut_eq, hd, NMMS.toTree]
+        exact congrArg List.singleton hd
+
     | conj_r d₁ d₂ =>
         have hbase₁ : IsBaseAdmissible base d₁.toTree
             (restrictCut cut 0) := by
@@ -1081,9 +1092,10 @@ theorem remainderGo_toTree_is_toTree
         obtain ⟨d₂', hd₂⟩ :=
           remainderGo_toTree_is_toTree d₂ (restrictCut cut 1) hbase₂
         refine ⟨NMMS.conj_r d₁' d₂', ?_⟩
-        simp only [NMMS.toTree, remainderGo, hroot, ite_false, List.nil_append]
-        congr 1
-        simp [remainderGo_restrictCut_eq, hd₁, hd₂, NMMS.toTree]
+        simp only [NMMS.toTree, remainderGo, hroot, ite_false, List.nil_append,
+          mapIdx_attach_pair, ← remainderGo_restrictCut_eq]
+        simpa [hd₁, hd₂]
+
     | disj_l d₁ d₂ =>
         have hbase₁ : IsBaseAdmissible base d₁.toTree
             (restrictCut cut 0) := by
@@ -1100,9 +1112,10 @@ theorem remainderGo_toTree_is_toTree
         obtain ⟨d₂', hd₂⟩ :=
           remainderGo_toTree_is_toTree d₂ (restrictCut cut 1) hbase₂
         refine ⟨NMMS.disj_l d₁' d₂', ?_⟩
-        simp only [NMMS.toTree, remainderGo, hroot, ite_false, List.nil_append]
-        congr 1
-        simp [remainderGo_restrictCut_eq, hd₁, hd₂, NMMS.toTree]
+        simp only [NMMS.toTree, remainderGo, hroot, ite_false, List.nil_append,
+          mapIdx_attach_pair, ← remainderGo_restrictCut_eq]
+        simpa [hd₁, hd₂]
+
     | disj_r d =>
         have hbase₁ : IsBaseAdmissible base d.toTree
             (restrictCut cut 0) := by
@@ -1112,9 +1125,11 @@ theorem remainderGo_toTree_is_toTree
         obtain ⟨d', hd⟩ :=
           remainderGo_toTree_is_toTree d (restrictCut cut 0) hbase₁
         refine ⟨NMMS.disj_r d', ?_⟩
-        simp only [NMMS.toTree, remainderGo, hroot, ite_false, List.nil_append]
+        simp only [NMMS.toTree, remainderGo, hroot, ite_false, List.nil_append,
+          mapIdx_attach_singleton, ← remainderGo_restrictCut_eq]
         congr 1
-        simp [remainderGo_restrictCut_eq, hd, NMMS.toTree]
+        exact congrArg List.singleton hd
+
     | neg_l d =>
         have hbase₁ : IsBaseAdmissible base d.toTree
             (restrictCut cut 0) := by
@@ -1124,9 +1139,11 @@ theorem remainderGo_toTree_is_toTree
         obtain ⟨d', hd⟩ :=
           remainderGo_toTree_is_toTree d (restrictCut cut 0) hbase₁
         refine ⟨NMMS.neg_l d', ?_⟩
-        simp only [NMMS.toTree, remainderGo, hroot, ite_false, List.nil_append]
+        simp only [NMMS.toTree, remainderGo, hroot, ite_false, List.nil_append,
+          mapIdx_attach_singleton, ← remainderGo_restrictCut_eq]
         congr 1
-        simp [remainderGo_restrictCut_eq, hd, NMMS.toTree]
+        exact congrArg List.singleton hd
+
     | neg_r d =>
         have hbase₁ : IsBaseAdmissible base d.toTree
             (restrictCut cut 0) := by
@@ -1136,9 +1153,10 @@ theorem remainderGo_toTree_is_toTree
         obtain ⟨d', hd⟩ :=
           remainderGo_toTree_is_toTree d (restrictCut cut 0) hbase₁
         refine ⟨NMMS.neg_r d', ?_⟩
-        simp only [NMMS.toTree, remainderGo, hroot, ite_false, List.nil_append]
+        simp only [NMMS.toTree, remainderGo, hroot, ite_false, List.nil_append,
+          mapIdx_attach_singleton, ← remainderGo_restrictCut_eq]
         congr 1
-        simp [remainderGo_restrictCut_eq, hd, NMMS.toTree]
+        exact congrArg List.singleton hd
 
 /--
 Every component appearing in the Connes-Kreimer coproduct of a proof tree `toTree d` corresponds to a genuine subderivation of `d`, provided the cut is base-admissible.
@@ -1168,5 +1186,84 @@ theorem coproduct_terms_are_subderivations
     simp [List.mem_filterMap] at ht
     obtain ⟨addr, haddr, hsubt⟩ := ht
     exact subtreeAt_toTree_is_toTree d addr t hsubt
+
+open scoped TensorProduct
+open Classical
+
+/-! ## Hopf algebra carrier (commutative CK-style) -/
+
+abbrev ProofForest := Multiset PTree
+abbrev HopfCarrier := AddMonoidAlgebra ℤ (Multiset PTree)
+
+noncomputable instance : Ring (HopfCarrier ⊗[ℤ] HopfCarrier) :=
+  Algebra.TensorProduct.instRing
+
+noncomputable instance : Semiring (HopfCarrier ⊗[ℤ] HopfCarrier) :=
+  inferInstanceAs (Semiring (HopfCarrier ⊗[ℤ] HopfCarrier))
+
+def forestToProofForest (f : Forest) : ProofForest :=
+  (f : Multiset PTree)
+
+noncomputable def treeGen (t : PTree) : HopfCarrier :=
+  Finsupp.single ({t} : Multiset PTree) 1
+
+noncomputable def forestMon (f : Forest) : HopfCarrier :=
+  Finsupp.single (forestToProofForest f) 1
+
+noncomputable def oneForest : HopfCarrier :=
+  forestMon []
+
+noncomputable def deltaTree (t : PTree) :
+    HopfCarrier ⊗[ℤ] HopfCarrier :=
+  (coproduct t).foldr
+    (fun fr acc =>
+      let (f, r) := fr
+      (forestMon f ⊗ₜ[ℤ] treeGen r) + acc)
+    0
+
+noncomputable def epsilonWord (f : Multiset PTree) : ℤ :=
+  if f = 0 then 1 else 0
+
+noncomputable def epsilon : HopfCarrier →ₗ[ℤ] ℤ :=
+  Finsupp.linearCombination ℤ epsilonWord
+
+open TensorProduct in
+
+#check (inferInstance : AddCommMonoid ProofForest)
+#check (inferInstance : CommRing HopfCarrier)
+#check (inferInstance : Algebra ℤ HopfCarrier)
+#check (inferInstance : Ring (HopfCarrier ⊗[ℤ] HopfCarrier))
+#check (inferInstance : Semiring (HopfCarrier ⊗[ℤ] HopfCarrier))
+
+/-! ## Coproduct on forests and linear extension -/
+
+noncomputable def deltaForest (f : Forest) : HopfCarrier ⊗[ℤ] HopfCarrier :=
+  f.foldr (fun t acc => deltaTree t * acc) 1
+
+@[simp] theorem deltaForest_nil :
+    deltaForest [] = 1 := by
+  simp [deltaForest]
+
+@[simp] theorem deltaForest_cons (t : PTree) (f : Forest) :
+    deltaForest (t :: f) = deltaTree t * deltaForest f := by
+  simp [deltaForest]
+
+@[simp] theorem deltaForest_singleton (t : PTree) :
+    deltaForest [t] = deltaTree t := by
+  simp [deltaForest]
+  exact mul_one (deltaTree t)
+
+noncomputable def delta : HopfCarrier →ₗ[ℤ] (HopfCarrier ⊗[ℤ] HopfCarrier) :=
+  Finsupp.linearCombination ℤ (fun f : Multiset PTree => deltaForest f.toList)
+
+@[simp] theorem epsilon_treeGen (t : PTree) :
+    epsilon (treeGen t) = 0 := by
+  change (Finsupp.linearCombination ℤ epsilonWord) (Finsupp.single ({t} : Multiset PTree) 1) = 0
+  simp [epsilonWord, Multiset.singleton_ne_zero]
+
+@[simp] theorem epsilon_oneForest :
+    epsilon oneForest = 1 := by
+  change (Finsupp.linearCombination ℤ epsilonWord) (Finsupp.single (0 : Multiset PTree) 1) = 1
+  simp [epsilonWord]
 
 end Syntax
