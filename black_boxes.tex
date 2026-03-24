@@ -35,7 +35,17 @@ there's a group of people who investigate language - from syntax and semantics t
 \begin{flushright} Wang-Ma\'{s}cianica (2023, p.13)\end{flushright}
 \end{quote}
 
-\noindent Here I discuss the relationship between LLMs understood as tools for generating meaningful text, and formal semantics understood as a mathematical-logical model of language. I describe current \emph{distributional semantics} for LLMs and explain why that model is in tension with formal or logical semantics. I further argue that LLMs are not incommensurable with formal semantics, but that the mathematical framework must be enriched if we are to reconcile our best theories of linguistic meaning with the probabilistic or frequency-based methods of LLM text generation. 
+\noindent Wang-Ma\'{s}cianica focuses on the relationship between LLMs understood as tools for generating meaningful text, and formal semantics understood as a mathematical-logical model of language and especially linguistic \emph{meaning}. 
+
+Here I present a mathematical framework not for natural language meaning but for natural language \emph{inference}. This framework is based primarily on a \emph{Hopf algebra}. In particular I define a Hopf algebra over proof trees for a \emph{nonmonotonic sequent calculus}, that is a presentation of a logic in which the structural rule of \emph{Weakening} is not admissible. The nonmonotonicity of the logic is motivated by the observation that natural language inference is not monotonic in the following sense -- given a valid inference from some set of premises $\Delta$ to a conclusion $X$, it is not necessarily the case there there is a valid inference from the enlarged set of premises $\Delta \cup \{Y\}$ to $X$.  
+
+The Hopf algebra structure models simultaneously the merging or composition of proof trees for the nonmonotonic sequent calculus, and the coalgebra structure models the relation of \emph{decomposition} between the canonical derivation of a sequent and the set of all (sub-)derivations. This compositional-decompositional model for a logic (or consequence relation) is used to define an equivalence between the directed structure of a proof tree and the undirected structure of an LLM embedding. The mathematical framework sketched is compatible with a reference-based semantics for natural language,
+
+
+and it is naturally understood as compatible with a proof-theoretic or inferential treatment of linguistic meaning. 
+
+LLM OUTPUTS ARE NOT PROBABILISTIC.
+
 
 The structure of the essay is as follows. I first describe some common desiderata for a formal semantics, and I explain how these desiderata are respected by both reference-based and inference-based approaches. I discuss briefly the relationship between formal semantics in linguistics, and semantics for logics and for programming languages. I then describe a BERT-style semantics for language models and explain why this fails to meet the common desiderata. In this section I introduce also the philosophical idea of a ``theory of meaning" and I explain how, unlike traditional formal semantics, distributional semantics for LLMs are not straightforwardly amenable to any human-friendly theory of meaning. In the final sections I discuss the status of ``nonmonotonic" reasoning -- reasoning which is not expressible in a deductive logic admitting a structural \emph{Weakening} rule -- in current formal semantics. 
 
@@ -44,11 +54,120 @@ The structure of the essay is as follows. I first describe some common desiderat
 In the technical sections I sketch a novel mathematical framework for natural language inference which is compatible with BERT distributional semantics. Here I draw on the tools of Hopf algebras and category theory. I reference recent work by Chomsky and Marcolli (2023) which applies the Loday-Ronco Hopf algebra to the syntactic merge operation, and earlier work by D\v{o}sen (1999) on categories and cut elimination in logic. On the Hopf algebra side, the Loday-Ronco algebra is used to model the splitting and merging of proof trees for a nonmonotonic sequent calculus. The coalgebra structure of the Hopf algebra models the relation of \emph{decomposition} between the canonical derivation of a sequent and the set of all (sub-)derivations, so extending the ordinary \emph{compositional} model of a logic in terms of (categories of) partial orders. This compositional-decompositional model for a logic (or consequence relation) is used to define an equivalence between the directed structure of a proof tree and the undirected structure of an LLM embedding. \textcolor{red}{On the category-theoretic side, I define the ``syntactic" category $\mathbf{Tree_{NML}}$ of nonmonotonic proof trees and the ``semantic" category $\mathbf{V_{Em}}$ of LLM vector space embeddings. A category-theoretic definition of the structural rule \emph{Cautious Cut} is given and proven admissible for $\mathbf{Tree_{NML}}$. A guiding idea here is that there should be a ``lossy'' mapping between natural language inference and LLM inference - this is modelled by i) composition of the Hopf algebra antipode with an embedding morphism, and ii) an adjunction between $\mathbf{Tree_{NML}}$ and $\mathbf{V_{Em}}$.} The mathematical framework sketched is naturally understood as compatible with a proof-theoretic or inferential treatment of linguistic meaning. 
 
 
- Note: bridge to distributional semantics may also be given by representation $\rho: H \rightarrow End(V)$, mapping each proof tree to a linear operator on the distributional embedding space $V = \mathbb{R}^n$ so that logical inference is modelled as structured transformation of semantic state. ``lossy" character of NL inference relative to formal inference is encoded in choice of $\rho$ (need not be injective), and in identification of propositions with subspaces of V rather than points, so that proof trees correspond to movements between geometrically defined regions of embedding space rather than to exact logical transitions. This may actually be more useful and note representations of HAs are well understood
+ Note: bridge to distributional semantics may also be given by representation $\rho: H \rightarrow End(V)$, mapping each proof tree to a linear operator on the distributional embedding space $V = \mathbb{R}^n$ so that logical inference is modelled as structured transformation of semantic state. ``lossy" character of NL inference relative to formal inference is encoded in choice of $\rho$ (need not be injective), and in identification of propositions with subspaces of V rather than points, so that proof trees correspond to movements between geometrically defined regions of embedding space rather than to exact logical transitions. This may actually be more useful and note representations of HAs are well understood.
+
+
+ \emph{Compositionality} is the property that the meaning of a compound expression is determined by (i.e. is a function of) the meanings of its components and the syntactic rules by which they are combined. Compositionality has long been understood as a desideratum for a formal semantics (REFERENCE) in the tradition of Montague and Frege. A \emph{distributional semantics} such as BERT for LLMs is a model of linguistic meaning in which the meaning of a word or phrase is represented as a vector in a high-dimensional space. While there is some empirical evidence that some form of compositionality is present in the embedding space of LLMs (KING QUEEN EXAMPLE) this is far from the general and deterministic compositionality principle of formal semantics. The DisCoCat framework (Coecke et al., 2010) is one attempt to reconcile the compositionality of formal semantics, leveraging the tools of category theory. 
 
 
 \section{Hopf algebras of proof trees}
-Text...
+\subsection*{Carrier and Grading}
+We take as basis either proof trees or proof forests:
+\[
+H = \mathbb{Z}[\mathrm{ProofForest}]
+\]
+with grading given by proof size (e.g.\ number of nodes):
+\[
+H = \bigoplus_{n \ge 0} H_n, \quad H_0 \cong \mathbb{Z}.
+\]
+The unit is the empty forest.
+
+\subsection*{Product}
+Two natural choices:
+\begin{itemize}
+\item \textbf{Forest union (commutative)}:
+\[
+\mu(f_1 \otimes f_2) = f_1 \cup f_2.
+\]
+\item \textbf{Grafting / composition (noncommutative)}:
+attach subproofs of one tree into another at admissible positions.
+\end{itemize}
+In both cases we require associativity.
+
+\subsection*{Coproduct (Cut Decomposition)}
+We define the coproduct via admissible cuts:
+\[
+\Delta(t) = \sum_{c \in \mathrm{Adm}(t)} P_c(t) \otimes R_c(t),
+\]
+where:
+\begin{itemize}
+\item $P_c(t)$ is the forest of pruned subproofs
+\item $R_c(t)$ is the remaining proof containing the root.
+\end{itemize}
+
+\subsection*{B\textsuperscript{+} and B\textsuperscript{-} Structure}
+We have structural operations:
+\begin{itemize}
+\item $B^{-}(t)$: remove the root, yielding immediate subproofs
+\item $B^{+}(f)$: apply an inference rule to combine a forest into a tree.
+\end{itemize}
+In our setting $B^{+}$ corresponds to the $\texttt{PTree.node}$ constructor.
+
+\subsection*{Bialgebra Compatibility}
+We require:
+\[
+\Delta(xy) = \Delta(x)\Delta(y),
+\]
+so that decomposition respects composition.
+
+\subsection*{Counit}
+The counit picks out the empty forest
+\[
+\varepsilon(f) =
+\begin{cases}
+1 & \text{if } f = \emptyset,\\
+0 & \text{otherwise}.
+\end{cases}
+\]
+
+\subsection*{Antipode}
+Since the algebra is connected and graded, the antipode is defined recursively:
+\[
+S(t) = - \sum S(t') \cdot t'',
+\]
+where the sum ranges over nontrivial coproduct terms.
+
+\subsection*{Primitive Elements}
+An element $x$ is primitive if:
+\[
+\Delta(x) = x \otimes 1 + 1 \otimes x.
+\]
+These form a Lie algebra under:
+\[
+[x,y] = xy - yx.
+\]
+In our setting primitives correspond to minimal (indecomposable) proofs.
+
+\subsection*{Pre-Lie Structure}
+Grafting operations define a pre-Lie product $\triangleright$:
+\[
+x \triangleright y = \sum \text{insertions of } x \text{ into } y,
+\]
+satisfying:
+\[
+x \triangleright (y \triangleright z) - (x \triangleright y) \triangleright z
+=
+x \triangleright (z \triangleright y) - (x \triangleright z) \triangleright y.
+\]
+This induces a Lie algebra via commutator and a Hopf algebra via enveloping constructions.
+
+\subsection*{Decorations}
+Nodes are decorated by inference data (e.g.\ rule tags and sequents), giving decorated rooted tree Hopf algebra.
+
+\subsection*{Key Properties to Establish}
+\begin{itemize}
+\item Associativity of $\mu$
+\item Coassociativity of $\Delta$
+\item Compatibility: $\Delta(xy) = \Delta(x)\Delta(y)$
+\item Counit laws
+\item Existence of antipode
+\item Grading compatibility
+\item Correctness and compositionality of cut decomposition
+\item Characterisation of primitive elements
+\end{itemize}
+
+\subsection*{Summary}
+We construct a graded Hopf algebra whose basis elements are proof trees of a nonmonotonic sequent calculus, with coproduct given by admissible cut decompositions and product given by proof composition or forest union.
 
 \subsection{Why decomposition matters}
 Text...
@@ -56,7 +175,7 @@ well, because LLM embedding states don't naturally have an idea of forward vs ba
 \section{Representations and distributional semantics}
 Text...
 
-Grokking or abstraction as Cut rule? See also \emph{Cut Elimination in Categories}. This is really an orthogonal issue to our Hopf Algebra inference model and one that is probably best dealt with by considering a fragment.  Consider especially \emph{Cautious Monotonicity} and \emph{Cut} (converse)
+Grokking or abstraction as Cut rule? See also \emph{Cut Elimination in Categories}. This is really an orthogonal issue to our Hopf Algebra inference model and one that is probably best dealt with by considering a fragment.  Consider especially \emph{Cautious Monotonicity} and \emph{Cut} (converse). Note that the likely global \emph{failure} of Cut means that a categorical semantics may not be straightforward -- cut is normally understand as arrow composition in a categorical setting (see e.g. Dosen).
 
 ``A Structural Probe for Finding Syntax in Word Representations
 '' - Manning and Hewitt
@@ -65,6 +184,8 @@ Grokking or abstraction as Cut rule? See also \emph{Cut Elimination in Categorie
 '' - Atkey and Wen
 
 ``Grok doesn't Grok -- Abstraction and Controlled Forgetting"
+
+``Hopf Algebras and Linear Logic'' -- Blute
 
 \bibliographystyle{plainnat}
 \bibliography{refs}
