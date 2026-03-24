@@ -2034,4 +2034,15 @@ theorem remainderGo_append_self
     remainderGo cut [] t := by
   simpa using remainderGo_idempotent cut [] t
 
+@[simp] theorem coproductTerm_snd_two_stage
+    (t : PTree) (cut₁ cut₂ : List Address) :
+    (coproductTerm (coproductTerm t cut₁).2 cut₂).2 =
+      (coproductTerm t (cut₁ ++ cut₂)).2 := by
+  simp [coproductTerm, remainderGo_remainderGo_eq]
+
+def iteratedCoproductData (t : PTree) :
+    List ((Forest × Forest) × PTree) := []
+
+#check Nat
+
 end Syntax
