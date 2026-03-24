@@ -732,19 +732,20 @@ abbrev GLCarrier := PTree →₀ ℤ
 noncomputable def treeGen (t : PTree) : GLCarrier :=
   Finsupp.single t 1
 
-/--
+/-
 Tree-level grafting product, as a formal sum of all one-step graftings.
 This is our first GL-style noncommutative product candidate.
--/
+
 noncomputable def graftProductTree (u t : PTree) : GLCarrier :=
   (PTree.graftings u t).foldr (fun x acc => treeGen x + acc) 0
 
-/--
+
 Leaf-substitution variant of the tree-level product.
 This may turn out to be closer to the proof-theoretic use case.
--/
+
 noncomputable def leafGraftProductTree (u t : PTree) : GLCarrier :=
   (PTree.leafGraftings u t).foldr (fun x acc => treeGen x + acc) 0
+-/
 
 @[simp] theorem treeGen_ne_zero (t : PTree) :
     treeGen t ≠ 0 := by
@@ -752,28 +753,29 @@ noncomputable def leafGraftProductTree (u t : PTree) : GLCarrier :=
   have := congrArg (fun f => f t) h
   simp [treeGen] at this
 
-theorem graftProductTree_nonzero (u t : PTree) :
+/-theorem graftProductTree_nonzero (u t : PTree) :
     graftProductTree u t ≠ 0 := by
-  -- At least the root graft appears.
+   At least the root graft appears.
   sorry
 
-/--
+
 Placeholder for the eventual bilinear extension of the grafting product.
 We do not try to push this further yet.
--/
+
 noncomputable def graftMul :
     GLCarrier →ₗ[ℤ] GLCarrier →ₗ[ℤ] GLCarrier := by
   classical
   sorry
 
-/--
+
 Placeholder for the eventual GL-style coproduct.
 We keep the coalgebraic side open rather than forcing the old CK one here.
--/
+
 noncomputable def deltaTreeGL (t : PTree) :
     GLCarrier ⊗ [ℤ] GLCarrier := by
   classical
   sorry
+-/
 
 /-! ## Auxiliary cut layer retained for possible future coproduct work -/
 
@@ -1864,5 +1866,400 @@ theorem graftMatchingLeafAt_toTree_is_toTree
                 0 rest (by simp) hleaf
                 (NMMS.toTree d') hd')
           · simp [PTree.subtreeAt] at h
+
+/-! ###########################################################################
+## GL / pre-Lie direction on proof trees
+
+At this stage we treat individual proof trees as the primitive objects, and
+their matching-leaf grafting operation as the candidate pre-Lie product.
+
+The ambient linear space of primitives is the formal ℤ-linear span of proof trees.
+Later, the commutative forest algebra `HopfCarrier` should play the role of the
+symmetric algebra `S(g)` in the Oudom–Guin construction.
+
+The cut-based coproduct machinery defined earlier is retained as a proof-theoretic
+comparison object, but the present section follows the GL / Oudom–Guin route.
+############################################################################ -/
+
+/-- The primitive linear space: formal ℤ-linear combinations of proof trees. -/
+abbrev PreLieCarrier := GLCarrier
+
+namespace PTree
+
+/--
+Tree-level matching grafting product.
+
+This is the candidate primitive pre-Lie product:
+we sum all proof trees obtained by replacing a matching leaf of `t`
+by the tree `u`.
+-/
+noncomputable def graftPreLieTree (u t : PTree) : PreLieCarrier :=
+  (matchingLeafGraftings u t).foldr (fun x acc => treeGen x + acc) 0
+
+theorem isGraftableLeafAt_of_graftMatchingLeafAt_eq_some
+    (u t : PTree) (a : Address) (t' : PTree)
+    (h : graftMatchingLeafAt u t a = some t') :
+    IsGraftableLeafAt u t a := by
+  unfold graftMatchingLeafAt at h
+  cases hsub : subtreeAt t a with
+  | none =>
+      simp [hsub] at h
+  | some sub =>
+      cases sub with
+      | leaf s =>
+          by_cases hmatch : u.conclusion = s
+          · simp [hsub, hmatch] at h
+            exact isGraftableLeafAt_of_eq (u := u) (t := t) (a := a) (by
+              simpa [hmatch] using hsub)
+          · simp [hsub, hmatch] at h
+      | node r s cs =>
+          simp [hsub] at h
+
+/--
+If there is a matching graftable leaf, then the tree-level grafting product
+is nonzero.
+
+This is the primitive analogue of the fact that the GL grafting product is
+nontrivial whenever there is at least one admissible grafting site.
+-/
+@[simp] theorem foldr_treeGen_apply
+    (xs : List PTree) (t : PTree) :
+    (xs.foldr (fun x acc => treeGen x + acc) 0) t = (xs.count t : ℤ) := by
+  induction xs with
+  | nil =>
+      simp [treeGen]
+  | cons x xs ih =>
+      by_cases hxt : x = t
+      · subst hxt
+        have h := congrArg (fun z : ℤ => 1 + z) ih
+        simpa [treeGen, add_comm, add_left_comm, add_assoc] using h
+      · simp [treeGen, hxt]
+        exact ih
+
+theorem subtreeAt_some_implies_mem_allAddressesGo
+    (n : Nat) (t u : PTree) (addr a : Address)
+    (hn : t.size ≤ n)
+    (h : subtreeAt t a = some u) :
+    addr ++ a ∈ allAddressesGo n t addr := by
+  induction n generalizing t addr a with
+  | zero =>
+      exfalso
+      exact size_ne_zero t (Nat.eq_zero_of_le_zero hn)
+  | succ n ih =>
+      cases a with
+      | nil =>
+          cases t with
+          | leaf s =>
+              simp [subtreeAt, allAddressesGo]
+          | node r s cs =>
+              simp [subtreeAt, allAddressesGo]
+      | cons i rest =>
+          cases t with
+          | leaf s =>
+              simp [subtreeAt] at h
+          | node r s cs =>
+              simp [subtreeAt] at h
+              obtain ⟨hi, hsub⟩ := h
+              have hchild_size : (cs[i]).size ≤ n := by
+                have himm : IsImmediateSubtree (PTree.node r s cs) (cs[i]) := by
+                  unfold IsImmediateSubtree PTree.children
+                  simp [hi]
+                have hlt : (cs[i]).size < (PTree.node r s cs).size :=
+                  child_size_lt_parent (PTree.node r s cs) (cs[i]) himm
+                have hlt' : (cs[i]).size < n + 1 := lt_of_lt_of_le hlt hn
+                exact Nat.lt_succ_iff.mp hlt'
+              have hmem_child :
+                  (addr ++ [i]) ++ rest ∈ allAddressesGo n (cs[i]) (addr ++ [i]) := by
+                exact ih (cs[i]) (addr ++ [i]) rest hchild_size hsub
+              simp [allAddressesGo]
+              refine ⟨i, hi, ?_⟩
+              simpa [List.append_assoc] using hmem_child
+
+theorem subtreeAt_some_implies_mem_allAddresses
+    (t u : PTree) (a : Address)
+    (h : subtreeAt t a = some u) :
+    a ∈ allAddresses t := by
+  unfold allAddresses
+  simpa using
+    subtreeAt_some_implies_mem_allAddressesGo t.size t u [] a (by rfl) h
+
+theorem graftPreLieTree_nonzero_of_exists_graftable
+    (u t : PTree)
+    (h : ∃ a, IsGraftableLeafAt u t a) :
+    graftPreLieTree u t ≠ 0 := by
+  obtain ⟨a, ha⟩ := h
+  obtain ⟨t', ht'⟩ := graftMatchingLeafAt_spec u t a ha
+
+  have haAddr : a ∈ allAddresses t := by
+    simpa [IsGraftableLeafAt_iff] using
+      (subtreeAt_some_implies_mem_allAddresses
+        (t := t) (a := a) (u := PTree.leaf u.conclusion) ha)
+
+  have hmem : t' ∈ matchingLeafGraftings u t := by
+    unfold matchingLeafGraftings
+    exact List.mem_filterMap.2 ⟨a, haAddr, ht'⟩
+
+  intro hz
+
+  have hcoeff_zero : graftPreLieTree u t t' = 0 := by
+    simpa [hz]
+
+  have hcount_zero :
+      ((List.count t' (matchingLeafGraftings u t) : Nat) : ℤ) = 0 := by
+    simpa [graftPreLieTree, foldr_treeGen_apply] using hcoeff_zero
+
+  have hcount_nat_ne :
+      List.count t' (matchingLeafGraftings u t) ≠ 0 := by
+    intro hc
+    apply List.count_eq_zero.mp hc
+    exact hmem
+
+  have hcount_ne :
+      ((List.count t' (matchingLeafGraftings u t) : Nat) : ℤ) ≠ 0 := by
+    exact_mod_cast hcount_nat_ne
+
+  exact hcount_ne hcount_zero
+
+/--
+Conversely, if there are no matching leaf graftings, the primitive grafting
+product should vanish.
+
+This is useful later for support calculations and for characterising when
+the pre-Lie product is zero.
+-/
+@[simp] theorem graftMatchingLeafAt_eq_none_of_not_graftable
+    (u t : PTree) (a : Address)
+    (h : ¬ IsGraftableLeafAt u t a) :
+    graftMatchingLeafAt u t a = none := by
+  cases hg : graftMatchingLeafAt u t a with
+  | none =>
+      rfl
+  | some t' =>
+      exfalso
+      exact h (isGraftableLeafAt_of_graftMatchingLeafAt_eq_some u t a t' hg)
+
+theorem graftPreLieTree_eq_zero_of_no_graftable
+    (u t : PTree)
+    (h : ∀ a, ¬ IsGraftableLeafAt u t a) :
+    graftPreLieTree u t = 0 := by
+  unfold graftPreLieTree matchingLeafGraftings
+  have hfm :
+      List.filterMap (graftMatchingLeafAt u t) (allAddresses t) = [] := by
+    apply List.filterMap_eq_nil_iff.2
+    intro a ha
+    exact graftMatchingLeafAt_eq_none_of_not_graftable u t a (h a)
+  simp [hfm]
+
+end PTree
+
+/--
+Every tree occurring in the matching-leaf grafting product of two derivation trees
+is again the tree of a derivation of the same outer sequent.
+
+This is the closure statement needed to justify restricting attention to the
+proof-tree fragment inside the ambient rooted-tree space.
+-/
+theorem matchingLeafGraftings_toTree_are_toTree
+    {base : BaseRel} {s_outer s_inner : MultiSequent}
+    (d_outer : NMMS base s_outer)
+    (d_inner : NMMS base s_inner) :
+    ∀ t ∈ PTree.matchingLeafGraftings (NMMS.toTree d_inner) (NMMS.toTree d_outer),
+      ∃ d' : NMMS base s_outer, t = NMMS.toTree d' := by
+  intro t ht
+  unfold PTree.matchingLeafGraftings at ht
+  simp [List.mem_filterMap] at ht
+  obtain ⟨a, ha, hg⟩ := ht
+  have hGraftable :
+      PTree.IsGraftableLeafAt (NMMS.toTree d_inner) (NMMS.toTree d_outer) a := by
+    exact PTree.isGraftableLeafAt_of_graftMatchingLeafAt_eq_some
+      (u := NMMS.toTree d_inner)
+      (t := NMMS.toTree d_outer)
+      (a := a)
+      (t' := t)
+      hg
+  obtain ⟨d', hd'⟩ :=
+    graftMatchingLeafAt_toTree_is_toTree d_outer d_inner a hGraftable
+  exact ⟨d', Option.some.inj (hg.symm.trans hd')⟩
+
+/--
+Bilinear extension of the primitive matching-leaf grafting product.
+
+This is the candidate pre-Lie product on the linear span of proof trees.
+-/
+noncomputable def graftPreLie :
+    PreLieCarrier →ₗ[ℤ] PreLieCarrier →ₗ[ℤ] PreLieCarrier := by
+  classical
+  sorry
+
+/--
+On tree generators, the bilinear extension agrees with the underlying
+tree-level grafting product.
+-/
+theorem graftPreLie_on_generators
+    (u t : PTree) :
+    graftPreLie (treeGen u) (treeGen t) = PTree.graftPreLieTree u t := by
+  sorry
+
+/--
+Candidate pre-Lie identity on generators.
+
+This is the key structural theorem to aim for next.  At present we state it
+as a placeholder.  Once proved, the primitive space of proof trees acquires
+a genuine pre-Lie structure.
+-/
+theorem graftPreLie_preLie_identity_on_generators
+    (x y z : PTree) :
+    graftPreLie (treeGen x)
+      (graftPreLie (treeGen y) (treeGen z))
+    -
+    graftPreLie
+      (graftPreLie (treeGen x) (treeGen y))
+      (treeGen z)
+    =
+    graftPreLie (treeGen y)
+      (graftPreLie (treeGen x) (treeGen z))
+    -
+    graftPreLie
+      (graftPreLie (treeGen y) (treeGen x))
+      (treeGen z) := by
+  sorry
+
+/-! ###########################################################################
+## Symmetric-algebra / forest side
+
+We now regard `HopfCarrier = AddMonoidAlgebra ℤ (Multiset PTree)` as the
+commutative forest algebra on proof trees, i.e. the symmetric algebra on the
+primitive pre-Lie space.
+
+The standard cocommutative coproduct on this symmetric algebra sends each
+primitive tree to `t ⊗ 1 + 1 ⊗ t` and extends multiplicatively.
+############################################################################ -/
+
+/--
+Primitive coproduct on a single proof tree generator.
+
+This is the standard cocommutative primitive coproduct expected on `S(g)`.
+-/
+noncomputable def deltaPrimTree (t : PTree) :
+    HopfCarrier ⊗[ℤ] HopfCarrier :=
+  treeGen t ⊗ₜ[ℤ] oneForest + oneForest ⊗ₜ[ℤ] treeGen t
+
+/--
+Multiplicative extension of the primitive coproduct to forests.
+
+This is the standard symmetric-algebra coproduct, defined first on forests.
+-/
+noncomputable def deltaSymmForest (f : Forest) :
+    HopfCarrier ⊗[ℤ] HopfCarrier :=
+  f.foldr (fun t acc => deltaPrimTree t * acc) 1
+
+@[simp] theorem deltaSymmForest_nil :
+    deltaSymmForest [] = 1 := by
+  simp [deltaSymmForest]
+
+@[simp] theorem deltaSymmForest_cons (t : PTree) (f : Forest) :
+    deltaSymmForest (t :: f) = deltaPrimTree t * deltaSymmForest f := by
+  simp [deltaSymmForest]
+
+@[simp] theorem deltaSymmForest_singleton (t : PTree) :
+    deltaSymmForest [t] = deltaPrimTree t := by
+  simp [deltaSymmForest]
+
+/--
+The primitive coproduct should be cocommutative.
+
+A precise formulation may later use the tensor-flip map explicitly.
+For now we record this as a placeholder.
+-/
+theorem deltaPrimTree_cocommutative
+    (t : PTree) :
+    True := by
+  trivial
+
+/-! ###########################################################################
+## Oudom–Guin style extension (placeholders)
+
+The goal is to extend the primitive pre-Lie product to the symmetric algebra
+and then define the associated associative Hopf product, following
+Oudom–Guin.
+############################################################################ -/
+
+/--
+Placeholder for the recursive Oudom–Guin extension of the pre-Lie product
+from primitive trees to the symmetric algebra / forest algebra.
+
+Intended behaviour:
+* `1 ▷ a = a`
+* `a ▷ 1 = ε(a) 1`
+* recursive extension in the left argument
+* multiplicative / coalgebraic extension in the right argument
+-/
+noncomputable def preLieExtend :
+    HopfCarrier → HopfCarrier → HopfCarrier := by
+  classical
+  sorry
+
+/--
+The Oudom–Guin associative product on the symmetric algebra of proof trees.
+
+Ultimately this should make `(HopfCarrier, ogMul, Δ)` into a cocommutative Hopf
+algebra isomorphic to the enveloping algebra of the Lie algebra obtained by
+antisymmetrising the primitive pre-Lie product.
+-/
+noncomputable def ogMul (a b : HopfCarrier) : HopfCarrier := by
+  classical
+  sorry
+
+/--
+Left unit law for the Oudom–Guin product (placeholder).
+-/
+theorem ogMul_one_left (a : HopfCarrier) :
+    ogMul oneForest a = a := by
+  sorry
+
+/--
+Right unit law for the Oudom–Guin product (placeholder).
+-/
+theorem ogMul_one_right (a : HopfCarrier) :
+    ogMul a oneForest = a := by
+  sorry
+
+/--
+Associativity of the Oudom–Guin product (placeholder).
+-/
+theorem ogMul_assoc (a b c : HopfCarrier) :
+    ogMul (ogMul a b) c = ogMul a (ogMul b c) := by
+  sorry
+
+/--
+Compatibility of the Oudom–Guin product with the symmetric coproduct
+(placeholder bialgebra law).
+-/
+theorem ogMul_delta_compatible
+    (a b : HopfCarrier) :
+    True := by
+  trivial
+
+/-! ###########################################################################
+## Primitive / Lie side (placeholders)
+
+Once the pre-Lie identity is established, the antisymmetrisation of
+`graftPreLie` should define a Lie bracket on the primitive space.
+############################################################################ -/
+
+/--
+The antisymmetrisation of the pre-Lie product.
+-/
+noncomputable def graftLieBracket
+    (x y : PreLieCarrier) : PreLieCarrier :=
+  graftPreLie x y - graftPreLie y x
+
+/--
+Placeholder Jacobi identity for the antisymmetrised grafting bracket.
+-/
+theorem graftLieBracket_jacobi
+    (x y z : PreLieCarrier) :
+    True := by
+  trivial
 
 end Syntax
