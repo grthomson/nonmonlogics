@@ -5,7 +5,10 @@ import Mathlib.Algebra.MonoidAlgebra.Basic
 import Mathlib.Algebra.FreeMonoid.Basic
 import Mathlib.LinearAlgebra.TensorProduct.Basic
 import Mathlib.RingTheory.TensorProduct.Basic
+import Mathlib.Data.Finsupp.Basic
 
+#check Finsupp.sum
+#check Finsupp.linearCombination
 namespace Syntax
 
 universe u
@@ -17,13 +20,23 @@ inductive Atomic : Type
 | String : Atomic
 deriving DecidableEq, Repr
 
+--falsum here is our "incompatibility detector"
+--do not yet assume anything re A, B, C ⊢ ⊥ or
+-- ⊢ A ∧ B ∧ C ⇒ ⊥ , indeed we don't
+-- want to assume Deduction Thm for ⇒ at all
+-- I think! think of our logical vocab as unconstrained,
+-- defining only trees with arities and types?
+-- almost like an AST where semantics come from base consequence relation
 inductive MyProp : Type u
 | atom : Atomic → MyProp
+| falsum : MyProp
 | imp  : MyProp → MyProp → MyProp
 | conj : MyProp → MyProp → MyProp
 | disj : MyProp → MyProp → MyProp
 | neg  : MyProp → MyProp
 deriving DecidableEq, Repr
+
+notation "⊥" => MyProp.falsum
 
 infixr:60 " ⇒ " => MyProp.imp
 infixr:55 " & " => MyProp.conj
@@ -412,18 +425,32 @@ theorem subtreeAt_toTree_is_toTree
 
 /-! ## Base admissibility retained as useful proof-theoretic structure -/
 
+-- Compatibility may be used to detect where non-logical
+-- atoms are not mutually assertible -- and so further grafting
+-- must fail via Admissibility conditions
+def AntecedentCompatible (base : BaseRel) (Γ : Multiset MyProp) : Prop :=
+  ¬ base Γ ({⊥} : Multiset MyProp)
+
+def SequentCompatible (base : BaseRel) (s : MultiSequent) : Prop :=
+  AntecedentCompatible base s.lhs
+
 def IsBaseAdmissible (base : BaseRel) (t : PTree)
     (cut : List Address) : Prop :=
   ∀ addr ∈ cut, ∀ u : PTree,
     PTree.subtreeAt t addr = some u →
-    base u.conclusion.lhs u.conclusion.rhs
+    base u.conclusion.lhs u.conclusion.rhs ∧
+    SequentCompatible base u.conclusion
 
 def IsDerivablyClosed (base : BaseRel) : Prop :=
   ∀ s : MultiSequent, Nonempty (NMMS base s) →
     base s.lhs s.rhs
 
-theorem derivablyClosed_isBaseAdmissible
-    {base : BaseRel} (hclosed : IsDerivablyClosed base)
+def IsDerivablyClosedCompatible (base : BaseRel) : Prop :=
+  ∀ s : MultiSequent, Nonempty (NMMS base s) →
+    base s.lhs s.rhs ∧ SequentCompatible base s
+
+theorem derivablyClosedCompatible_isBaseAdmissible
+    {base : BaseRel} (hclosed : IsDerivablyClosedCompatible base)
     {s : MultiSequent} (d : NMMS base s) (cut : List Address) :
     IsBaseAdmissible base (NMMS.toTree d) cut := by
   intro addr _ u hsubt
@@ -431,8 +458,7 @@ theorem derivablyClosed_isBaseAdmissible
   have hu : u.conclusion = s' := by
     simpa [hd'] using toTree_conclusion d'
   rw [hu]
-  apply hclosed
-  exact ⟨d'⟩
+  exact hclosed s' ⟨d'⟩
 
 /-! ## GL-style grafting preliminaries -/
 
@@ -714,6 +740,67 @@ theorem size_lt_of_root_grafting (u t : PTree) :
     t.size < (insertChildAtRoot u t).size := by
   exact insertChildAtRoot_size_strict u t
 
+theorem replaceNth_foldr_size_lt
+    (cs : List PTree) (i : Nat) (new : PTree)
+    (hi : i < cs.length)
+    (hsize : (cs[i]).size < new.size) :
+    cs.foldr (fun t n => t.size + n) 0 <
+      (PTree.replaceNth cs i new).foldr (fun t n => t.size + n) 0 := by
+  induction cs generalizing i with
+  | nil =>
+      cases hi
+  | cons c cs ih =>
+      cases i with
+      | zero =>
+          simp [PTree.replaceNth, List.foldr] at hsize ⊢
+          exact hsize
+      | succ i =>
+          simp [PTree.replaceNth, List.foldr] at hi ⊢
+          have htail :
+              (cs[i]).size < new.size := by
+            simpa using hsize
+          have ih' := ih i (by simpa using hi) htail
+          exact ih'
+
+theorem modifyAt_increases_size_of_local_increase
+    (t t' : PTree) (a : Address) (f : PTree → PTree)
+    (hmod : PTree.modifyAt t a f = some t')
+    (hinc : ∀ u, PTree.subtreeAt t a = some u → u.size < (f u).size) :
+    t.size < t'.size := by
+  induction a generalizing t t' with
+  | nil =>
+      simp [PTree.modifyAt] at hmod
+      cases hmod
+      have hroot : t.size < (f t).size := by
+        exact hinc t (by simp [PTree.subtreeAt])
+      simpa using hroot
+  | cons i rest ih =>
+      cases t with
+      | leaf s =>
+          simp [PTree.modifyAt] at hmod
+      | node r s cs =>
+          by_cases hi : i < cs.length
+          · simp [PTree.modifyAt, hi] at hmod
+            cases hrec : PTree.modifyAt (cs[i]) rest f with
+            | none =>
+                simp [hrec] at hmod
+            | some child' =>
+                simp [hrec] at hmod
+                cases hmod
+                have hinc_child :
+                    ∀ u, PTree.subtreeAt (cs[i]) rest = some u → u.size < (f u).size := by
+                  intro u hu
+                  apply hinc u
+                  simp [PTree.subtreeAt, hi, hu]
+                have hchild_lt : (cs[i]).size < child'.size := by
+                  exact ih (t := cs[i]) (t' := child') hrec hinc_child
+                have hsum_lt :
+                    cs.foldr (fun t n => t.size + n) 0 <
+                      (PTree.replaceNth cs i child').foldr (fun t n => t.size + n) 0 := by
+                  exact replaceNth_foldr_size_lt cs i child' hi hchild_lt
+                simpa [PTree.size] using hsum_lt
+          · simp [PTree.modifyAt, hi] at hmod
+
 /--
 Future target: characterise precisely which graftings preserve derivability.
 -/
@@ -721,7 +808,19 @@ theorem grafting_preserves_toTree_shape
     {base : BaseRel} {s : MultiSequent} (d : NMMS base s) (u : PTree) :
     ∀ t, t ∈ graftings u (NMMS.toTree d) → t.size > (NMMS.toTree d).size := by
   intro t ht
-  sorry
+  unfold graftings at ht
+  rcases List.mem_filterMap.1 ht with ⟨a, ha, hgraft⟩
+  have hmod :
+      PTree.modifyAt (NMMS.toTree d) a (PTree.insertChildAtRoot u) = some t := by
+    simpa [PTree.graftAt] using hgraft
+  have hlt :
+      (NMMS.toTree d).size < t.size := by
+    apply modifyAt_increases_size_of_local_increase
+      (t := NMMS.toTree d) (t' := t) (a := a) (f := PTree.insertChildAtRoot u)
+      hmod
+    intro sub hsub
+    simpa using PTree.insertChildAtRoot_size_strict u sub
+  exact hlt
 
 end PTree
 
@@ -1357,8 +1456,13 @@ theorem remainderGo_toTree_is_toTree
           some (NMMS.toTree d) := by
         simp [PTree.subtreeAt]
       have hconc := toTree_conclusion d
-      have := hbase [] hroot (NMMS.toTree d) hsubt
-      rwa [hconc] at this
+      have hrootbase :
+          base (NMMS.toTree d).conclusion.lhs (NMMS.toTree d).conclusion.rhs ∧
+          SequentCompatible base (NMMS.toTree d).conclusion :=
+        hbase [] hroot (NMMS.toTree d) hsubt
+      have : base (NMMS.toTree d).conclusion.lhs (NMMS.toTree d).conclusion.rhs :=
+        hrootbase.1
+      simpa [hconc] using this
     have hrem : PTree.remainderGo cut [] (NMMS.toTree d) =
         PTree.leaf s := by
       cases d <;> simp [NMMS.toTree, PTree.remainderGo, hroot]
@@ -2086,27 +2190,809 @@ Bilinear extension of the primitive matching-leaf grafting product.
 
 This is the candidate pre-Lie product on the linear span of proof trees.
 -/
+noncomputable def graftPreLieRight (u : PTree) :
+    PreLieCarrier →ₗ[ℤ] PreLieCarrier :=
+  Finsupp.linearCombination ℤ (fun t => PTree.graftPreLieTree u t)
+
+/-
+tree × tree → tree
+   ↓ linearise in right
+tree → (linear map)
+   ↓ linearise in left
+linear × linear → linear
+-/
+
 noncomputable def graftPreLie :
-    PreLieCarrier →ₗ[ℤ] PreLieCarrier →ₗ[ℤ] PreLieCarrier := by
-  classical
-  sorry
+    PreLieCarrier →ₗ[ℤ] PreLieCarrier →ₗ[ℤ] PreLieCarrier :=
+  Finsupp.linearCombination ℤ graftPreLieRight
 
 /--
 On tree generators, the bilinear extension agrees with the underlying
 tree-level grafting product.
 -/
+theorem graftPreLieRight_on_generator
+    (u t : PTree) :
+    graftPreLieRight u (treeGen t) = PTree.graftPreLieTree u t := by
+  simp [graftPreLieRight, treeGen]
+
 theorem graftPreLie_on_generators
     (u t : PTree) :
     graftPreLie (treeGen u) (treeGen t) = PTree.graftPreLieTree u t := by
+  simp [graftPreLie, graftPreLieRight, treeGen]
+
+@[simp] theorem replaceNth_length
+    (xs : List α) (i : Nat) (y : α) :
+    (PTree.replaceNth xs i y).length = xs.length := by
+  induction xs generalizing i with
+  | nil =>
+      cases i <;> simp [PTree.replaceNth]
+  | cons x xs ih =>
+      cases i <;> simp [PTree.replaceNth, ih]
+
+@[simp] theorem getElem_replaceNth_self
+    (xs : List α) (i : Nat) (y : α) (h : i < (PTree.replaceNth xs i y).length) :
+    (PTree.replaceNth xs i y)[i] = y := by
+  have hi : i < xs.length := by
+    simpa [replaceNth_length] using h
+  induction xs generalizing i y with
+  | nil =>
+      cases hi
+  | cons x xs ih =>
+      cases i with
+      | zero =>
+          simp [PTree.replaceNth]
+      | succ i =>
+          simp [PTree.replaceNth] at h hi ⊢
+          exact ih i y (by simpa [replaceNth_length] using hi) hi
+
+theorem subtreeAt_modifyAt_append
+    (t u : PTree) (a c : Address) (t' : PTree)
+    (h : PTree.modifyAt t a (fun _ => u) = some t') :
+    PTree.subtreeAt t' (a ++ c) = PTree.subtreeAt u c := by
+  induction a generalizing t t' with
+  | nil =>
+      simp [PTree.modifyAt] at h
+      cases h
+      simp [PTree.subtreeAt]
+  | cons i rest ih =>
+      cases t with
+      | leaf s =>
+          simp [PTree.modifyAt] at h
+      | node r s cs =>
+          by_cases hi : i < cs.length
+          · simp [PTree.modifyAt, hi] at h
+            cases hrec : PTree.modifyAt (cs[i]) rest (fun _ => u) with
+            | none =>
+                simp [hrec] at h
+            | some child' =>
+                simp [hrec] at h
+                cases h
+                simp [PTree.subtreeAt, hi]
+                have hih :
+                    PTree.subtreeAt child' (rest ++ c) = PTree.subtreeAt u c := by
+                  exact ih (cs[i]) child' hrec
+                simpa [PTree.replaceNth, hi] using hih
+          · simp [PTree.modifyAt, hi] at h
+
+theorem subtreeAt_graftMatchingLeafAt_append
+    (u t : PTree) (a c : Address) (t' : PTree)
+    (h : PTree.graftMatchingLeafAt u t a = some t') :
+    PTree.subtreeAt t' (a ++ c) = PTree.subtreeAt u c := by
+  unfold PTree.graftMatchingLeafAt at h
+  cases hsub : PTree.subtreeAt t a with
+  | none =>
+      simp [hsub] at h
+  | some sub =>
+      cases sub with
+      | node r s cs =>
+          simp [hsub] at h
+      | leaf s =>
+          simp [hsub] at h
+          exact subtreeAt_modifyAt_append t u a c t' h.2
+
+theorem addresses_after_graft_split
+    (u t : PTree) (a c : Address) (t' : PTree)
+    (h : PTree.graftMatchingLeafAt u t a = some t') :
+    PTree.subtreeAt t' (a ++ c) = PTree.subtreeAt u c := by
+  exact subtreeAt_graftMatchingLeafAt_append u t a c t' h
+
+theorem subtreeAt_graftMatchingLeafAt_self
+    (u t : PTree) (a : Address) (t' : PTree)
+    (h : PTree.graftMatchingLeafAt u t a = some t') :
+    PTree.subtreeAt t' a = some u := by
+  simpa using subtreeAt_graftMatchingLeafAt_append u t a [] t' h
+
+theorem graftable_after_graft_split_inner
+    (x y z : PTree) (a c : Address) (z' : PTree)
+    (h : PTree.graftMatchingLeafAt y z a = some z')
+    (hb : PTree.IsGraftableLeafAt x z' (a ++ c)) :
+    PTree.IsGraftableLeafAt x y c := by
+  rw [PTree.IsGraftableLeafAt_iff] at hb ⊢
+  have hs :
+      PTree.subtreeAt z' (a ++ c) = PTree.subtreeAt y c := by
+    exact subtreeAt_graftMatchingLeafAt_append y z a c z' h
+  rw [hs] at hb
+  exact hb
+
+theorem graftable_after_graft_split
+    (x y z : PTree) (a c : Address) (z' : PTree)
+    (h : PTree.graftMatchingLeafAt y z a = some z')
+    (hb : PTree.IsGraftableLeafAt x z' (a ++ c)) :
+    PTree.IsGraftableLeafAt x y c := by
+  exact graftable_after_graft_split_inner x y z a c z' h hb
+
+@[simp] theorem getElem_replaceNth_of_ne
+    (xs : List α) (i j : Nat) (y : α)
+    (hj : j < xs.length) (hij : j ≠ i) :
+    (PTree.replaceNth xs i y)[j]'(by simpa [replaceNth_length] using hj) = xs[j] := by
+  induction xs generalizing i j with
+  | nil =>
+      cases hj
+  | cons x xs ih =>
+      cases i with
+      | zero =>
+          cases j with
+          | zero =>
+              cases (hij rfl)
+          | succ j =>
+              simp [PTree.replaceNth]
+      | succ i =>
+          cases j with
+          | zero =>
+              simp [PTree.replaceNth]
+          | succ j =>
+              simp [PTree.replaceNth] at hj ⊢
+              exact ih i j hj (by
+                intro hji
+                apply hij
+                simpa [hji])
+
+theorem comparable_cons_cons_of_comparable
+    {i : Nat} {a b : Address}
+    (h : PTree.comparable a b) :
+    PTree.comparable (i :: a) (i :: b) := by
+  cases h with
+  | inl ha =>
+      left
+      rcases ha with ⟨c, hc⟩
+      refine ⟨c, ?_⟩
+      simp [PTree.isAncestorOf, hc]
+  | inr hb =>
+      right
+      rcases hb with ⟨c, hc⟩
+      refine ⟨c, ?_⟩
+      simp [PTree.isAncestorOf, hc]
+
+theorem subtreeAt_modifyAt_of_not_comparable
+    (t u : PTree) (a b : Address) (t' : PTree)
+    (h : PTree.modifyAt t a (fun _ => u) = some t')
+    (hb : ¬ PTree.comparable a b) :
+    PTree.subtreeAt t' b = PTree.subtreeAt t b := by
+  induction a generalizing t t' b with
+  | nil =>
+      exfalso
+      apply hb
+      exact Or.inl (PTree.root_isAncestorOf b)
+
+  | cons i rest ih =>
+      cases b with
+      | nil =>
+          exfalso
+          apply hb
+          exact Or.inr (PTree.root_isAncestorOf (i :: rest))
+
+      | cons j brest =>
+          cases t with
+          | leaf s =>
+              simp [PTree.modifyAt] at h
+
+          | node r s cs =>
+              by_cases hi : i < cs.length
+              · simp [PTree.modifyAt, hi] at h
+                cases hrec : PTree.modifyAt (cs[i]) rest (fun _ => u) with
+                | none =>
+                    simp [hrec] at h
+                | some child' =>
+                    simp [hrec] at h
+                    cases h
+                    by_cases hij : j = i
+                    · subst hij
+                      have hb' : ¬ PTree.comparable rest brest := by
+                        intro hcomp
+                        apply hb
+                        exact comparable_cons_cons_of_comparable hcomp
+                      simp [PTree.subtreeAt, hi]
+                      exact ih (t := cs[j]) (b := brest) (t' := child') hrec hb'
+
+                    · by_cases hj : j < cs.length
+                      · have hlen : j < (PTree.replaceNth cs i child').length := by
+                          simpa [replaceNth_length] using hj
+                        have hget :
+                            (PTree.replaceNth cs i child')[j] = cs[j] := by
+                          simpa using getElem_replaceNth_of_ne cs i j child' hj hij
+                        simp [PTree.subtreeAt, hj, hlen, hget]
+
+                      · have hlen : ¬ j < (PTree.replaceNth cs i child').length := by
+                          simpa [replaceNth_length] using hj
+                        simp [PTree.subtreeAt, hj, hlen]
+
+              · simp [PTree.modifyAt, hi] at h
+
+theorem subtreeAt_graftMatchingLeafAt_of_not_comparable
+    (u t : PTree) (a b : Address) (t' : PTree)
+    (h : PTree.graftMatchingLeafAt u t a = some t')
+    (hb : ¬ PTree.comparable a b) :
+    PTree.subtreeAt t' b = PTree.subtreeAt t b := by
+  unfold PTree.graftMatchingLeafAt at h
+  cases hsub : PTree.subtreeAt t a with
+  | none =>
+      simp [hsub] at h
+  | some sub =>
+      cases sub with
+      | node r s cs =>
+          simp [hsub] at h
+      | leaf s =>
+          simp [hsub] at h
+          exact subtreeAt_modifyAt_of_not_comparable t u a b t' h.2 hb
+
+theorem graftable_after_graft_split_outer
+    (x y z : PTree) (a b : Address) (z' : PTree)
+    (h : PTree.graftMatchingLeafAt y z a = some z')
+    (hb : ¬ PTree.comparable a b)
+    (hg : PTree.IsGraftableLeafAt x z' b) :
+    PTree.IsGraftableLeafAt x z b := by
+  rw [PTree.IsGraftableLeafAt_iff] at hg ⊢
+  rw [subtreeAt_graftMatchingLeafAt_of_not_comparable y z a b z' h hb] at hg
+  exact hg
+
+/-
+###############################################################################
+## Next structural lemmas toward the tree-level pre-Lie identity
+
+These lemmas isolate the two fundamental behaviours of double grafting:
+
+1. Inner exchange:
+   grafting inside the newly inserted subtree is the same as first grafting
+   inside that subtree, then inserting the result.
+
+2. Incomparable commutation:
+   graftings at incomparable addresses commute.
+
+Once these are established, the tree-level pre-Lie identity should follow by
+splitting two-step graftings into:
+- inner terms, corresponding to (x ▷ y) ▷ z;
+- outer/incomparable terms, symmetric in x and y.
+###############################################################################
+-/
+
+/-- If a graft of `y` into `z` at `a` succeeds, then every subtree below `a`
+is exactly read from `y` with the prefix `a` removed. This is the already-proved
+inner-address lemma, restated here for convenience. -/
+theorem graftMatchingLeafAt_inner_subtree
+    (y z : PTree) (a c : Address) (z' : PTree)
+    (h : PTree.graftMatchingLeafAt y z a = some z') :
+    PTree.subtreeAt z' (a ++ c) = PTree.subtreeAt y c := by
+  exact subtreeAt_graftMatchingLeafAt_append y z a c z' h
+
+/-- Inner graftability transport:
+if `x` is graftable into the result of grafting `y` into `z` at an address
+of the form `a ++ c`, then `x` was already graftable into `y` at `c`. -/
+theorem graftMatchingLeafAt_inner_graftable
+    (x y z : PTree) (a c : Address) (z' : PTree)
+    (h : PTree.graftMatchingLeafAt y z a = some z')
+    (hg : PTree.IsGraftableLeafAt x z' (a ++ c)) :
+    PTree.IsGraftableLeafAt x y c := by
+  exact graftable_after_graft_split_inner x y z a c z' h hg
+
+/-- Outer graftability transport:
+if `x` is graftable at an address incomparable with `a` after grafting `y`
+into `z` at `a`, then it was already graftable there in the original `z`. -/
+theorem graftMatchingLeafAt_outer_graftable
+    (x y z : PTree) (a b : Address) (z' : PTree)
+    (h : PTree.graftMatchingLeafAt y z a = some z')
+    (hb : ¬ PTree.comparable a b)
+    (hg : PTree.IsGraftableLeafAt x z' b) :
+    PTree.IsGraftableLeafAt x z b := by
+  exact graftable_after_graft_split_outer x y z a b z' h hb hg
+
+/-- Successful matching-leaf grafting preserves the overall root conclusion. -/
+theorem graftMatchingLeafAt_preserves_conclusion
+    (u t t' : PTree) (a : Address)
+    (h : PTree.graftMatchingLeafAt u t a = some t') :
+    t'.conclusion = t.conclusion := by
+  cases a with
+  | nil =>
+      cases t with
+      | leaf s =>
+          unfold PTree.graftMatchingLeafAt at h
+          by_cases hmatch : u.conclusion = s
+          · simp [PTree.subtreeAt, PTree.modifyAt, hmatch] at h
+            cases h
+            simpa [PTree.conclusion] using hmatch
+          · simp [PTree.subtreeAt, PTree.modifyAt, hmatch] at h
+      | node r s cs =>
+          unfold PTree.graftMatchingLeafAt at h
+          simp [PTree.subtreeAt] at h
+
+  | cons i rest =>
+      cases t with
+      | leaf s =>
+          unfold PTree.graftMatchingLeafAt at h
+          simp [PTree.subtreeAt] at h
+
+      | node r s cs =>
+          unfold PTree.graftMatchingLeafAt at h
+          by_cases hi : i < cs.length
+          · cases hsub : PTree.subtreeAt cs[i] rest with
+            | none =>
+                simp [PTree.subtreeAt, hi, hsub] at h
+            | some sub =>
+                cases sub with
+                | node r' s' cs' =>
+                    simp [PTree.subtreeAt, hi, hsub] at h
+                | leaf s' =>
+                    by_cases hmatch : u.conclusion = s'
+                    · simp [PTree.subtreeAt, hi, hsub, hmatch] at h
+                      cases hmod : PTree.modifyAt cs[i] rest (fun _ => u) with
+                      | none =>
+                          simp [PTree.modifyAt, hi, hmod] at h
+                      | some child' =>
+                          simp [PTree.modifyAt, hi, hmod] at h
+                          cases h
+                          simp [PTree.conclusion]
+                    · simp [PTree.subtreeAt, hi, hsub, hmatch] at h
+          · simp [PTree.subtreeAt, hi] at h
+
+@[simp] theorem replaceNth_replaceNth_same
+    (xs : List α) (i : Nat) (y z : α) :
+    PTree.replaceNth (PTree.replaceNth xs i y) i z =
+      PTree.replaceNth xs i z := by
+  induction xs generalizing i with
+  | nil =>
+      cases i <;> simp [PTree.replaceNth]
+  | cons x xs ih =>
+      cases i <;> simp [PTree.replaceNth, ih]
+
+/-- If we first replace the subtree at `a` by `u`, and then replace the subtree
+at `a ++ c` by `x`, this is the same as first replacing inside `u` at `c`
+and then putting the resulting tree back at `a`. -/
+theorem modifyAt_append_exchange
+    (t u x : PTree) (a c : Address)
+    (t' u' : PTree)
+    (ht : PTree.modifyAt t a (fun _ => u) = some t')
+    (hu : PTree.modifyAt u c (fun _ => x) = some u') :
+    PTree.modifyAt t' (a ++ c) (fun _ => x) =
+      PTree.modifyAt t a (fun _ => u') := by
+  induction a generalizing t t' with
+  | nil =>
+      simp [PTree.modifyAt] at ht ⊢
+      cases ht
+      simpa [PTree.modifyAt] using hu
+  | cons i rest ih =>
+      cases t with
+      | leaf s =>
+          simp [PTree.modifyAt] at ht
+      | node r s cs =>
+          by_cases hi : i < cs.length
+          · simp [PTree.modifyAt, hi] at ht ⊢
+            cases hrec : PTree.modifyAt (cs[i]) rest (fun _ => u) with
+            | none =>
+                simp [hrec] at ht
+            | some child' =>
+                simp [hrec] at ht
+                cases ht
+                have hih :
+                    PTree.modifyAt child' (rest ++ c) (fun _ => x) =
+                      PTree.modifyAt (cs[i]) rest (fun _ => u') := by
+                  exact ih (t := cs[i]) (t' := child') hrec
+                cases hright : PTree.modifyAt (cs[i]) rest (fun _ => u') with
+                | none =>
+                    have hchild :
+                        PTree.modifyAt child' (rest ++ c) (fun _ => x) = none := by
+                      rw [hih]
+                      exact hright
+                    simpa [PTree.modifyAt, hi, hchild]
+                | some child'' =>
+                    have hchild :
+                        PTree.modifyAt child' (rest ++ c) (fun _ => x) = some child'' := by
+                      rw [hih]
+                      exact hright
+                    simpa [PTree.modifyAt, hi, hchild, replaceNth_replaceNth_same]
+          · simp [PTree.modifyAt, hi] at ht
+
+/-- Inner exchange for successful grafts.
+
+If grafting `y` into `z` at `a` succeeds, and grafting `x` into `y` at `c`
+succeeds, then grafting `x` into the already-grafted tree at `a ++ c`
+is the same as first forming the grafted version of `y` and then inserting
+that at `a`.
+-/
+theorem graftMatchingLeafAt_inner_exchange
+    (x y z : PTree) (a c : Address)
+    (z' y' : PTree)
+    (hyz : PTree.graftMatchingLeafAt y z a = some z')
+    (hxy : PTree.graftMatchingLeafAt x y c = some y') :
+    PTree.graftMatchingLeafAt x z' (a ++ c) = PTree.graftMatchingLeafAt y' z a := by
+  have hs1 : PTree.subtreeAt z' (a ++ c) = PTree.subtreeAt y c := by
+    exact subtreeAt_graftMatchingLeafAt_append y z a c z' hyz
+
+  have hs2 : PTree.subtreeAt y c = some (PTree.leaf x.conclusion) := by
+    exact (PTree.IsGraftableLeafAt_iff x y c).mp
+      (PTree.isGraftableLeafAt_of_graftMatchingLeafAt_eq_some x y c y' hxy)
+
+  have hs : PTree.subtreeAt z' (a ++ c) = some (PTree.leaf x.conclusion) := by
+    rw [hs1, hs2]
+
+  have hyroot : PTree.subtreeAt z a = some (PTree.leaf y.conclusion) := by
+    exact (PTree.IsGraftableLeafAt_iff y z a).mp
+      (PTree.isGraftableLeafAt_of_graftMatchingLeafAt_eq_some y z a z' hyz)
+
+  have hconc : y'.conclusion = y.conclusion := by
+    exact graftMatchingLeafAt_preserves_conclusion x y y' c hxy
+
+  have hmod_yz : PTree.modifyAt z a (fun _ => y) = some z' := by
+    unfold PTree.graftMatchingLeafAt at hyz
+    simp [hyroot] at hyz
+    exact hyz
+
+  have hmod_xy : PTree.modifyAt y c (fun _ => x) = some y' := by
+    unfold PTree.graftMatchingLeafAt at hxy
+    simp [hs2] at hxy
+    exact hxy
+
+  have hmod_exch :
+      PTree.modifyAt z' (a ++ c) (fun _ => x) =
+        PTree.modifyAt z a (fun _ => y') := by
+    exact modifyAt_append_exchange z y x a c z' y' hmod_yz hmod_xy
+
+  unfold PTree.graftMatchingLeafAt
+  simp [hs, hyroot, hconc, hmod_exch]
+
+/-- Replacing different indices commutes. -/
+theorem replaceNth_replaceNth_of_ne
+    (xs : List α) (i j : Nat) (x y : α)
+    (hij : i ≠ j) :
+    PTree.replaceNth (PTree.replaceNth xs i x) j y =
+      PTree.replaceNth (PTree.replaceNth xs j y) i x := by
+  induction xs generalizing i j with
+  | nil =>
+      cases i <;> cases j <;> simp [PTree.replaceNth]
+  | cons z zs ih =>
+      cases i with
+      | zero =>
+          cases j with
+          | zero =>
+              exfalso
+              exact hij rfl
+          | succ j =>
+              simp [PTree.replaceNth]
+      | succ i =>
+          cases j with
+          | zero =>
+              simp [PTree.replaceNth]
+          | succ j =>
+              simp [PTree.replaceNth]
+              apply ih
+              intro h
+              apply hij
+              simpa [h]
+
+/-- If we modify at incomparable addresses, the two modifications commute. -/
+theorem modifyAt_incomparable_commute
+    (t x y : PTree) (a b : Address)
+    (hb : ¬ PTree.comparable a b)
+    (t₁ t₂ t₃ : PTree)
+    (h1 : PTree.modifyAt t a (fun _ => y) = some t₁)
+    (h2 : PTree.modifyAt t₁ b (fun _ => x) = some t₂)
+    (h3 : PTree.modifyAt t b (fun _ => x) = some t₃) :
+    PTree.modifyAt t₃ a (fun _ => y) = some t₂ := by
+  induction a generalizing t t₁ t₂ t₃ b with
+  | nil =>
+      exfalso
+      apply hb
+      exact Or.inl (PTree.root_isAncestorOf b)
+
+  | cons i rest ih =>
+      cases b with
+      | nil =>
+          exfalso
+          apply hb
+          exact Or.inr (PTree.root_isAncestorOf (i :: rest))
+
+      | cons j brest =>
+          cases t with
+          | leaf s =>
+              simp [PTree.modifyAt] at h1
+
+          | node r s cs =>
+              by_cases hi : i < cs.length
+              · by_cases hj : j < cs.length
+                · cases h1c : PTree.modifyAt (cs[i]) rest (fun _ => y) with
+                  | none =>
+                      simp [PTree.modifyAt, hi, h1c] at h1
+                  | some ci =>
+                      simp [PTree.modifyAt, hi, h1c] at h1
+                      cases h1
+
+                      cases h3c : PTree.modifyAt (cs[j]) brest (fun _ => x) with
+                      | none =>
+                          simp [PTree.modifyAt, hj, h3c] at h3
+                      | some cj =>
+                          simp [PTree.modifyAt, hj, h3c] at h3
+                          cases h3
+
+                          by_cases hij : i = j
+                          · subst hij
+                            have hb' : ¬ PTree.comparable rest brest := by
+                              intro hcomp
+                              apply hb
+                              exact comparable_cons_cons_of_comparable hcomp
+
+                            cases h2c : PTree.modifyAt ci brest (fun _ => x) with
+                            | none =>
+                                simp [PTree.modifyAt, hi, h2c] at h2
+                            | some cix =>
+                                simp [PTree.modifyAt, hi, h2c] at h2
+                                cases h2
+
+                                have hcomm_child :
+                                    PTree.modifyAt cj rest (fun _ => y) = some cix := by
+                                  exact ih
+                                    (t := cs[i]) (b := brest) hb'
+                                    (t₁ := ci) (t₂ := cix) (t₃ := cj)
+                                    h1c h2c h3c
+
+                                simpa [PTree.modifyAt, hi, hcomm_child,
+                                  replaceNth_replaceNth_same]
+
+                          · have hj' : j < (PTree.replaceNth cs i ci).length := by
+                              simpa [replaceNth_length] using hj
+
+                            have hgetj :
+                                (PTree.replaceNth cs i ci)[j]'hj' = cs[j] := by
+                              simpa using
+                                (getElem_replaceNth_of_ne cs i j ci hj (by
+                                  intro hEq
+                                  apply hij
+                                  exact hEq.symm))
+
+                            cases h2c :
+                                PTree.modifyAt ((PTree.replaceNth cs i ci)[j]'hj')
+                                  brest (fun _ => x) with
+                            | none =>
+                                have h2none :
+                                    PTree.modifyAt (cs[j]) brest (fun _ => x) = none := by
+                                  simpa [hgetj] using h2c
+                                rw [h3c] at h2none
+                                simp at h2none
+                            | some cix =>
+                                have h2c' :
+                                    PTree.modifyAt (cs[j]) brest (fun _ => x) = some cix := by
+                                  simpa [hgetj] using h2c
+
+                                have hc : cj = cix := by
+                                  apply Option.some.inj
+                                  exact h3c.symm.trans h2c'
+                                subst cj
+
+                                have h2node :
+                                    some
+                                      (PTree.node r s
+                                        (PTree.replaceNth (PTree.replaceNth cs i ci) j cix))
+                                      = some t₂ := by
+                                  have h2' :
+                                      j < cs.length ∧
+                                        (match cs[j].modifyAt brest (fun _ => x) with
+                                          | none => none
+                                          | some child' =>
+                                              some (PTree.node r s
+                                                (PTree.replaceNth
+                                                  (PTree.replaceNth cs i ci) j child')))
+                                        = some t₂ := by
+                                    simpa [PTree.modifyAt, hj', hgetj, h2c] using h2
+                                  have : some
+                                      (PTree.node r s
+                                        (PTree.replaceNth (PTree.replaceNth cs i ci) j cix))
+                                      = some t₂ := by
+                                    simpa [h2c'] using h2'.2
+                                  exact this
+
+                                have hi' : i < (PTree.replaceNth cs j cix).length := by
+                                  simpa [replaceNth_length] using hi
+
+                                have hgeti :
+                                    (PTree.replaceNth cs j cix)[i]'hi' = cs[i] := by
+                                  simpa using
+                                    (getElem_replaceNth_of_ne cs j i cix hi (by
+                                      intro hEq
+                                      apply hij
+                                      exact hEq))
+
+                                have hcomm :
+                                    PTree.replaceNth (PTree.replaceNth cs i ci) j cix =
+                                      PTree.replaceNth (PTree.replaceNth cs j cix) i ci := by
+                                  apply replaceNth_replaceNth_of_ne
+                                  intro hEq
+                                  apply hij
+                                  exact hEq
+
+                                have htarget :
+                                    PTree.modifyAt
+                                      (PTree.node r s (PTree.replaceNth cs j cix))
+                                      (i :: rest) (fun _ => y) =
+                                      some
+                                        (PTree.node r s
+                                          (PTree.replaceNth (PTree.replaceNth cs j cix) i ci)) := by
+                                  simpa [PTree.modifyAt, hi, replaceNth_length, hgeti, h1c]
+
+                                have hrhs :
+                                    some
+                                      (PTree.node r s
+                                        (PTree.replaceNth (PTree.replaceNth cs j cix) i ci))
+                                      = some t₂ := by
+                                  simpa [hcomm] using h2node
+
+                                exact htarget.trans hrhs
+
+                · have h3none : PTree.modifyAt (PTree.node r s cs) (j :: brest) (fun _ => x) = none := by
+                    simp [PTree.modifyAt, hj]
+                  rw [h3none] at h3
+                  simp at h3
+
+              · have h1none : PTree.modifyAt (PTree.node r s cs) (i :: rest) (fun _ => y) = none := by
+                  simp [PTree.modifyAt, hi]
+                rw [h1none] at h1
+                simp at h1
+
+/-- Incomparable successful grafts commute. -/
+theorem graftMatchingLeafAt_incomparable_commute
+    (x y z : PTree) (a b : Address)
+    (hb : ¬ PTree.comparable a b)
+    (z₁ z₂ z₃ : PTree)
+    (h1 : PTree.graftMatchingLeafAt y z a = some z₁)
+    (h2 : PTree.graftMatchingLeafAt x z₁ b = some z₂)
+    (h3 : PTree.graftMatchingLeafAt x z b = some z₃) :
+    PTree.graftMatchingLeafAt y z₃ a = some z₂ := by
+  have hg1 : PTree.IsGraftableLeafAt y z a := by
+    exact PTree.isGraftableLeafAt_of_graftMatchingLeafAt_eq_some y z a z₁ h1
+
+  have hg3 : PTree.IsGraftableLeafAt x z b := by
+    exact PTree.isGraftableLeafAt_of_graftMatchingLeafAt_eq_some x z b z₃ h3
+
+  have hg2 : PTree.IsGraftableLeafAt y z₃ a := by
+    rw [PTree.IsGraftableLeafAt_iff] at hg1 ⊢
+    rw [subtreeAt_graftMatchingLeafAt_of_not_comparable x z b a z₃ h3]
+    · exact hg1
+    · intro hcomp
+      apply hb
+      exact Or.elim hcomp Or.inr Or.inl
+
+  have hs1 : PTree.subtreeAt z a = some (PTree.leaf y.conclusion) := by
+    exact (PTree.IsGraftableLeafAt_iff y z a).mp hg1
+
+  have hs2 : PTree.subtreeAt z₃ a = some (PTree.leaf y.conclusion) := by
+    exact (PTree.IsGraftableLeafAt_iff y z₃ a).mp hg2
+
+  have hs3 : PTree.subtreeAt z b = some (PTree.leaf x.conclusion) := by
+    exact (PTree.IsGraftableLeafAt_iff x z b).mp hg3
+
+  have hs4 : PTree.subtreeAt z₁ b = some (PTree.leaf x.conclusion) := by
+    exact (PTree.IsGraftableLeafAt_iff x z₁ b).mp
+      (PTree.isGraftableLeafAt_of_graftMatchingLeafAt_eq_some x z₁ b z₂ h2)
+
+  have hmod1 : PTree.modifyAt z a (fun _ => y) = some z₁ := by
+    unfold PTree.graftMatchingLeafAt at h1
+    simp [hs1] at h1
+    exact h1
+
+  have hmod2 : PTree.modifyAt z₁ b (fun _ => x) = some z₂ := by
+    unfold PTree.graftMatchingLeafAt at h2
+    simp [hs4] at h2
+    exact h2
+
+  have hmod3 : PTree.modifyAt z b (fun _ => x) = some z₃ := by
+    unfold PTree.graftMatchingLeafAt at h3
+    simp [hs3] at h3
+    exact h3
+
+  have hmod :
+      PTree.modifyAt z₃ a (fun _ => y) = some z₂ := by
+    exact modifyAt_incomparable_commute z x y a b hb z₁ z₂ z₃ hmod1 hmod2 hmod3
+
+  unfold PTree.graftMatchingLeafAt
+  simp [hs2, hmod]
+
+/-- Inner two-step grafts can be re-expressed by first grafting inside the
+inserted tree, then inserting the result back into the outer tree. -/
+theorem two_step_graft_inner
+    (x y z : PTree) (a c : Address)
+    (z' y' w : PTree)
+    (hyz : PTree.graftMatchingLeafAt y z a = some z')
+    (hxy : PTree.graftMatchingLeafAt x y c = some y')
+    (hw  : PTree.graftMatchingLeafAt x z' (a ++ c) = some w) :
+    PTree.graftMatchingLeafAt y' z a = some w := by
+  have hexch :
+      PTree.graftMatchingLeafAt x z' (a ++ c) =
+        PTree.graftMatchingLeafAt y' z a := by
+    exact graftMatchingLeafAt_inner_exchange x y z a c z' y' hyz hxy
+  simpa [hexch] using hw
+
+/-- Outer two-step grafts at incomparable addresses commute. -/
+theorem two_step_graft_outer
+    (x y z : PTree) (a b : Address)
+    (z' z₃ w : PTree)
+    (hyz : PTree.graftMatchingLeafAt y z a = some z')
+    (hb  : ¬ PTree.comparable a b)
+    (hxz': PTree.graftMatchingLeafAt x z' b = some w)
+    (hxz : PTree.graftMatchingLeafAt x z b = some z₃) :
+    PTree.graftMatchingLeafAt y z₃ a = some w := by
+  exact graftMatchingLeafAt_incomparable_commute
+    x y z a b hb z' w z₃ hyz hxz' hxz
+
+/-- Structural two-step decomposition, assuming the second graft site has already
+been classified as either inner (`b = a ++ c`) or outer (`¬ comparable a b`).
+
+This is the Lean-friendly form of the decomposition behind the pre-Lie identity.
+The remaining work is to prove the address-classification lemma saying that every
+successful second graft falls into one of these two cases. -/
+theorem two_step_graft_decomposition
+    (x y z : PTree) (a b : Address)
+    (z' w : PTree)
+    (hyz : PTree.graftMatchingLeafAt y z a = some z')
+    (hxz' : PTree.graftMatchingLeafAt x z' b = some w)
+    (hclass : (∃ c, b = a ++ c) ∨ ¬ PTree.comparable a b) :
+    (∃ c y',
+        b = a ++ c ∧
+        PTree.graftMatchingLeafAt x y c = some y' ∧
+        PTree.graftMatchingLeafAt y' z a = some w)
+    ∨
+    (∃ z₃,
+        ¬ PTree.comparable a b ∧
+        PTree.graftMatchingLeafAt x z b = some z₃ ∧
+        PTree.graftMatchingLeafAt y z₃ a = some w) := by
+  cases hclass with
+  | inl hinner =>
+      rcases hinner with ⟨c, rfl⟩
+      have hg_inner : PTree.IsGraftableLeafAt x y c := by
+        exact graftMatchingLeafAt_inner_graftable x y z a c z' hyz
+          (PTree.isGraftableLeafAt_of_graftMatchingLeafAt_eq_some x z' (a ++ c) w hxz')
+      obtain ⟨y', hxy⟩ := PTree.graftMatchingLeafAt_spec x y c hg_inner
+      left
+      refine ⟨c, y', rfl, hxy, ?_⟩
+      exact two_step_graft_inner x y z a c z' y' w hyz hxy hxz'
+
+  | inr hout =>
+      have hg_outer : PTree.IsGraftableLeafAt x z b := by
+        exact graftMatchingLeafAt_outer_graftable x y z a b z' hyz hout
+          (PTree.isGraftableLeafAt_of_graftMatchingLeafAt_eq_some x z' b w hxz')
+      obtain ⟨z₃, hxz⟩ := PTree.graftMatchingLeafAt_spec x z b hg_outer
+      right
+      refine ⟨z₃, hout, hxz, ?_⟩
+      exact two_step_graft_outer x y z a b z' z₃ w hyz hout hxz' hxz
+
+/-- Tree-level pre-Lie identity.
+
+At this point the remaining ingredient is the address-classification lemma:
+every successful second graft after grafting at `a` is either at an address
+of the form `a ++ c`, or at an address incomparable with `a`.
+
+Once that bookkeeping lemma is in place, the proof should proceed by:
+1. expanding both sides on generators;
+2. splitting two-step grafts using `two_step_graft_decomposition`;
+3. using `two_step_graft_inner` for inner terms;
+4. using `two_step_graft_outer` for outer terms.
+-/
+theorem graftPreLie_preLie_identity_tree_level
+    (x y z : PTree) :
+    graftPreLie (treeGen x) (PTree.graftPreLieTree y z)
+    -
+    graftPreLie (PTree.graftPreLieTree x y) (treeGen z)
+    =
+    graftPreLie (treeGen y) (PTree.graftPreLieTree x z)
+    -
+    graftPreLie (PTree.graftPreLieTree y x) (treeGen z) := by
   sorry
 
-/--
-Candidate pre-Lie identity on generators.
-
-This is the key structural theorem to aim for next.  At present we state it
-as a placeholder.  Once proved, the primitive space of proof trees acquires
-a genuine pre-Lie structure.
--/
 theorem graftPreLie_preLie_identity_on_generators
     (x y z : PTree) :
     graftPreLie (treeGen x)
@@ -2122,7 +3008,8 @@ theorem graftPreLie_preLie_identity_on_generators
     graftPreLie
       (graftPreLie (treeGen y) (treeGen x))
       (treeGen z) := by
-  sorry
+  simpa [graftPreLie_on_generators] using
+    graftPreLie_preLie_identity_tree_level x y z
 
 /-! ###########################################################################
 ## Symmetric-algebra / forest side
