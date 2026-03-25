@@ -2970,6 +2970,73 @@ theorem two_step_graft_decomposition
       refine ⟨z₃, hout, hxz, ?_⟩
       exact two_step_graft_outer x y z a b z' z₃ w hyz hout hxz' hxz
 
+/-- If `a` points to a leaf, then any strict extension of `a` is invalid. -/
+theorem subtreeAt_eq_leaf_append_none
+    (t : PTree) (a c : Address) (s : MultiSequent)
+    (h : PTree.subtreeAt t a = some (PTree.leaf s))
+    (hc : c ≠ []) :
+    PTree.subtreeAt t (a ++ c) = none := by
+  induction a generalizing t with
+  | nil =>
+      cases t with
+      | leaf s' =>
+          simp [PTree.subtreeAt] at h
+          cases h
+          cases c with
+          | nil =>
+              cases hc rfl
+          | cons i rest =>
+              simp [PTree.subtreeAt]
+      | node r s' cs =>
+          simp [PTree.subtreeAt] at h
+
+  | cons i rest ih =>
+      cases t with
+      | leaf s' =>
+          simp [PTree.subtreeAt] at h
+      | node r s' cs =>
+          by_cases hi : i < cs.length
+          · simp [PTree.subtreeAt, hi] at h ⊢
+            exact ih (cs[i]) h
+          · simp [PTree.subtreeAt, hi] at h
+
+/-- After grafting `y` into `z` at address `a`, any successful second graft
+address `b` is either inside the newly inserted subtree (`b = a ++ c`) or
+incomparable with `a`. -/
+theorem graftMatchingLeafAt_address_classification
+    (x y z : PTree) (a b : Address)
+    (z' w : PTree)
+    (hyz : PTree.graftMatchingLeafAt y z a = some z')
+    (hxz' : PTree.graftMatchingLeafAt x z' b = some w) :
+    (∃ c, b = a ++ c) ∨ ¬ PTree.comparable a b := by
+  by_cases hcomp : PTree.comparable a b
+  · cases hcomp with
+    | inl hab =>
+        rcases hab with ⟨c, hc⟩
+        exact Or.inl ⟨c, hc⟩
+    | inr hba =>
+        rcases hba with ⟨d, hd⟩
+        cases d with
+        | nil =>
+            left
+            refine ⟨[], ?_⟩
+            simpa using hd.symm
+        | cons j rest =>
+            have hbLeaf : PTree.subtreeAt z' b = some (PTree.leaf x.conclusion) := by
+              exact (PTree.IsGraftableLeafAt_iff x z' b).mp
+                (PTree.isGraftableLeafAt_of_graftMatchingLeafAt_eq_some x z' b w hxz')
+
+            have haY : PTree.subtreeAt z' a = some y := by
+              exact subtreeAt_graftMatchingLeafAt_self y z a z' hyz
+
+            have hnone : PTree.subtreeAt z' (b ++ (j :: rest)) = none := by
+              exact subtreeAt_eq_leaf_append_none z' b (j :: rest) x.conclusion hbLeaf (by simp)
+
+            rw [hd] at haY
+            rw [hnone] at haY
+            simp at haY
+  · exact Or.inr hcomp
+
 /-- Tree-level pre-Lie identity.
 
 At this point the remaining ingredient is the address-classification lemma:
@@ -2982,6 +3049,172 @@ Once that bookkeeping lemma is in place, the proof should proceed by:
 3. using `two_step_graft_inner` for inner terms;
 4. using `two_step_graft_outer` for outer terms.
 -/
+
+theorem two_step_graft_decomposition_full
+    (x y z : PTree) (a b : Address)
+    (z' w : PTree)
+    (hyz : PTree.graftMatchingLeafAt y z a = some z')
+    (hxz' : PTree.graftMatchingLeafAt x z' b = some w) :
+    (∃ c y',
+        b = a ++ c ∧
+        PTree.graftMatchingLeafAt x y c = some y' ∧
+        PTree.graftMatchingLeafAt y' z a = some w)
+    ∨
+    (∃ z₃,
+        ¬ PTree.comparable a b ∧
+        PTree.graftMatchingLeafAt x z b = some z₃ ∧
+        PTree.graftMatchingLeafAt y z₃ a = some w) := by
+  apply two_step_graft_decomposition x y z a b z' w hyz hxz'
+  exact graftMatchingLeafAt_address_classification x y z a b z' w hyz hxz'
+
+theorem graftPreLie_tree_tree_apply
+    (u t w : PTree) :
+    graftPreLie (treeGen u) (PTree.graftPreLieTree t w)
+      =
+    (PTree.matchingLeafGraftings t w).foldr
+      (fun z' acc => graftPreLie (treeGen u) (treeGen z') + acc) 0 := by
+  let xs := PTree.matchingLeafGraftings t w
+  change graftPreLie (treeGen u) (xs.foldr (fun x acc => treeGen x + acc) 0) =
+    xs.foldr (fun z' acc => graftPreLie (treeGen u) (treeGen z') + acc) 0
+  induction xs with
+  | nil =>
+      simp
+  | cons x xs ih =>
+      simp only [List.foldr]
+      change
+        graftPreLie (treeGen u)
+          (treeGen x + xs.foldr (fun x acc => treeGen x + acc) 0)
+        =
+        graftPreLie (treeGen u) (treeGen x) +
+          xs.foldr (fun z' acc => graftPreLie (treeGen u) (treeGen z') + acc) 0
+      rw [map_add, ih]
+
+theorem graftPreLie_foldr_apply_eq_flatMap_count_right
+    (x w : PTree) (xs : List PTree) :
+    ((xs.foldr
+        (fun z' acc => graftPreLie (treeGen x) (treeGen z') + acc) 0) w)
+      =
+    (((xs.flatMap (fun z' => PTree.matchingLeafGraftings x z')).count w : Nat) : ℤ) := by
+  induction xs with
+  | nil =>
+      simp
+  | cons z' xs ih =>
+      simp only [List.foldr, List.flatMap_cons, Finsupp.add_apply, Finsupp.zero_apply]
+      rw [graftPreLie_on_generators]
+      rw [PTree.graftPreLieTree]
+      rw [PTree.foldr_treeGen_apply]
+      rw [ih]
+      rw [List.count_append]
+      norm_num
+
+theorem graftPreLie_foldr_apply_eq_flatMap_count_left
+    (z w : PTree) (xs : List PTree) :
+    ((xs.foldr
+        (fun y' acc => graftPreLie (treeGen y') (treeGen z) + acc) 0) w)
+      =
+    (((xs.flatMap (fun y' => PTree.matchingLeafGraftings y' z)).count w : Nat) : ℤ) := by
+  induction xs with
+  | nil =>
+      simp
+  | cons y' xs ih =>
+      simp only [List.foldr, List.flatMap_cons, Finsupp.add_apply, Finsupp.zero_apply]
+      rw [graftPreLie_on_generators]
+      rw [PTree.graftPreLieTree]
+      rw [PTree.foldr_treeGen_apply]
+      rw [ih]
+      rw [List.count_append]
+      norm_num
+
+theorem graftPreLie_coeff_x_on_yz
+    (x y z w : PTree) :
+    (graftPreLie (treeGen x) (PTree.graftPreLieTree y z)) w =
+      (((PTree.matchingLeafGraftings y z).flatMap
+          (fun z' => PTree.matchingLeafGraftings x z')).count w : ℤ) := by
+  rw [graftPreLie_tree_tree_apply]
+  exact graftPreLie_foldr_apply_eq_flatMap_count_right x w
+    (PTree.matchingLeafGraftings y z)
+
+theorem graftPreLie_tree_tree_apply_left
+    (u t w : PTree) :
+    graftPreLie (PTree.graftPreLieTree u t) (treeGen w)
+      =
+    (PTree.matchingLeafGraftings u t).foldr
+      (fun y' acc => graftPreLie (treeGen y') (treeGen w) + acc) 0 := by
+  let xs := PTree.matchingLeafGraftings u t
+  change graftPreLie (xs.foldr (fun x acc => treeGen x + acc) 0) (treeGen w) =
+    xs.foldr (fun y' acc => graftPreLie (treeGen y') (treeGen w) + acc) 0
+  induction xs with
+  | nil =>
+      simp
+  | cons x xs ih =>
+      simp only [List.foldr]
+      rw [LinearMap.map_add]
+      simp only [LinearMap.add_apply]
+      rw [ih]
+
+theorem graftPreLie_coeff_xy_on_z
+    (x y z w : PTree) :
+    (graftPreLie (PTree.graftPreLieTree x y) (treeGen z)) w =
+      (((PTree.matchingLeafGraftings x y).flatMap
+          (fun y' => PTree.matchingLeafGraftings y' z)).count w : ℤ) := by
+  rw [graftPreLie_tree_tree_apply_left]
+  exact graftPreLie_foldr_apply_eq_flatMap_count_left z w
+    (PTree.matchingLeafGraftings x y)
+
+lemma count_flatMap_eq_sum
+    (l : List α) (f : α → List β) (w : β) :
+    (l.flatMap f).count w =
+      (l.map (fun x => (f x).count w)).sum := by
+  induction l with
+  | nil =>
+      simp
+  | cons x xs ih =>
+      simp only [List.flatMap_cons, List.map_cons, List.sum_cons]
+      rw [List.count_append, ih]
+
+/-- The two parametrisations of successful two-step grafts produce the same
+multiset of output trees. -/
+theorem two_step_graft_outputs_perm
+    (x y z : PTree) :
+    List.Perm
+      (((PTree.matchingLeafGraftings y z).flatMap
+          (fun z' => PTree.matchingLeafGraftings x z'))
+        ++
+       ((PTree.matchingLeafGraftings y x).flatMap
+          (fun y' => PTree.matchingLeafGraftings y' z)))
+      (((PTree.matchingLeafGraftings x z).flatMap
+          (fun z' => PTree.matchingLeafGraftings y z'))
+        ++
+       ((PTree.matchingLeafGraftings x y).flatMap
+          (fun y' => PTree.matchingLeafGraftings y' z))) := by
+  sorry
+
+
+theorem two_step_graft_count_balance
+    (x y z w : PTree) :
+    (((PTree.matchingLeafGraftings y z).flatMap
+        (fun z' => PTree.matchingLeafGraftings x z')).count w : ℤ)
+    +
+    (((PTree.matchingLeafGraftings y x).flatMap
+        (fun y' => PTree.matchingLeafGraftings y' z)).count w : ℤ)
+    =
+    (((PTree.matchingLeafGraftings x z).flatMap
+        (fun z' => PTree.matchingLeafGraftings y z')).count w : ℤ)
+    +
+    (((PTree.matchingLeafGraftings x y).flatMap
+        (fun y' => PTree.matchingLeafGraftings y' z)).count w : ℤ) := by
+  -- proof uses two_step_graft_decomposition_full pointwise on w
+  -- classify all two-step grafts yielding w
+  -- and show both sides count the same set
+  --
+  -- structure:
+  -- 1. expand flatMaps via membership
+  -- 2. interpret count as number of witnesses
+  -- 3. apply two_step_graft_decomposition_full to split cases
+  -- 4. regroup counts
+  --
+  sorry
+
 theorem graftPreLie_preLie_identity_tree_level
     (x y z : PTree) :
     graftPreLie (treeGen x) (PTree.graftPreLieTree y z)
@@ -2991,7 +3224,57 @@ theorem graftPreLie_preLie_identity_tree_level
     graftPreLie (treeGen y) (PTree.graftPreLieTree x z)
     -
     graftPreLie (PTree.graftPreLieTree y x) (treeGen z) := by
-  sorry
+  ext w
+
+  -- expand all four terms to counts
+  simp [
+    graftPreLie_coeff_x_on_yz,
+    graftPreLie_coeff_xy_on_z,
+    sub_eq_add_neg,
+  ]
+
+  -- Goal is now purely about counts of flatMaps
+
+  -- Abbreviate lists to reduce noise (VERY helpful for Lean)
+  set L₁ :=
+    (PTree.matchingLeafGraftings y z).flatMap
+      (fun z' => PTree.matchingLeafGraftings x z') with hL₁
+  set L₂ :=
+    (PTree.matchingLeafGraftings x y).flatMap
+      (fun y' => PTree.matchingLeafGraftings y' z) with hL₂
+  set R₁ :=
+    (PTree.matchingLeafGraftings x z).flatMap
+      (fun z' => PTree.matchingLeafGraftings y z') with hR₁
+  set R₂ :=
+    (PTree.matchingLeafGraftings y x).flatMap
+      (fun y' => PTree.matchingLeafGraftings y' z) with hR₂
+
+  -- We want:
+  -- count w L₁ - count w L₂ = count w R₁ - count w R₂
+
+  -- Rearrange to:
+  -- count w L₁ + count w R₂ = count w R₁ + count w L₂
+  have hgoal :
+      (L₁.count w : ℤ) + (R₂.count w : ℤ)
+      =
+      (R₁.count w : ℤ) + (L₂.count w : ℤ) := by
+
+    -- This is the combinatorial heart:
+    -- every two-step graft contributes exactly once to each side
+
+    -- Strategy:
+    -- prove equality by showing a bijection via decomposition
+
+    -- TODO: bridge lemma using two_step_graft_decomposition_full
+    -- (this is the only real missing piece)
+
+    sorry
+
+  -- finish algebra
+  have := hgoal
+  -- rewrite back to subtraction form
+  -- a - b = c - d  ↔  a + d = c + b
+  simpa [sub_eq_add_neg, add_comm, add_left_comm, add_assoc] using this
 
 theorem graftPreLie_preLie_identity_on_generators
     (x y z : PTree) :
