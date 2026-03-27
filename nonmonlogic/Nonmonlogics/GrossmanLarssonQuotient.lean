@@ -690,7 +690,8 @@ theorem leftOuterWitness_class_eq_some_rightShaped
     ∃ c : TwoStepCode x y z w,
       IsRightShapedCode x y z w c ∧
       classOfLeftWitness (TwoStepWitnessLeft.outer a b z' haz hbw) = codeClass c := by
-  sorry
+  simpa [classOfLeftWitness, codeOfLeftWitness, classOfLeftOuter] using
+    leftOuter_class_has_rightShaped_representative x y z w a b z' haz hbw
 
 
 /--
@@ -705,7 +706,7 @@ theorem leftInnerWitness_has_swapped_innerRepresentative
       match c with
       | TwoStepCode.rightInner _ _ _ _ _ => True
       | _ => False := by
-  sorry
+  exact ⟨TwoStepCode.rightInner a b y' hay hbw, trivial⟩
 
 /--
 A right-inner witness determines an inner-shaped code in the swapped quotient.
@@ -719,7 +720,8 @@ theorem rightInnerWitness_has_swapped_innerRepresentative
       match c with
       | TwoStepCode.leftInner _ _ _ _ _ => True
       | _ => False := by
-  sorry
+  exact ⟨TwoStepCode.leftInner a b y' hay hbw, trivial⟩
+
 
 /--
 Outer commutation is handled internally in the fixed quotient, while inner
@@ -729,21 +731,705 @@ This is the structural quotient-level form of the pre-Lie associator symmetry.
 -/
 theorem twoStepQuotient_preLie_shape
     (x y z w : PTree) :
-    (∀ a b z',
-      (a, z') ∈ matchingLeafGraftWitnesses y z →
-      (b, w) ∈ matchingLeafGraftWitnesses x z' →
+    (∀ a b z'
+      (haz : (a, z') ∈ matchingLeafGraftWitnesses y z)
+      (hbw : (b, w) ∈ matchingLeafGraftWitnesses x z'),
       ∃ c : TwoStepCode x y z w,
         IsRightShapedCode x y z w c ∧
-        classOfLeftOuter a b z' ‹_› ‹_› = codeClass c)
+        classOfLeftOuter a b z' haz hbw = codeClass c)
     ∧
-    (∀ a b y',
-      (a, y') ∈ matchingLeafGraftWitnesses y x →
-      (b, w) ∈ matchingLeafGraftWitnesses y' z →
+    (∀ a b y'
+      (hay : (a, y') ∈ matchingLeafGraftWitnesses y x)
+      (hbw : (b, w) ∈ matchingLeafGraftWitnesses y' z),
       ∃ c : TwoStepCode y x z w,
         match c with
         | TwoStepCode.rightInner _ _ _ _ _ => True
         | _ => False) := by
-  sorry
+  constructor
+  · intro a b z' haz hbw
+    exact outer_support_quotient_left_to_right x y z w a b z' haz hbw
+  · intro a b y' hay hbw
+    exact leftInnerWitness_has_swapped_innerRepresentative x y z w a b y' hay hbw
+
+/--
+A basic quotient-level swapped correspondence relation.
+
+For now we only build in the inner/nested part explicitly. Outer commutation
+is already handled internally in the fixed quotient, so this relation is the
+first bridge between `TwoStepQuotient x y z w` and `TwoStepQuotient y x z w`.
+-/
+inductive SwappedTwoStepClass
+    (x y z w : PTree) :
+    TwoStepQuotient x y z w →
+    TwoStepQuotient y x z w → Prop where
+
+| leftInner
+    (a b : Address) (y' : PTree)
+    (hay : (a, y') ∈ matchingLeafGraftWitnesses y x)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y' z) :
+    SwappedTwoStepClass x y z w
+      (classOfLeftInner a b y' hay hbw)
+      (classOfRightInner a b y' hay hbw)
+
+| rightInner
+    (a b : Address) (y' : PTree)
+    (hay : (a, y') ∈ matchingLeafGraftWitnesses x y)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y' z) :
+    SwappedTwoStepClass x y z w
+      (codeClass (TwoStepCode.rightInner a b y' hay hbw))
+      (codeClass (TwoStepCode.leftInner a b y' hay hbw))
+
+/--
+Any raw left-inner code determines a swapped quotient-level partner.
+-/
+theorem leftInner_class_has_swapped_partner
+    (x y z w : PTree)
+    (a b : Address) (y' : PTree)
+    (hay : (a, y') ∈ matchingLeafGraftWitnesses y x)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y' z) :
+    SwappedTwoStepClass x y z w
+      (classOfLeftInner a b y' hay hbw)
+      (classOfRightInner a b y' hay hbw) := by
+  exact SwappedTwoStepClass.leftInner a b y' hay hbw
+
+/--
+Any raw right-inner code determines a swapped quotient-level partner.
+-/
+theorem rightInner_class_has_swapped_partner
+    (x y z w : PTree)
+    (a b : Address) (y' : PTree)
+    (hay : (a, y') ∈ matchingLeafGraftWitnesses x y)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y' z) :
+    SwappedTwoStepClass x y z w
+      (codeClass (TwoStepCode.rightInner a b y' hay hbw))
+      (codeClass (TwoStepCode.leftInner a b y' hay hbw)) := by
+  exact SwappedTwoStepClass.rightInner a b y' hay hbw
+
+  /--
+Quotient-level pre-Lie shape, first relational version.
+
+- Outer commutation is handled internally in `TwoStepQuotient x y z w`.
+- Inner reassociation is expressed by `SwappedTwoStepClass`, relating
+  classes in `TwoStepQuotient x y z w` to classes in
+  `TwoStepQuotient y x z w`.
+-/
+theorem twoStepQuotient_preLie_shape_rel
+    (x y z w : PTree) :
+    (∀ a b z'
+      (haz : (a, z') ∈ matchingLeafGraftWitnesses y z)
+      (hbw : (b, w) ∈ matchingLeafGraftWitnesses x z'),
+      ∃ c : TwoStepCode x y z w,
+        IsRightShapedCode x y z w c ∧
+        classOfLeftOuter a b z' haz hbw = codeClass c)
+    ∧
+    (∀ a b y'
+      (hay : (a, y') ∈ matchingLeafGraftWitnesses y x)
+      (hbw : (b, w) ∈ matchingLeafGraftWitnesses y' z),
+      SwappedTwoStepClass x y z w
+        (classOfLeftInner a b y' hay hbw)
+        (classOfRightInner a b y' hay hbw)) := by
+  constructor
+  · intro a b z' haz hbw
+    exact outer_support_quotient_left_to_right x y z w a b z' haz hbw
+  · intro a b y' hay hbw
+    exact leftInner_class_has_swapped_partner x y z w a b y' hay hbw
+
+/--
+`SwappedTwoStepClass` respects equality on the left quotient argument.
+-/
+theorem swapped_respects_eq_left
+    (x y z w : PTree)
+    {q₁ q₂ : TwoStepQuotient x y z w}
+    {q' : TwoStepQuotient y x z w}
+    (h : q₁ = q₂)
+    (hs : SwappedTwoStepClass x y z w q₁ q') :
+    SwappedTwoStepClass x y z w q₂ q' := by
+  cases h
+  exact hs
+
+/--
+`SwappedTwoStepClass` respects equality on the right quotient argument.
+-/
+theorem swapped_respects_eq_right
+    (x y z w : PTree)
+    {q : TwoStepQuotient x y z w}
+    {q₁ q₂ : TwoStepQuotient y x z w}
+    (h : q₁ = q₂)
+    (hs : SwappedTwoStepClass x y z w q q₁) :
+    SwappedTwoStepClass x y z w q q₂ := by
+  cases h
+  exact hs
+
+/--
+`SwappedTwoStepClass` respects equality of quotient classes on both sides.
+-/
+theorem swapped_respects_eq
+    (x y z w : PTree)
+    {q₁ q₂ : TwoStepQuotient x y z w}
+    {q₁' q₂' : TwoStepQuotient y x z w}
+    (hleft : q₁ = q₂)
+    (hright : q₁' = q₂')
+    (hs : SwappedTwoStepClass x y z w q₁ q₁') :
+    SwappedTwoStepClass x y z w q₂ q₂' := by
+  exact swapped_respects_eq_right x y z w hright
+    (swapped_respects_eq_left x y z w hleft hs)
+
+/--
+If two raw codes represent the same quotient class on the left, then any
+swapped partner for the first also serves as a swapped partner for the second.
+-/
+theorem swapped_respects_equiv_left
+    (x y z w : PTree)
+    {c₁ c₂ : TwoStepCode x y z w}
+    {q' : TwoStepQuotient y x z w}
+    (h : TwoStepEquiv x y z w c₁ c₂)
+    (hs : SwappedTwoStepClass x y z w (codeClass c₁) q') :
+    SwappedTwoStepClass x y z w (codeClass c₂) q' := by
+  exact
+    swapped_respects_eq_left x y z w
+      (q₁ := codeClass c₁)
+      (q₂ := codeClass c₂)
+      (q' := q')
+      (codeClass_eq_of_equiv h)
+      hs
+
+/--
+If two raw codes represent the same quotient class on the right, then any
+swapped correspondence into the first right class also lands in the second.
+-/
+theorem swapped_respects_equiv_right
+    (x y z w : PTree)
+    {q : TwoStepQuotient x y z w}
+    {d₁ d₂ : TwoStepCode y x z w}
+    (h : TwoStepEquiv y x z w d₁ d₂)
+    (hs : SwappedTwoStepClass x y z w q (codeClass d₁)) :
+    SwappedTwoStepClass x y z w q (codeClass d₂) := by
+  exact
+    swapped_respects_eq_right x y z w
+      (q := q)
+      (q₁ := codeClass d₁)
+      (q₂ := codeClass d₂)
+      (codeClass_eq_of_equiv h)
+      hs
+
+/--
+Two-sided quotient compatibility for swapped correspondence.
+-/
+theorem swapped_respects_equiv
+    (x y z w : PTree)
+    {c₁ c₂ : TwoStepCode x y z w}
+    {d₁ d₂ : TwoStepCode y x z w}
+    (hleft : TwoStepEquiv x y z w c₁ c₂)
+    (hright : TwoStepEquiv y x z w d₁ d₂)
+    (hs : SwappedTwoStepClass x y z w (codeClass c₁) (codeClass d₁)) :
+    SwappedTwoStepClass x y z w (codeClass c₂) (codeClass d₂) := by
+  exact
+    swapped_respects_equiv_right x y z w hright
+      (swapped_respects_equiv_left x y z w hleft hs)
+
+/--
+A quotient class lies in the left two-step support for `(x,y,z,w)` if it is
+represented by some left witness.
+-/
+def InLeftSupportClass
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) : Prop :=
+  ∃ h : TwoStepWitnessLeft x y z w,
+    classOfLeftWitness h = q
+
+/--
+A quotient class lies in the right two-step support for `(x,y,z,w)` if it is
+represented by some right witness.
+-/
+def InRightSupportClass
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) : Prop :=
+  ∃ h : TwoStepWitnessRight x y z w,
+    classOfRightWitness h = q
+
+/--
+The quotient class of any left witness lies in the left support.
+-/
+theorem classOfLeftWitness_in_leftSupport
+    (x y z w : PTree)
+    (h : TwoStepWitnessLeft x y z w) :
+    InLeftSupportClass x y z w (classOfLeftWitness h) := by
+  exact ⟨h, rfl⟩
+
+/--
+The quotient class of any right witness lies in the right support.
+-/
+theorem classOfRightWitness_in_rightSupport
+    (x y z w : PTree)
+    (h : TwoStepWitnessRight x y z w) :
+    InRightSupportClass x y z w (classOfRightWitness h) := by
+  exact ⟨h, rfl⟩
+
+/--
+Any left-outer witness class lies in the right support, up to quotient equality.
+-/
+theorem leftOuterWitness_supports_some_rightClass
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses y z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses x z') :
+    ∃ q : TwoStepQuotient x y z w,
+      InRightSupportClass x y z w q ∧
+      classOfLeftWitness (TwoStepWitnessLeft.outer a b z' haz hbw) = q := by
+  have hr : Nonempty (TwoStepWitnessRight x y z w) :=
+    outer_left_gives_right_witness x y z w ⟨a, b, z', haz, hbw⟩
+  rcases hr with ⟨r⟩
+  refine ⟨classOfRightWitness r, ?_, ?_⟩
+  · exact classOfRightWitness_in_rightSupport x y z w r
+  · cases r with
+    | outer a' b' z'' haz' hbw' =>
+        exact codeClass_eq_of_equiv
+          (TwoStepEquiv.outer_comm_outer haz hbw haz' hbw' (by
+            rw [mem_twoStepAddrWitnessesRight_iff]
+            exact Or.inl ⟨z'', haz', hbw'⟩))
+    | inner a' b' y'' hay' hbw' =>
+        exact codeClass_eq_of_equiv
+          (TwoStepEquiv.outer_comm_inner haz hbw hay' hbw' (by
+            rw [mem_twoStepAddrWitnessesRight_iff]
+            exact Or.inr ⟨y'', hay', hbw'⟩))
+
+/--
+Any left-inner witness class has a swapped partner coming from a right witness.
+-/
+theorem leftInnerWitness_supports_swapped_rightClass
+    (x y z w : PTree)
+    (a b : Address) (y' : PTree)
+    (hay : (a, y') ∈ matchingLeafGraftWitnesses y x)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y' z) :
+    ∃ q : TwoStepQuotient y x z w,
+      InRightSupportClass y x z w q ∧
+      SwappedTwoStepClass x y z w
+        (classOfLeftWitness (TwoStepWitnessLeft.inner a b y' hay hbw))
+        q := by
+  let r : TwoStepWitnessRight y x z w :=
+    TwoStepWitnessRight.inner a b y' hay hbw
+  refine ⟨classOfRightWitness r, ?_, ?_⟩
+  · exact classOfRightWitness_in_rightSupport y x z w r
+  · simpa [r, classOfLeftWitness, codeOfLeftWitness, classOfRightWitness, codeOfRightWitness,
+      classOfLeftInner, classOfRightInner] using
+      leftInner_class_has_swapped_partner x y z w a b y' hay hbw
+
+
+/--
+Every left-support quotient class has a corresponding right-support class.
+
+- Outer case: correspondence inside the same quotient.
+- Inner case: correspondence via `SwappedTwoStepClass`.
+-/
+theorem leftSupport_has_matching_rightSupport
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : InLeftSupportClass x y z w q) :
+    (∃ q', InRightSupportClass x y z w q' ∧ q = q')
+    ∨
+    (∃ q', InRightSupportClass y x z w q' ∧
+        SwappedTwoStepClass x y z w q q') := by
+  rcases hq with ⟨h, rfl⟩
+  cases h with
+  | outer a b z' haz hbw =>
+      -- outer case: stays in same quotient
+      left
+      obtain ⟨q', hmem, hEq⟩ :=
+        leftOuterWitness_supports_some_rightClass x y z w a b z' haz hbw
+      exact ⟨q', hmem, hEq⟩
+
+  | inner a b y' hay hbw =>
+      -- inner case: goes to swapped quotient
+      right
+      obtain ⟨q', hmem, hswap⟩ :=
+        leftInnerWitness_supports_swapped_rightClass x y z w a b y' hay hbw
+      exact ⟨q', hmem, hswap⟩
+
+/--
+Every right-support quotient class has a corresponding left-support class.
+
+(Symmetric version of the previous theorem.)
+-/
+theorem rightSupport_has_matching_leftSupport
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : InRightSupportClass x y z w q) :
+    (∃ q', InLeftSupportClass x y z w q' ∧ q = q')
+    ∨
+    (∃ q', InLeftSupportClass y x z w q' ∧
+        SwappedTwoStepClass x y z w q q') := by
+  rcases hq with ⟨h, rfl⟩
+  cases h with
+  | outer a b z' haz hbw =>
+      -- outer case: transport via right → left witness theorem
+      left
+      have hl : Nonempty (TwoStepWitnessLeft x y z w) :=
+        outer_right_gives_left_witness x y z w ⟨a, b, z', haz, hbw⟩
+      rcases hl with ⟨l⟩
+      refine ⟨classOfLeftWitness l, ?_, ?_⟩
+      · exact classOfLeftWitness_in_leftSupport x y z w l
+      · -- equality of classes via equivalence
+        cases l with
+        | outer a' b' z'' haz' hbw' =>
+            exact codeClass_eq_of_equiv
+              (TwoStepEquiv.outer_comm_back_outer haz hbw haz' hbw' (by
+                rw [mem_twoStepAddrWitnessesLeft_iff]
+                exact Or.inl ⟨z'', haz', hbw'⟩))
+        | inner a' b' y'' hay' hbw' =>
+            exact codeClass_eq_of_equiv
+              (TwoStepEquiv.outer_comm_back_inner haz hbw hay' hbw' (by
+                rw [mem_twoStepAddrWitnessesLeft_iff]
+                exact Or.inr ⟨y'', hay', hbw'⟩))
+
+  | inner a b y' hay hbw =>
+      -- inner case: swap
+      right
+      let l : TwoStepWitnessLeft y x z w :=
+        TwoStepWitnessLeft.inner a b y' hay hbw
+      refine ⟨classOfLeftWitness l, ?_, ?_⟩
+      · exact classOfLeftWitness_in_leftSupport y x z w l
+      · simpa [l, classOfRightWitness, codeOfRightWitness] using
+          rightInner_class_has_swapped_partner x y z w a b y' hay hbw
+
+/--
+Left witnesses lying over a fixed quotient class.
+-/
+def LeftFiber
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) :=
+  { h : TwoStepWitnessLeft x y z w // classOfLeftWitness h = q }
+
+/--
+Right witnesses lying over a fixed quotient class.
+-/
+def RightFiber
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) :=
+  { h : TwoStepWitnessRight x y z w // classOfRightWitness h = q }
+
+/--
+Right witnesses in the swapped parameter order lying over a fixed quotient class.
+This is the natural fibre for the inner part.
+-/
+def SwappedRightFiber
+    (x y z w : PTree)
+    (q : TwoStepQuotient y x z w) :=
+  { h : TwoStepWitnessRight y x z w // classOfRightWitness h = q }
+
+/--
+A quotient class is in left support iff its left fibre is inhabited.
+-/
+theorem inLeftSupport_iff_nonempty_LeftFiber
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) :
+    InLeftSupportClass x y z w q ↔ Nonempty (LeftFiber x y z w q) := by
+  constructor
+  · intro hq
+    rcases hq with ⟨h, hh⟩
+    exact ⟨⟨h, hh⟩⟩
+  · intro hq
+    rcases hq with ⟨⟨h, hh⟩⟩
+    exact ⟨h, hh⟩
+
+/--
+A quotient class is in right support iff its right fibre is inhabited.
+-/
+theorem inRightSupport_iff_nonempty_RightFiber
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) :
+    InRightSupportClass x y z w q ↔ Nonempty (RightFiber x y z w q) := by
+  constructor
+  · intro hq
+    rcases hq with ⟨h, hh⟩
+    exact ⟨⟨h, hh⟩⟩
+  · intro hq
+    rcases hq with ⟨⟨h, hh⟩⟩
+    exact ⟨h, hh⟩
+
+/--
+A swapped quotient class is in swapped right support iff its swapped right fibre
+is inhabited.
+-/
+theorem inRightSupportSwapped_iff_nonempty_SwappedRightFiber
+    (x y z w : PTree)
+    (q : TwoStepQuotient y x z w) :
+    InRightSupportClass y x z w q ↔ Nonempty (SwappedRightFiber x y z w q) := by
+  constructor
+  · intro hq
+    rcases hq with ⟨h, hh⟩
+    exact ⟨⟨h, hh⟩⟩
+  · intro hq
+    rcases hq with ⟨⟨h, hh⟩⟩
+    exact ⟨h, hh⟩
+
+/--
+Diagnostic predicate: the left fibre over `q` has at most one witness.
+-/
+def LeftFiberSubsingleton
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) : Prop :=
+  Subsingleton (LeftFiber x y z w q)
+
+/--
+Diagnostic predicate: the right fibre over `q` has at most one witness.
+-/
+def RightFiberSubsingleton
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) : Prop :=
+  Subsingleton (RightFiber x y z w q)
+
+/--
+Diagnostic predicate: the swapped right fibre over `q` has at most one witness.
+-/
+def SwappedRightFiberSubsingleton
+    (x y z w : PTree)
+    (q : TwoStepQuotient y x z w) : Prop :=
+  Subsingleton (SwappedRightFiber x y z w q)
+
+/--
+Every left-supported class has either
+
+- a right fibre over the same quotient class (outer case), or
+- a swapped right fibre over some swapped class (inner case).
+
+This is the fibre-level version of the quotient support theorem.
+-/
+theorem leftSupport_has_matching_rightFiber
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : InLeftSupportClass x y z w q) :
+    (∃ q', Nonempty (RightFiber x y z w q') ∧ q = q')
+    ∨
+    (∃ q', Nonempty (SwappedRightFiber x y z w q') ∧
+        SwappedTwoStepClass x y z w q q') := by
+  rcases leftSupport_has_matching_rightSupport x y z w q hq with h | h
+  · left
+    rcases h with ⟨q', hq', hEq⟩
+    exact ⟨q', (inRightSupport_iff_nonempty_RightFiber x y z w q').mp hq', hEq⟩
+  · right
+    rcases h with ⟨q', hq', hswap⟩
+    exact ⟨q', (inRightSupportSwapped_iff_nonempty_SwappedRightFiber x y z w q').mp hq', hswap⟩
+
+/--
+Left witnesses lying over a fixed quotient class.
+-/
+def LeftWitnessFiber
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) :=
+  { h : TwoStepWitnessLeft x y z w // classOfLeftWitness h = q }
+
+/--
+Right witnesses lying over a fixed quotient class.
+-/
+def RightWitnessFiber
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) :=
+  { h : TwoStepWitnessRight x y z w // classOfRightWitness h = q }
+
+/--
+Right witnesses in the swapped quotient lying over a fixed swapped class.
+-/
+def SwappedRightWitnessFiber
+    (x y z w : PTree)
+    (q : TwoStepQuotient y x z w) :=
+  { h : TwoStepWitnessRight y x z w // classOfRightWitness h = q }
+
+/--
+A left-outer witness determines some nonempty right fibre.
+-/
+theorem leftOuter_has_nonempty_rightFiber
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses y z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses x z') :
+    ∃ q : TwoStepQuotient x y z w,
+      Nonempty (RightWitnessFiber x y z w q) ∧
+      classOfLeftWitness (TwoStepWitnessLeft.outer a b z' haz hbw) = q := by
+  obtain ⟨q, hq, hEq⟩ :=
+    leftOuterWitness_supports_some_rightClass x y z w a b z' haz hbw
+  rcases hq with ⟨r, hrfl⟩
+  refine ⟨q, ?_, hEq⟩
+  refine ⟨⟨r, hrfl⟩⟩
+
+/--
+A left-inner witness determines some nonempty swapped-right fibre.
+-/
+theorem leftInner_has_nonempty_swappedRightFiber
+    (x y z w : PTree)
+    (a b : Address) (y' : PTree)
+    (hay : (a, y') ∈ matchingLeafGraftWitnesses y x)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y' z) :
+    ∃ q : TwoStepQuotient y x z w,
+      Nonempty (SwappedRightWitnessFiber x y z w q) ∧
+      SwappedTwoStepClass x y z w
+        (classOfLeftWitness (TwoStepWitnessLeft.inner a b y' hay hbw))
+        q := by
+  obtain ⟨q, hq, hswap⟩ :=
+    leftInnerWitness_supports_swapped_rightClass x y z w a b y' hay hbw
+  rcases hq with ⟨r, hrfl⟩
+  refine ⟨q, ?_, hswap⟩
+  refine ⟨⟨r, hrfl⟩⟩
+
+/--
+Left outer witnesses lying over a quotient class.
+-/
+def LeftOuterFiber
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) :=
+  { h : TwoStepWitnessLeft x y z w //
+      match h with
+      | TwoStepWitnessLeft.outer _ _ _ _ _ => classOfLeftWitness h = q
+      | _ => False }
+
+/--
+Right outer witnesses lying over a quotient class.
+-/
+def RightOuterFiber
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) :=
+  { h : TwoStepWitnessRight x y z w //
+      match h with
+      | TwoStepWitnessRight.outer _ _ _ _ _ => classOfRightWitness h = q
+      | _ => False }
+
+theorem leftOuterFiber_to_rightSupport
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) :
+    LeftOuterFiber x y z w q → Nonempty (RightWitnessFiber x y z w q) := by
+  intro h
+  rcases h with ⟨hw, hh⟩
+  cases hw with
+  | outer a b z' haz hbw =>
+      obtain ⟨q', hq', hEq⟩ :=
+        leftOuterWitness_supports_some_rightClass x y z w a b z' haz hbw
+      rcases hq' with ⟨r, hr⟩
+      have hq'q : q' = q := by
+        exact hEq.symm.trans hh
+      refine ⟨⟨r, ?_⟩⟩
+      exact hr.trans hq'q
+  | inner =>
+      cases hh
+
+/--
+Left inner witnesses lying over a quotient class.
+-/
+def LeftInnerFiber
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) :=
+  { h : TwoStepWitnessLeft x y z w //
+      match h with
+      | TwoStepWitnessLeft.inner _ _ _ _ _ => classOfLeftWitness h = q
+      | _ => False }
+
+/--
+Right inner witnesses lying over a quotient class.
+-/
+def RightInnerFiber
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) :=
+  { h : TwoStepWitnessRight x y z w //
+      match h with
+      | TwoStepWitnessRight.inner _ _ _ _ _ => classOfRightWitness h = q
+      | _ => False }
+
+/--
+Right inner witnesses in the swapped parameter order lying over a swapped class.
+-/
+def SwappedRightInnerFiber
+    (x y z w : PTree)
+    (q : TwoStepQuotient y x z w) :=
+  { h : TwoStepWitnessRight y x z w //
+      match h with
+      | TwoStepWitnessRight.inner _ _ _ _ _ => classOfRightWitness h = q
+      | _ => False }
+
+/--
+Any right-outer fibre element determines a nonempty left witness fibre over the same class.
+-/
+theorem rightOuterFiber_to_leftSupport
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) :
+    RightOuterFiber x y z w q → Nonempty (LeftWitnessFiber x y z w q) := by
+  intro h
+  rcases h with ⟨hw, hh⟩
+  cases hw with
+  | outer a b z' haz hbw =>
+      have hl : Nonempty (TwoStepWitnessLeft x y z w) :=
+        outer_right_gives_left_witness x y z w ⟨a, b, z', haz, hbw⟩
+      rcases hl with ⟨l⟩
+      refine ⟨⟨l, ?_⟩⟩
+      cases l with
+      | outer a' b' z'' haz' hbw' =>
+          have hEq :
+              codeClass (TwoStepCode.rightOuter a b z' haz hbw) =
+              codeClass (TwoStepCode.leftOuter a' b' z'' haz' hbw') := by
+            exact codeClass_eq_of_equiv
+              (TwoStepEquiv.outer_comm_back_outer haz hbw haz' hbw' (by
+                rw [mem_twoStepAddrWitnessesLeft_iff]
+                exact Or.inl ⟨z'', haz', hbw'⟩))
+          simpa [classOfRightWitness, codeOfRightWitness, classOfLeftWitness, codeOfLeftWitness] using
+            hEq.symm.trans hh
+      | inner a' b' y'' hay' hbw' =>
+          have hEq :
+              codeClass (TwoStepCode.rightOuter a b z' haz hbw) =
+              codeClass (TwoStepCode.leftInner a' b' y'' hay' hbw') := by
+            exact codeClass_eq_of_equiv
+              (TwoStepEquiv.outer_comm_back_inner haz hbw hay' hbw' (by
+                rw [mem_twoStepAddrWitnessesLeft_iff]
+                exact Or.inr ⟨y'', hay', hbw'⟩))
+          simpa [classOfRightWitness, codeOfRightWitness, classOfLeftWitness, codeOfLeftWitness] using
+            hEq.symm.trans hh
+  | inner =>
+      cases hh
+
+/--
+Any left-inner fibre element determines a nonempty swapped right-inner fibre.
+-/
+theorem leftInnerFiber_to_swappedRightInnerFiber
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) :
+    LeftInnerFiber x y z w q →
+    ∃ q' : TwoStepQuotient y x z w,
+      Nonempty (SwappedRightInnerFiber x y z w q') ∧
+      SwappedTwoStepClass x y z w q q' := by
+  intro h
+  rcases h with ⟨hw, hh⟩
+  cases hw with
+  | inner a b y' hay hbw =>
+      let r : TwoStepWitnessRight y x z w :=
+        TwoStepWitnessRight.inner a b y' hay hbw
+      refine ⟨classOfRightWitness r, ?_, ?_⟩
+      · refine ⟨⟨r, ?_⟩⟩
+        simp [r, classOfRightWitness, codeOfRightWitness]
+      · simpa [classOfLeftWitness, codeOfLeftWitness] using
+          leftInner_class_has_swapped_partner x y z w a b y' hay hbw
+  | outer =>
+      cases hh
+
+/--
+Any right-inner fibre element determines a nonempty swapped left-inner witness fibre.
+-/
+theorem rightInnerFiber_to_swappedLeftWitnessFiber
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) :
+    RightInnerFiber x y z w q →
+    ∃ q' : TwoStepQuotient y x z w,
+      Nonempty (LeftWitnessFiber y x z w q') ∧
+      SwappedTwoStepClass x y z w q q' := by
+  intro h
+  rcases h with ⟨hw, hh⟩
+  cases hw with
+  | inner a b y' hay hbw =>
+      let l : TwoStepWitnessLeft y x z w :=
+        TwoStepWitnessLeft.inner a b y' hay hbw
+      refine ⟨classOfLeftWitness l, ?_, ?_⟩
+      · exact ⟨⟨l, rfl⟩⟩
+      · simpa [l, classOfRightWitness, codeOfRightWitness] using
+          rightInner_class_has_swapped_partner x y z w a b y' hay hbw
+  | outer =>
+      cases hh
+
+
 
 /--
 Inner reassociation is already canonical up to swapping `x` and `y`.
