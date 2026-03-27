@@ -10,5 +10,5 @@ require mathlib from git
 
 @[default_target]
 lean_lib «Nonmonlogics» {
-  -- add any library configuration options here
+  srcDir := "nonmonlogic"
 }

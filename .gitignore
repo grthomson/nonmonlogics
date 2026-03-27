@@ -1,0 +1,69 @@
+# ================================
+# Lean 4
+# ================================
+.lake/
+lake-manifest.json
+*.olean
+*.ilean
+*.trace
+*.extra
+.elan/
+lake-packages/
+
+# ================================
+# LaTeX
+# ================================
+
+# Compiled output
+*.pdf
+*.dvi
+*.ps
+*.eps
+
+# Auxiliary files
+*.aux
+*.log
+*.out
+*.toc
+*.lof
+*.lot
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.synctex(busy)
+*.blg
+*.bbl
+*.bcf
+*.run.xml
+*.nav
+*.snm
+*.vrb
+*.idx
+*.ind
+*.ilg
+*.glo
+*.gls
+*.glg
+*.acn
+*.acr
+*.alg
+*.xdy
+*.maf
+*.mtc
+*.mtc0
+
+# latexmk
+*.fdb_latexmk
+
+# Editor temp files (vim, emacs, vscode)
+*.swp
+*.swo
+*~
+\#*\#
+.\#*
+.vscode/
+.idea/
+
+# OS junk
+.DS_Store
+Thumbs.db

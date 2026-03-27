@@ -1190,9 +1190,6 @@ theorem coproduct_terms_are_subderivations
 open scoped TensorProduct
 open Classical
 
-open scoped TensorProduct
-open Classical
-
 /-! ## Hopf algebra carrier (commutative CK-style) -/
 
 abbrev ProofForest := Multiset PTree
