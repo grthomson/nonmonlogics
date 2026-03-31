@@ -3124,16 +3124,490 @@ record that these shape predicates are stable under equality of quotient
 classes.
 -/
 
+/-!
+## Stability of quotient-level pre-Lie shape
 
+The quotient-level outer/inner split should depend only on the quotient class
+itself, not on the particular witness used to establish it. The next lemmas
+record that these shape predicates are stable under equality of quotient
+classes.
+-/
 
+/-- Outer/right representability is stable under equality of quotient classes. -/
+theorem HasRightRepresentative.respects_eq
+    (x y z w : PTree)
+    {q₁ q₂ : TwoStepQuotient x y z w}
+    (h : q₁ = q₂) :
+    HasRightRepresentative x y z w q₁ →
+    HasRightRepresentative x y z w q₂ := by
+  intro hq
+  cases h
+  exact hq
 
+/-- Swapped-right representability is stable under equality of quotient classes. -/
+theorem HasSwappedRightRepresentative.respects_eq
+    (x y z w : PTree)
+    {q₁ q₂ : TwoStepQuotient x y z w}
+    (h : q₁ = q₂) :
+    HasSwappedRightRepresentative x y z w q₁ →
+    HasSwappedRightRepresentative x y z w q₂ := by
+  intro hq
+  rcases hq with ⟨q', hq', hs⟩
+  exact ⟨q', hq', swapped_respects_eq_left x y z w h hs⟩
 
+/-- Pre-Lie class shape is stable under equality of quotient classes. -/
+theorem HasPreLieClassShape.respects_eq
+    (x y z w : PTree)
+    {q₁ q₂ : TwoStepQuotient x y z w}
+    (h : q₁ = q₂) :
+    HasPreLieClassShape x y z w q₁ →
+    HasPreLieClassShape x y z w q₂ := by
+  intro hshape
+  cases hshape with
+  | outer hq =>
+      exact HasPreLieClassShape.outer
+        (HasRightRepresentative.respects_eq x y z w h hq)
+  | inner q' hq' hs =>
+      exact HasPreLieClassShape.inner q' hq'
+        (swapped_respects_eq_left x y z w h hs)
 
+/-- Pre-Lie fibre shape is stable under equality of quotient classes. -/
+theorem HasPreLieFiberShape.respects_eq
+    (x y z w : PTree)
+    {q₁ q₂ : TwoStepQuotient x y z w}
+    (h : q₁ = q₂) :
+    HasPreLieFiberShape x y z w q₁ →
+    HasPreLieFiberShape x y z w q₂ := by
+  intro hshape
+  cases hshape with
+  | outer hq =>
+      cases h
+      exact HasPreLieFiberShape.outer hq
+  | inner q' hq' hs =>
+      exact HasPreLieFiberShape.inner q' hq'
+        (swapped_respects_eq_left x y z w h hs)
 
+/-- Every left-supported class has either outer or inner pre-Lie shape. -/
+theorem leftSupportClass_has_outer_or_inner_shape
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : InLeftSupportClass x y z w q) :
+    HasRightRepresentative x y z w q ∨
+    HasSwappedRightRepresentative x y z w q := by
+  exact leftSupportClass_preLie_split x y z w q hq
 
+/-- Every inhabited left fibre has either outer or inner pre-Lie shape. -/
+theorem leftFiber_has_outer_or_inner_shape
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : Nonempty (LeftFiber x y z w q)) :
+    Nonempty (RightFiber x y z w q) ∨
+    ∃ q' : TwoStepQuotient y x z w,
+      Nonempty (SwappedRightFiber x y z w q') ∧
+      SwappedTwoStepClass x y z w q q' := by
+  exact leftFiber_preLie_split x y z w q hq
 
+/-- If a class has outer pre-Lie shape, then it has a right representative in
+the same quotient. -/
+theorem HasPreLieClassShape.outer_spec
+    (x y z w : PTree)
+    {q : TwoStepQuotient x y z w}
+    (hshape : HasPreLieClassShape x y z w q) :
+    (∃ hq : InRightSupportClass x y z w q,
+      hshape = HasPreLieClassShape.outer hq)
+    ∨
+    (∃ q' hq' hs,
+      hshape = HasPreLieClassShape.inner q' hq' hs) := by
+  cases hshape with
+  | outer hq =>
+      left
+      exact ⟨hq, rfl⟩
+  | inner q' hq' hs =>
+      right
+      exact ⟨q', hq', hs, rfl⟩
 
+/-- The quotient-level outer/inner split is determined up to equality of
+the source quotient class. -/
+theorem leftSupportClass_preLie_split_respects_eq
+    (x y z w : PTree)
+    {q₁ q₂ : TwoStepQuotient x y z w}
+    (h : q₁ = q₂)
+    (hq₁ : InLeftSupportClass x y z w q₁) :
+    HasPreLieClassShape x y z w q₂ := by
+  exact HasPreLieClassShape.respects_eq x y z w h
+    (leftSupportClass_has_preLie_shape x y z w q₁ hq₁)
 
+/-- Fibre-level version of the previous stability theorem. -/
+theorem leftFiber_preLie_split_respects_eq
+    (x y z w : PTree)
+    {q₁ q₂ : TwoStepQuotient x y z w}
+    (h : q₁ = q₂)
+    (hq₁ : Nonempty (LeftFiber x y z w q₁)) :
+    HasPreLieFiberShape x y z w q₂ := by
+  exact HasPreLieFiberShape.respects_eq x y z w h
+    (leftFiber_has_preLie_shape x y z w q₁ hq₁)
+
+/-!
+## Quotient-level associator decomposition
+
+This packages the proof-theoretic analogue of the rooted-tree pre-Lie
+associator split:
+
+- outer contributions correspond to independent proof extensions and remain in
+  the same quotient;
+- inner contributions correspond to dependent/nested proof extensions and are
+  transported to the swapped quotient.
+-/
+
+/-- Outer contribution of a left-supported class. -/
+def IsOuterContribution
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) : Prop :=
+  InRightSupportClass x y z w q
+
+/-- Inner contribution of a left-supported class. -/
+def IsInnerContribution
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) : Prop :=
+  ∃ q' : TwoStepQuotient y x z w,
+    InRightSupportClass y x z w q' ∧
+    SwappedTwoStepClass x y z w q q'
+
+/-- Every left-supported class contributes either outerly or innerly. -/
+theorem leftSupportClass_associator_decomposes
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : InLeftSupportClass x y z w q) :
+    IsOuterContribution x y z w q ∨
+    IsInnerContribution x y z w q := by
+  exact leftSupportClass_preLie_split x y z w q hq
+
+/-- Fibre-level version of the associator decomposition. -/
+theorem leftFiber_associator_decomposes
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : Nonempty (LeftFiber x y z w q)) :
+    Nonempty (RightFiber x y z w q) ∨
+    ∃ q' : TwoStepQuotient y x z w,
+      Nonempty (SwappedRightFiber x y z w q') ∧
+      SwappedTwoStepClass x y z w q q' := by
+  exact leftFiber_preLie_split x y z w q hq
+
+/-- The outer part of the associator decomposition is stable under equality of
+quotient classes. -/
+theorem IsOuterContribution_respects_eq
+    (x y z w : PTree)
+    {q₁ q₂ : TwoStepQuotient x y z w}
+    (h : q₁ = q₂) :
+    IsOuterContribution x y z w q₁ →
+    IsOuterContribution x y z w q₂ := by
+  intro hq
+  cases h
+  exact hq
+
+/-- The inner part of the associator decomposition is stable under equality of
+quotient classes. -/
+theorem IsInnerContribution_respects_eq
+    (x y z w : PTree)
+    {q₁ q₂ : TwoStepQuotient x y z w}
+    (h : q₁ = q₂) :
+    IsInnerContribution x y z w q₁ →
+    IsInnerContribution x y z w q₂ := by
+  intro hq
+  rcases hq with ⟨q', hq', hs⟩
+  exact ⟨q', hq', swapped_respects_eq_left x y z w h hs⟩
+
+/-- Every left-supported class has a quotient-level associator shape. -/
+theorem leftSupportClass_has_associator_shape
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : InLeftSupportClass x y z w q) :
+    (IsOuterContribution x y z w q ∨ IsInnerContribution x y z w q) := by
+  exact leftSupportClass_associator_decomposes x y z w q hq
+
+/-!
+## Bridge lemmas between pre-Lie shape and associator contribution shape
+-/
+
+/-- An outer pre-Lie class shape gives an outer associator contribution. -/
+theorem HasPreLieClassShape.to_outerContribution
+    (x y z w : PTree)
+    {q : TwoStepQuotient x y z w}
+    (hshape : HasPreLieClassShape x y z w q) :
+    IsOuterContribution x y z w q ∨ IsInnerContribution x y z w q := by
+  cases hshape with
+  | outer hq =>
+      exact Or.inl hq
+  | inner q' hq' hs =>
+      exact Or.inr ⟨q', hq', hs⟩
+
+/-- Every pre-Lie class shape induces an associator shape. -/
+theorem HasPreLieClassShape.to_associator_shape
+    (x y z w : PTree)
+    {q : TwoStepQuotient x y z w}
+    (hshape : HasPreLieClassShape x y z w q) :
+    IsOuterContribution x y z w q ∨ IsInnerContribution x y z w q := by
+  exact HasPreLieClassShape.to_outerContribution x y z w hshape
+
+/-- An outer associator contribution determines an outer pre-Lie class shape. -/
+theorem IsOuterContribution.to_preLieClassShape
+    (x y z w : PTree)
+    {q : TwoStepQuotient x y z w}
+    (hq : IsOuterContribution x y z w q) :
+    HasPreLieClassShape x y z w q := by
+  exact HasPreLieClassShape.outer hq
+
+/-- An inner associator contribution determines an inner pre-Lie class shape. -/
+theorem IsInnerContribution.to_preLieClassShape
+    (x y z w : PTree)
+    {q : TwoStepQuotient x y z w}
+    (hq : IsInnerContribution x y z w q) :
+    HasPreLieClassShape x y z w q := by
+  rcases hq with ⟨q', hq', hs⟩
+  exact HasPreLieClassShape.inner q' hq' hs
+
+/-- Associator shape can be repackaged as a pre-Lie class shape. -/
+theorem associator_shape_to_preLieClassShape
+    (x y z w : PTree)
+    {q : TwoStepQuotient x y z w}
+    (h :
+      IsOuterContribution x y z w q ∨
+      IsInnerContribution x y z w q) :
+    HasPreLieClassShape x y z w q := by
+  cases h with
+  | inl houter =>
+      exact IsOuterContribution.to_preLieClassShape x y z w houter
+  | inr hinner =>
+      exact IsInnerContribution.to_preLieClassShape x y z w hinner
+
+/-- The associator decomposition is exactly the pre-Lie class-shape split. -/
+theorem leftSupportClass_associator_shape_eq_preLie_shape
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : InLeftSupportClass x y z w q) :
+    HasPreLieClassShape x y z w q := by
+  exact associator_shape_to_preLieClassShape x y z w
+    (leftSupportClass_associator_decomposes x y z w q hq)
+
+/-- Equality-stability for the packaged associator shape, via pre-Lie shape. -/
+theorem associator_shape_respects_eq
+    (x y z w : PTree)
+    {q₁ q₂ : TwoStepQuotient x y z w}
+    (h : q₁ = q₂) :
+    (IsOuterContribution x y z w q₁ ∨ IsInnerContribution x y z w q₁) →
+    (IsOuterContribution x y z w q₂ ∨ IsInnerContribution x y z w q₂) := by
+  intro hshape
+  apply HasPreLieClassShape.to_associator_shape
+  exact HasPreLieClassShape.respects_eq x y z w h
+    (associator_shape_to_preLieClassShape x y z w hshape)
+
+/-- The quotient-level associator shape depends only on the quotient class. -/
+theorem leftSupportClass_associator_decomposes_respects_eq
+    (x y z w : PTree)
+    {q₁ q₂ : TwoStepQuotient x y z w}
+    (h : q₁ = q₂)
+    (hq₁ : InLeftSupportClass x y z w q₁) :
+    IsOuterContribution x y z w q₂ ∨
+    IsInnerContribution x y z w q₂ := by
+  exact associator_shape_respects_eq x y z w h
+    (leftSupportClass_associator_decomposes x y z w q₁ hq₁)
+
+/-!
+## Support/fibre conversion lemmas
+-/
+
+/-- A right-supported class has an inhabited right fibre. -/
+theorem InRightSupportClass.to_nonempty_RightFiber
+    (x y z w : PTree)
+    {q : TwoStepQuotient x y z w}
+    (hq : InRightSupportClass x y z w q) :
+    Nonempty (RightFiber x y z w q) := by
+  rcases hq with ⟨h, rfl⟩
+  exact ⟨⟨h, rfl⟩⟩
+
+/-- An inhabited right fibre gives a right-supported class. -/
+theorem RightFiber.nonempty_to_InRightSupportClass
+    (x y z w : PTree)
+    {q : TwoStepQuotient x y z w}
+    (hq : Nonempty (RightFiber x y z w q)) :
+    InRightSupportClass x y z w q := by
+  rcases hq with ⟨⟨h, hh⟩⟩
+  exact ⟨h, hh⟩
+
+/-- A swapped-right-supported class has an inhabited swapped right fibre. -/
+theorem InRightSupportClass.to_nonempty_SwappedRightFiber
+    (x y z w : PTree)
+    {q : TwoStepQuotient y x z w}
+    (hq : InRightSupportClass y x z w q) :
+    Nonempty (SwappedRightFiber x y z w q) := by
+  rcases hq with ⟨h, rfl⟩
+  exact ⟨⟨h, rfl⟩⟩
+
+/-- An inhabited swapped right fibre gives right support in the swapped order. -/
+theorem SwappedRightFiber.nonempty_to_InRightSupportClass
+    (x y z w : PTree)
+    {q : TwoStepQuotient y x z w}
+    (hq : Nonempty (SwappedRightFiber x y z w q)) :
+    InRightSupportClass y x z w q := by
+  rcases hq with ⟨⟨h, hh⟩⟩
+  exact ⟨h, hh⟩
+
+/-!
+## Associator contribution → fibre-level contribution
+-/
+
+/-- An outer contribution yields an inhabited right fibre over the same class. -/
+theorem IsOuterContribution.to_nonempty_RightFiber
+    (x y z w : PTree)
+    {q : TwoStepQuotient x y z w}
+    (hq : IsOuterContribution x y z w q) :
+    Nonempty (RightFiber x y z w q) := by
+  exact InRightSupportClass.to_nonempty_RightFiber x y z w hq
+
+/-- An inner contribution yields an inhabited swapped right fibre. -/
+theorem IsInnerContribution.to_nonempty_SwappedRightFiber
+    (x y z w : PTree)
+    {q : TwoStepQuotient x y z w}
+    (hq : IsInnerContribution x y z w q) :
+    ∃ q' : TwoStepQuotient y x z w,
+      Nonempty (SwappedRightFiber x y z w q') ∧
+      SwappedTwoStepClass x y z w q q' := by
+  rcases hq with ⟨q', hq', hs⟩
+  exact ⟨q', InRightSupportClass.to_nonempty_SwappedRightFiber x y z w hq', hs⟩
+
+/-- Class-level associator shape induces fibre-level associator shape. -/
+theorem associator_class_shape_to_fiber_shape
+    (x y z w : PTree)
+    {q : TwoStepQuotient x y z w}
+    (h :
+      IsOuterContribution x y z w q ∨
+      IsInnerContribution x y z w q) :
+    Nonempty (RightFiber x y z w q) ∨
+    ∃ q' : TwoStepQuotient y x z w,
+      Nonempty (SwappedRightFiber x y z w q') ∧
+      SwappedTwoStepClass x y z w q q' := by
+  cases h with
+  | inl houter =>
+      exact Or.inl (IsOuterContribution.to_nonempty_RightFiber x y z w houter)
+  | inr hinner =>
+      exact Or.inr (IsInnerContribution.to_nonempty_SwappedRightFiber x y z w hinner)
+
+/-- Fibre-level outer contribution gives class-level outer contribution. -/
+theorem nonempty_RightFiber.to_IsOuterContribution
+    (x y z w : PTree)
+    {q : TwoStepQuotient x y z w}
+    (hq : Nonempty (RightFiber x y z w q)) :
+    IsOuterContribution x y z w q := by
+  exact RightFiber.nonempty_to_InRightSupportClass x y z w hq
+
+/-- Fibre-level swapped inner contribution gives class-level inner contribution. -/
+theorem nonempty_SwappedRightFiber.to_IsInnerContribution
+    (x y z w : PTree)
+    {q : TwoStepQuotient x y z w}
+    (h :
+      ∃ q' : TwoStepQuotient y x z w,
+        Nonempty (SwappedRightFiber x y z w q') ∧
+        SwappedTwoStepClass x y z w q q') :
+    IsInnerContribution x y z w q := by
+  rcases h with ⟨q', hq', hs⟩
+  exact ⟨q', SwappedRightFiber.nonempty_to_InRightSupportClass x y z w hq', hs⟩
+
+/-- Fibre-level associator shape can be repackaged as class-level associator
+shape. -/
+theorem associator_fiber_shape_to_class_shape
+    (x y z w : PTree)
+    {q : TwoStepQuotient x y z w}
+    (h :
+      Nonempty (RightFiber x y z w q) ∨
+      ∃ q' : TwoStepQuotient y x z w,
+        Nonempty (SwappedRightFiber x y z w q') ∧
+        SwappedTwoStepClass x y z w q q') :
+    IsOuterContribution x y z w q ∨
+    IsInnerContribution x y z w q := by
+  cases h with
+  | inl houter =>
+      exact Or.inl (nonempty_RightFiber.to_IsOuterContribution x y z w houter)
+  | inr hinner =>
+      exact Or.inr (nonempty_SwappedRightFiber.to_IsInnerContribution x y z w hinner)
+
+/-- The class-level and fibre-level associator decompositions are equivalent
+packagings of the same data. -/
+theorem associator_class_shape_iff_fiber_shape
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) :
+    (IsOuterContribution x y z w q ∨
+      IsInnerContribution x y z w q)
+    ↔
+    (Nonempty (RightFiber x y z w q) ∨
+      ∃ q' : TwoStepQuotient y x z w,
+        Nonempty (SwappedRightFiber x y z w q') ∧
+        SwappedTwoStepClass x y z w q q') := by
+  constructor
+  · intro h
+    exact associator_class_shape_to_fiber_shape x y z w h
+  · intro h
+    exact associator_fiber_shape_to_class_shape x y z w h
+
+theorem leftSupportClass_associator_symmetric
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : InLeftSupportClass x y z w q) :
+    InRightSupportClass x y z w q ∨
+    ∃ q' : TwoStepQuotient y x z w,
+      InRightSupportClass y x z w q' ∧
+      SwappedTwoStepClass x y z w q q' := by
+  exact quotient_preLie_associator_shape x y z w q hq
+
+/--
+Forward map from all left-inner fibre data to all swapped right-inner fibre data.
+-/
+def allLeftInnerFiberData_forward
+    (x y z w : PTree) :
+    AllLeftInnerFiberData x y z w →
+    AllSwappedRightInnerFiberData x y z w
+  | ⟨q, hq⟩ => leftInnerFiberData_forward x y z w q hq
+
+/--
+Backward map from all swapped right-inner fibre data to all left-inner fibre data.
+-/
+def allLeftInnerFiberData_backward
+    (x y z w : PTree) :
+    AllSwappedRightInnerFiberData x y z w →
+    AllLeftInnerFiberData x y z w :=
+  leftInnerFiberData_backward x y z w
+
+/-- Roundtrip on the left-inner side, at the level of the underlying witness. -/
+theorem allLeftInnerFiber_roundtrip_left
+    (x y z w : PTree)
+    (h : AllLeftInnerFiberData x y z w) :
+    (allLeftInnerFiberData_backward x y z w
+      (allLeftInnerFiberData_forward x y z w h)).2.1.1 = h.2.1.1 := by
+  rcases h with ⟨q, hq⟩
+  exact leftInnerFiber_roundtrip_left x y z w q hq
+
+/-- Roundtrip on the swapped-right-inner side, at the level of the underlying witness. -/
+theorem allLeftInnerFiber_roundtrip_right
+    (x y z w : PTree)
+    (h : AllSwappedRightInnerFiberData x y z w) :
+    (allLeftInnerFiberData_forward x y z w
+      (allLeftInnerFiberData_backward x y z w h)).2.1.1 = h.2.1.1 := by
+  exact leftInnerFiber_roundtrip_right x y z w h
+
+/--
+Existence of left-inner fibre data is equivalent to existence of swapped
+right-inner fibre data.
+-/
+theorem nonempty_allLeftInnerFiberData_iff
+    (x y z w : PTree) :
+    Nonempty (AllLeftInnerFiberData x y z w) ↔
+    Nonempty (AllSwappedRightInnerFiberData x y z w) := by
+  constructor
+  · intro h
+    rcases h with ⟨h⟩
+    exact ⟨allLeftInnerFiberData_forward x y z w h⟩
+  · intro h
+    rcases h with ⟨h⟩
+    exact ⟨allLeftInnerFiberData_backward x y z w h⟩
 
 
 
