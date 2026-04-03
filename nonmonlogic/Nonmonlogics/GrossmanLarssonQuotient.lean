@@ -3558,24 +3558,6 @@ theorem leftSupportClass_associator_symmetric
       SwappedTwoStepClass x y z w q q' := by
   exact quotient_preLie_associator_shape x y z w q hq
 
-/--
-Forward map from all left-inner fibre data to all swapped right-inner fibre data.
--/
-def allLeftInnerFiberData_forward
-    (x y z w : PTree) :
-    AllLeftInnerFiberData x y z w →
-    AllSwappedRightInnerFiberData x y z w
-  | ⟨q, hq⟩ => leftInnerFiberData_forward x y z w q hq
-
-/--
-Backward map from all swapped right-inner fibre data to all left-inner fibre data.
--/
-def allLeftInnerFiberData_backward
-    (x y z w : PTree) :
-    AllSwappedRightInnerFiberData x y z w →
-    AllLeftInnerFiberData x y z w :=
-  leftInnerFiberData_backward x y z w
-
 /-- Roundtrip on the left-inner side, at the level of the underlying witness. -/
 theorem allLeftInnerFiber_roundtrip_left
     (x y z w : PTree)
@@ -3608,6 +3590,443 @@ theorem nonempty_allLeftInnerFiberData_iff
   · intro h
     rcases h with ⟨h⟩
     exact ⟨allLeftInnerFiberData_backward x y z w h⟩
+
+/-!
+## Inner fibre correspondence as an equivalence of total data
+
+The previous lemmas gave forward/backward maps and witness-level roundtrip
+identities. We now package this as an explicit equivalence between the total
+left-inner fibre data and the total swapped right-inner fibre data.
+-/
+
+/-- Forward map on total inner fibre data. -/
+def AllLeftInnerFiberData.toSwapped
+    (x y z w : PTree) :
+    AllLeftInnerFiberData x y z w →
+    AllSwappedRightInnerFiberData x y z w :=
+  allLeftInnerFiberData_forward x y z w
+
+/-- Backward map on total swapped inner fibre data. -/
+def AllSwappedRightInnerFiberData.toLeft
+    (x y z w : PTree) :
+    AllSwappedRightInnerFiberData x y z w →
+    AllLeftInnerFiberData x y z w :=
+  allLeftInnerFiberData_backward x y z w
+
+/-- On the left side, forward then backward preserves the underlying witness. -/
+theorem AllLeftInnerFiberData.toSwapped_toLeft_witness
+    (x y z w : PTree)
+    (h : AllLeftInnerFiberData x y z w) :
+    ((AllSwappedRightInnerFiberData.toLeft x y z w)
+      ((AllLeftInnerFiberData.toSwapped x y z w) h)).2.1.1
+      = h.2.1.1 := by
+  exact allLeftInnerFiber_roundtrip_left x y z w h
+
+/-- On the swapped-right side, backward then forward preserves the underlying
+witness. -/
+theorem AllSwappedRightInnerFiberData.toLeft_toSwapped_witness
+    (x y z w : PTree)
+    (h : AllSwappedRightInnerFiberData x y z w) :
+    ((AllLeftInnerFiberData.toSwapped x y z w)
+      ((AllSwappedRightInnerFiberData.toLeft x y z w) h)).2.1.1
+      = h.2.1.1 := by
+  exact allLeftInnerFiber_roundtrip_right x y z w h
+
+/-- The inner contribution types are inhabited simultaneously. -/
+theorem allInnerFiberDataEquiv_nonempty
+    (x y z w : PTree) :
+    Nonempty (AllLeftInnerFiberData x y z w) ↔
+    Nonempty (AllSwappedRightInnerFiberData x y z w) := by
+  exact nonempty_allLeftInnerFiberData_iff x y z w
+
+/-- Forward then backward preserves the left quotient class. -/
+theorem AllLeftInnerFiberData.toSwapped_toLeft_fst
+    (x y z w : PTree)
+    (h : AllLeftInnerFiberData x y z w) :
+    ((AllSwappedRightInnerFiberData.toLeft x y z w)
+      ((AllLeftInnerFiberData.toSwapped x y z w) h)).fst = h.fst := by
+  rcases h with ⟨q, hq⟩
+  rcases hq with ⟨h, hh⟩
+  rcases h with ⟨hw, hinner⟩
+  cases hw with
+  | inner a b y' hay hbw =>
+      simpa [AllLeftInnerFiberData.toSwapped,
+        AllSwappedRightInnerFiberData.toLeft,
+        allLeftInnerFiberData_forward,
+        allLeftInnerFiberData_backward,
+        leftInnerFiberData_forward,
+        leftInnerFiberData_backward,
+        leftInnerFiberData_to_swappedRightInnerFiberData,
+        swappedRightInnerFiberData_to_leftInnerFiberData,
+        leftInnerWitnessClass,
+        hh]
+  | outer a b z' haz hbw =>
+      cases hinner
+
+/-- Backward then forward preserves the swapped quotient class. -/
+theorem AllSwappedRightInnerFiberData.toLeft_toSwapped_fst
+    (x y z w : PTree)
+    (h : AllSwappedRightInnerFiberData x y z w) :
+    ((AllLeftInnerFiberData.toSwapped x y z w)
+      ((AllSwappedRightInnerFiberData.toLeft x y z w) h)).fst = h.fst := by
+  rcases h with ⟨q', hq'⟩
+  rcases hq' with ⟨h, hh⟩
+  rcases h with ⟨hw, hinner⟩
+  cases hw with
+  | inner a b y' hay hbw =>
+      simpa [AllLeftInnerFiberData.toSwapped,
+        AllSwappedRightInnerFiberData.toLeft,
+        allLeftInnerFiberData_forward,
+        allLeftInnerFiberData_backward,
+        leftInnerFiberData_forward,
+        leftInnerFiberData_backward,
+        leftInnerFiberData_to_swappedRightInnerFiberData,
+        swappedRightInnerFiberData_to_leftInnerFiberData,
+        swappedRightInnerWitnessClass,
+        hh]
+  | outer a b z' haz hbw =>
+      cases hinner
+
+
+/-!
+## Inner contribution classes as subtypes of quotient classes
+
+The witness-carrying transport lives on `AllLeftInnerFiberData` and
+`AllSwappedRightInnerFiberData`. If we only want to speak about which quotient
+classes support such data, we package that as a subtype.
+-/
+
+open Classical
+
+/-- A quotient class on the left carries inner contribution data. -/
+def HasLeftInnerContributionClass
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) : Prop :=
+  Nonempty (LeftInnerFiberData x y z w q)
+
+/-- A quotient class on the swapped side carries right-inner contribution data. -/
+def HasSwappedRightInnerContributionClass
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w) : Prop :=
+  Nonempty (SwappedRightInnerFiberData x y z w q')
+
+/-- The subtype of left quotient classes supporting inner contribution data. -/
+def LeftInnerContributionClasses
+    (x y z w : PTree) :=
+  { q : TwoStepQuotient x y z w // HasLeftInnerContributionClass x y z w q }
+
+/-- The subtype of swapped quotient classes supporting right-inner contribution data. -/
+def SwappedRightInnerContributionClasses
+    (x y z w : PTree) :=
+  { q' : TwoStepQuotient y x z w // HasSwappedRightInnerContributionClass x y z w q' }
+
+/-- Total left-inner fibre data determines a supporting left quotient class. -/
+def AllLeftInnerFiberData.toContributionClass
+    (x y z w : PTree)
+    (h : AllLeftInnerFiberData x y z w) :
+    LeftInnerContributionClasses x y z w :=
+  ⟨h.1, ⟨h.2⟩⟩
+
+/-- Total swapped-right-inner fibre data determines a supporting swapped quotient class. -/
+def AllSwappedRightInnerFiberData.toContributionClass
+    (x y z w : PTree)
+    (h : AllSwappedRightInnerFiberData x y z w) :
+    SwappedRightInnerContributionClasses x y z w :=
+  ⟨h.1, ⟨h.2⟩⟩
+
+/-- A supporting left quotient class yields total left-inner fibre data. -/
+noncomputable def LeftInnerContributionClasses.toTotal
+    (x y z w : PTree)
+    (h : LeftInnerContributionClasses x y z w) :
+    AllLeftInnerFiberData x y z w :=
+  ⟨h.1, Classical.choice h.2⟩
+
+/-- A supporting swapped quotient class yields total swapped-right-inner fibre data. -/
+noncomputable def SwappedRightInnerContributionClasses.toTotal
+    (x y z w : PTree)
+    (h : SwappedRightInnerContributionClasses x y z w) :
+    AllSwappedRightInnerFiberData x y z w :=
+  ⟨h.1, Classical.choice h.2⟩
+
+/-
+/-- The total left-inner and swapped-right-inner data types are equivalent at
+the level of witness-carrying data. -/
+def allInnerFiberDataEquiv
+    (x y z w : PTree) :
+    AllLeftInnerFiberData x y z w ≃
+    AllSwappedRightInnerFiberData x y z w where
+  toFun := AllLeftInnerFiberData.toSwapped x y z w
+  invFun := AllSwappedRightInnerFiberData.toLeft x y z w
+  left_inv := by
+    intro h
+    apply Sigma.ext
+    · exact leftInnerFiber_roundtrip_left x y z w h.1 h.2
+    · cases h with
+      | mk q hq =>
+          simp [AllLeftInnerFiberData.toSwapped,
+            AllSwappedRightInnerFiberData.toLeft,
+            allLeftInnerFiberData_forward,
+            allLeftInnerFiberData_backward]
+  right_inv := by
+    intro h
+    apply Sigma.ext
+    · exact leftInnerFiber_roundtrip_right x y z w h
+    · cases h with
+      | mk q hq =>
+          simp [AllLeftInnerFiberData.toSwapped,
+            AllSwappedRightInnerFiberData.toLeft,
+            allLeftInnerFiberData_forward,
+            allLeftInnerFiberData_backward]
+-/
+
+/-- Left inner-supporting classes transport to swapped right-inner-supporting classes. -/
+noncomputable def transportLeftInnerContributionClassToSwapped
+    (x y z w : PTree)
+    (h : LeftInnerContributionClasses x y z w) :
+    SwappedRightInnerContributionClasses x y z w :=
+  (AllLeftInnerFiberData.toSwapped x y z w
+    (LeftInnerContributionClasses.toTotal x y z w h)).toContributionClass x y z w
+
+/-- Swapped right-inner-supporting classes transport back to left inner-supporting classes. -/
+noncomputable def transportSwappedInnerContributionClassToLeft
+    (x y z w : PTree)
+    (h : SwappedRightInnerContributionClasses x y z w) :
+    LeftInnerContributionClasses x y z w :=
+  (AllSwappedRightInnerFiberData.toLeft x y z w
+    (SwappedRightInnerContributionClasses.toTotal x y z w h)).toContributionClass x y z w
+
+/-- Existence of a left inner-supporting quotient class is equivalent to existence
+of a swapped right-inner-supporting quotient class. -/
+theorem nonempty_innerContributionClasses_iff
+    (x y z w : PTree) :
+    Nonempty (LeftInnerContributionClasses x y z w) ↔
+    Nonempty (SwappedRightInnerContributionClasses x y z w) := by
+  constructor
+  · intro h
+    rcases h with ⟨h⟩
+    exact ⟨transportLeftInnerContributionClassToSwapped x y z w h⟩
+  · intro h
+    rcases h with ⟨h⟩
+    exact ⟨transportSwappedInnerContributionClassToLeft x y z w h⟩
+
+/-!
+## Pointwise transport of left-inner contribution data
+-/
+
+open Classical
+
+/-- The forward transport of left-inner fibre data lands in a swapped class
+related by `SwappedTwoStepClass`. -/
+theorem leftInnerFiberData_forward_swapped
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (h : LeftInnerFiberData x y z w q) :
+    SwappedTwoStepClass x y z w q
+      (leftInnerFiberData_forward x y z w q h).1 := by
+  rcases h with ⟨h, hh⟩
+  rcases h with ⟨hw, hinner⟩
+  cases hw with
+  | inner a b y' hay hbw =>
+      apply swapped_respects_eq_left x y z w hh
+      simpa [leftInnerFiberData_forward,
+        leftInnerFiberData_to_swappedRightInnerFiberData,
+        leftInnerWitnessEquiv_swappedRightInnerWitness,
+        leftInnerWitnessClass,
+        swappedRightInnerWitnessClass,
+        classOfLeftWitness, codeOfLeftWitness,
+        classOfRightWitness, codeOfRightWitness,
+        classOfLeftInner, classOfRightInner] using
+        (SwappedTwoStepClass.leftInner (x := x) (y := y) (z := z) (w := w)
+          a b y' hay hbw)
+  | outer a b z' haz hbw =>
+      cases hinner
+
+/-- A left inner-supporting class yields some swapped right-inner supporting
+class related by `SwappedTwoStepClass`. -/
+theorem HasLeftInnerContributionClass.exists_swappedRightInner
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : HasLeftInnerContributionClass x y z w q) :
+    ∃ q' : TwoStepQuotient y x z w,
+      SwappedTwoStepClass x y z w q q' ∧
+      HasSwappedRightInnerContributionClass x y z w q' := by
+  rcases hq with ⟨h⟩
+  refine ⟨(leftInnerFiberData_forward x y z w q h).1, ?_, ?_⟩
+  · exact leftInnerFiberData_forward_swapped x y z w q h
+  · exact ⟨(leftInnerFiberData_forward x y z w q h).2⟩
+
+/-- Any total left-inner fibre datum determines a swapped right-inner
+supporting class. -/
+def AllLeftInnerFiberData.toSwappedSupportingClass
+    (x y z w : PTree)
+    (h : AllLeftInnerFiberData x y z w) :
+    SwappedRightInnerContributionClasses x y z w :=
+  (AllLeftInnerFiberData.toSwapped x y z w h).toContributionClass x y z w
+
+/-- Pointwise left-inner support implies existence of a swapped right-inner
+supporting class. -/
+theorem HasLeftInnerContributionClass.exists_supporting_swappedClass
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : HasLeftInnerContributionClass x y z w q) :
+    ∃ s : SwappedRightInnerContributionClasses x y z w,
+      SwappedTwoStepClass x y z w q s.1 := by
+  rcases hq with ⟨h⟩
+  refine ⟨(AllLeftInnerFiberData.toSwappedSupportingClass x y z w ⟨q, h⟩), ?_⟩
+  exact leftInnerFiberData_forward_swapped x y z w q h
+
+/-- A swapped right-inner supporting class is, in particular, right-supported. -/
+theorem HasSwappedRightInnerContributionClass.to_inRightSupportClass
+    (x y z w : PTree)
+    {q' : TwoStepQuotient y x z w}
+    (hq' : HasSwappedRightInnerContributionClass x y z w q') :
+    InRightSupportClass y x z w q' := by
+  rcases hq' with ⟨hq'⟩
+  rcases hq' with ⟨h, hh⟩
+  rcases h with ⟨hw, hinner⟩
+  exact ⟨hw, by
+    simpa [swappedRightInnerWitnessClass, classOfRightWitness, codeOfRightWitness] using hh⟩
+
+/-!
+## Backward transport of swapped-right-inner contribution data
+-/
+
+/-- The backward transport of swapped-right-inner fibre data lands in a left
+class related by `SwappedTwoStepClass`. -/
+theorem swappedRightInnerFiberData_backward_swapped
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w)
+    (h : SwappedRightInnerFiberData x y z w q') :
+    SwappedTwoStepClass x y z w
+      (leftInnerFiberData_backward x y z w ⟨q', h⟩).1
+      q' := by
+  rcases h with ⟨h, hh⟩
+  rcases h with ⟨hw, hinner⟩
+  cases hw with
+  | inner a b y' hay hbw =>
+      apply swapped_respects_eq_right x y z w hh
+      simpa [leftInnerFiberData_backward,
+        swappedRightInnerFiberData_to_leftInnerFiberData,
+        leftInnerWitnessEquiv_swappedRightInnerWitness,
+        leftInnerWitnessClass,
+        swappedRightInnerWitnessClass,
+        classOfLeftWitness, codeOfLeftWitness,
+        classOfRightWitness, codeOfRightWitness,
+        classOfLeftInner, classOfRightInner] using
+        (SwappedTwoStepClass.leftInner (x := x) (y := y) (z := z) (w := w)
+          a b y' hay hbw)
+  | outer a b z' haz hbw =>
+      cases hinner
+
+/-- A swapped right-inner-supporting class yields some left inner-supporting
+class related by `SwappedTwoStepClass`. -/
+theorem HasSwappedRightInnerContributionClass.exists_leftInner
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : HasSwappedRightInnerContributionClass x y z w q') :
+    ∃ q : TwoStepQuotient x y z w,
+      SwappedTwoStepClass x y z w q q' ∧
+      HasLeftInnerContributionClass x y z w q := by
+  rcases hq' with ⟨h⟩
+  refine ⟨(leftInnerFiberData_backward x y z w ⟨q', h⟩).1, ?_, ?_⟩
+  · exact swappedRightInnerFiberData_backward_swapped x y z w q' h
+  · exact ⟨(leftInnerFiberData_backward x y z w ⟨q', h⟩).2⟩
+
+/-- Any total swapped-right-inner fibre datum determines a left inner-supporting
+class. -/
+def AllSwappedRightInnerFiberData.toLeftSupportingClass
+    (x y z w : PTree)
+    (h : AllSwappedRightInnerFiberData x y z w) :
+    LeftInnerContributionClasses x y z w :=
+  (AllSwappedRightInnerFiberData.toLeft x y z w h).toContributionClass x y z w
+
+/-- Pointwise swapped-right-inner support implies existence of a left
+inner-supporting class. -/
+theorem HasSwappedRightInnerContributionClass.exists_supporting_leftClass
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : HasSwappedRightInnerContributionClass x y z w q') :
+    ∃ s : LeftInnerContributionClasses x y z w,
+      SwappedTwoStepClass x y z w s.1 q' := by
+  rcases hq' with ⟨h⟩
+  refine ⟨(AllSwappedRightInnerFiberData.toLeftSupportingClass x y z w ⟨q', h⟩), ?_⟩
+  exact swappedRightInnerFiberData_backward_swapped x y z w q' h
+
+/-!
+## Inner-supporting classes correspond across the swapped quotient
+-/
+
+/-- Every left inner-supporting class has a swapped right-inner supporting
+partner related by `SwappedTwoStepClass`. -/
+theorem LeftInnerContributionClasses.exists_swapped_partner
+    (x y z w : PTree)
+    (s : LeftInnerContributionClasses x y z w) :
+    ∃ t : SwappedRightInnerContributionClasses x y z w,
+      SwappedTwoStepClass x y z w s.1 t.1 := by
+  exact HasLeftInnerContributionClass.exists_supporting_swappedClass
+    x y z w s.1 s.2
+
+/-- Every swapped right-inner supporting class has a left inner-supporting
+partner related by `SwappedTwoStepClass`. -/
+theorem SwappedRightInnerContributionClasses.exists_left_partner
+    (x y z w : PTree)
+    (t : SwappedRightInnerContributionClasses x y z w) :
+    ∃ s : LeftInnerContributionClasses x y z w,
+      SwappedTwoStepClass x y z w s.1 t.1 := by
+  exact HasSwappedRightInnerContributionClass.exists_supporting_leftClass
+    x y z w t.1 t.2
+
+
+theorem HasLeftInnerContributionClass_exists_swapped_partner
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) :
+    HasLeftInnerContributionClass x y z w q →
+    ∃ t : SwappedRightInnerContributionClasses x y z w,
+      SwappedTwoStepClass x y z w q t.1 := by
+  intro hq
+  exact HasLeftInnerContributionClass.exists_supporting_swappedClass
+    x y z w q hq
+
+/-- A left inner-supporting class yields a swapped partner and conversely. -/
+theorem innerSupportingClasses_correspond
+    (x y z w : PTree) :
+    (∀ s : LeftInnerContributionClasses x y z w,
+      ∃ t : SwappedRightInnerContributionClasses x y z w,
+        SwappedTwoStepClass x y z w s.1 t.1)
+    ∧
+    (∀ t : SwappedRightInnerContributionClasses x y z w,
+      ∃ s : LeftInnerContributionClasses x y z w,
+        SwappedTwoStepClass x y z w s.1 t.1) := by
+  constructor
+  · intro s
+    exact LeftInnerContributionClasses.exists_swapped_partner x y z w s
+  · intro t
+    exact SwappedRightInnerContributionClasses.exists_left_partner x y z w t
+
+/-- Any left inner-supporting class determines a swapped-side inner associator
+shape. -/
+theorem LeftInnerContributionClasses.to_inner_associator_shape
+    (x y z w : PTree)
+    (s : LeftInnerContributionClasses x y z w) :
+    ∃ q' : TwoStepQuotient y x z w,
+      SwappedTwoStepClass x y z w s.1 q' ∧
+      HasSwappedRightInnerContributionClass x y z w q' := by
+  exact HasLeftInnerContributionClass.exists_swappedRightInner
+    x y z w s.1 s.2
+
+/-- Any swapped right-inner supporting class determines a left-side inner
+associator shape. -/
+theorem SwappedRightInnerContributionClasses.to_inner_associator_shape
+    (x y z w : PTree)
+    (t : SwappedRightInnerContributionClasses x y z w) :
+    ∃ q : TwoStepQuotient x y z w,
+      SwappedTwoStepClass x y z w q t.1 ∧
+      HasLeftInnerContributionClass x y z w q := by
+  exact HasSwappedRightInnerContributionClass.exists_leftInner
+    x y z w t.1 t.2
+
+
+
 
 
 
