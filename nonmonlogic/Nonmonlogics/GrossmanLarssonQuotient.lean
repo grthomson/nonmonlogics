@@ -1,4 +1,9 @@
 import Nonmonlogics.GrossmanLarsson
+import Mathlib.SetTheory.Cardinal.Basic
+
+#check Cardinal
+#check Cardinal.mk
+#check Cardinal.lift
 
 /-!
 # Quotient / canonical witness layer for the Grossman–Larson proof-tree development
@@ -751,6 +756,7 @@ theorem twoStepQuotient_preLie_shape
   · intro a b y' hay hbw
     exact leftInnerWitness_has_swapped_innerRepresentative x y z w a b y' hay hbw
 
+/-
 /--
 A basic quotient-level swapped correspondence relation.
 
@@ -762,6 +768,44 @@ inductive SwappedTwoStepClass
     (x y z w : PTree) :
     TwoStepQuotient x y z w →
     TwoStepQuotient y x z w → Prop where
+
+| leftInner
+    (a b : Address) (y' : PTree)
+    (hay : (a, y') ∈ matchingLeafGraftWitnesses y x)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y' z) :
+    SwappedTwoStepClass x y z w
+      (classOfLeftInner a b y' hay hbw)
+      (classOfRightInner a b y' hay hbw)
+
+| rightInner
+    (a b : Address) (y' : PTree)
+    (hay : (a, y') ∈ matchingLeafGraftWitnesses x y)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y' z) :
+    SwappedTwoStepClass x y z w
+      (codeClass (TwoStepCode.rightInner a b y' hay hbw))
+      (codeClass (TwoStepCode.leftInner a b y' hay hbw))
+-/
+
+inductive SwappedTwoStepClass
+    (x y z w : PTree) :
+    TwoStepQuotient x y z w →
+    TwoStepQuotient y x z w → Prop where
+
+| leftOuter
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses y z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses x z') :
+    SwappedTwoStepClass x y z w
+      (classOfLeftWitness (TwoStepWitnessLeft.outer a b z' haz hbw))
+      (classOfRightWitness (TwoStepWitnessRight.outer a b z' haz hbw))
+
+| rightOuter
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses x z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y z') :
+    SwappedTwoStepClass x y z w
+      (classOfRightWitness (TwoStepWitnessRight.outer a b z' haz hbw))
+      (classOfLeftWitness (TwoStepWitnessLeft.outer a b z' haz hbw))
 
 | leftInner
     (a b : Address) (y' : PTree)
@@ -4025,6 +4069,1837 @@ theorem SwappedRightInnerContributionClasses.to_inner_associator_shape
   exact HasSwappedRightInnerContributionClass.exists_leftInner
     x y z w t.1 t.2
 
+
+/-!
+## Outer-supporting classes
+-/
+
+/-- The quotient class determined by an outer-left witness. -/
+def OuterLeftWitness.toClass
+    {x y z w : PTree}
+    (h : OuterLeftWitness x y z w) :
+    TwoStepQuotient x y z w :=
+  match h with
+  | OuterLeftWitness.mk a b z' haz hbw =>
+      classOfLeftWitness (TwoStepWitnessLeft.outer a b z' haz hbw)
+
+/-- The quotient class determined by an outer-right witness. -/
+def OuterRightWitness.toClass
+    {x y z w : PTree}
+    (h : OuterRightWitness x y z w) :
+    TwoStepQuotient x y z w :=
+  match h with
+  | OuterRightWitness.mk a b z' haz hbw =>
+      classOfRightWitness (TwoStepWitnessRight.outer a b z' haz hbw)
+
+/-- The quotient class determined by an outer-left witness. -/
+def outerLeftWitnessClass
+    {x y z w : PTree}
+    (h : OuterLeftWitness x y z w) :
+    TwoStepQuotient x y z w :=
+  match h with
+  | OuterLeftWitness.mk a b z' haz hbw =>
+      classOfLeftWitness (TwoStepWitnessLeft.outer a b z' haz hbw)
+
+/-- The quotient class determined by an outer-right witness. -/
+def outerRightWitnessClass
+    {x y z w : PTree}
+    (h : OuterRightWitness x y z w) :
+    TwoStepQuotient x y z w :=
+  match h with
+  | OuterRightWitness.mk a b z' haz hbw =>
+      classOfRightWitness (TwoStepWitnessRight.outer a b z' haz hbw)
+
+/-- A left outer-supporting quotient class. -/
+def HasLeftOuterContributionClass
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) : Prop :=
+  ∃ h : OuterLeftWitness x y z w, outerLeftWitnessClass h = q
+
+/-- A right outer-supporting quotient class on the original side. -/
+def HasRightOuterContributionClass
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) : Prop :=
+  ∃ h : OuterRightWitness x y z w, outerRightWitnessClass h = q
+
+/-- A swapped-side right outer-supporting quotient class. -/
+def HasSwappedRightOuterContributionClass
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w) : Prop :=
+  ∃ h : OuterRightWitness y x z w, outerRightWitnessClass h = q'
+
+
+/-- Every left outer-supporting class has a swapped right-outer partner. -/
+theorem HasLeftOuterContributionClass.exists_rightOuter
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : HasLeftOuterContributionClass x y z w q) :
+    ∃ q' : TwoStepQuotient y x z w,
+      SwappedTwoStepClass x y z w q q' ∧
+      HasSwappedRightOuterContributionClass x y z w q' := by
+  rcases hq with ⟨h, hh⟩
+  cases h with
+  | mk a b z' haz hbw =>
+      refine ⟨outerRightWitnessClass (OuterRightWitness.mk a b z' haz hbw), ?_, ?_⟩
+      · apply swapped_respects_eq_left x y z w hh
+        simpa [outerLeftWitnessClass, outerRightWitnessClass,
+          classOfLeftWitness, codeOfLeftWitness,
+          classOfRightWitness, codeOfRightWitness]
+          using
+            (SwappedTwoStepClass.leftOuter (x := x) (y := y) (z := z) (w := w)
+              a b z' haz hbw)
+      · refine ⟨OuterRightWitness.mk a b z' haz hbw, rfl⟩
+
+/-- A swapped left-outer-supporting quotient class. -/
+def HasSwappedLeftOuterContributionClass
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w) : Prop :=
+  ∃ h : OuterLeftWitness y x z w,
+    outerLeftWitnessClass h = q'
+
+/-- Every right outer-supporting class has a swapped left-outer partner. -/
+theorem HasRightOuterContributionClass.exists_leftOuter
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : HasRightOuterContributionClass x y z w q) :
+    ∃ q' : TwoStepQuotient y x z w,
+      SwappedTwoStepClass x y z w q q' ∧
+      HasSwappedLeftOuterContributionClass x y z w q' := by
+  rcases hq with ⟨h, hh⟩
+  cases h with
+  | mk a b z' haz hbw =>
+      refine ⟨outerLeftWitnessClass (OuterLeftWitness.mk a b z' haz hbw), ?_, ?_⟩
+      · apply swapped_respects_eq_left x y z w hh
+        simpa [outerLeftWitnessClass, outerRightWitnessClass,
+          classOfLeftWitness, codeOfLeftWitness,
+          classOfRightWitness, codeOfRightWitness]
+          using
+            (SwappedTwoStepClass.rightOuter (x := x) (y := y) (z := z) (w := w)
+              a b z' haz hbw)
+      · refine ⟨OuterLeftWitness.mk a b z' haz hbw, rfl⟩
+
+/-- A contribution class is either an outer or inner supporting class. -/
+def IsLeftContributionClass
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) : Prop :=
+  HasLeftOuterContributionClass x y z w q ∨
+  HasLeftInnerContributionClass x y z w q
+
+/-- Swapped-side contribution class. -/
+def IsRightContributionClass
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w) : Prop :=
+  HasSwappedRightOuterContributionClass x y z w q' ∨
+  HasSwappedRightInnerContributionClass x y z w q'
+
+/-- Any left contribution class transports to a swapped-side contribution class. -/
+theorem IsLeftContributionClass.exists_right
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : IsLeftContributionClass x y z w q) :
+    ∃ q' : TwoStepQuotient y x z w,
+      SwappedTwoStepClass x y z w q q' ∧
+      IsRightContributionClass x y z w q' := by
+  rcases hq with hq | hq
+  · rcases HasLeftOuterContributionClass.exists_rightOuter x y z w q hq with
+      ⟨q', hs, hq'⟩
+    exact ⟨q', hs, Or.inl hq'⟩
+  · rcases HasLeftInnerContributionClass.exists_swappedRightInner x y z w q hq with
+      ⟨q', hs, hq'⟩
+    exact ⟨q', hs, Or.inr hq'⟩
+
+/-- Every swapped right-outer-supporting class has a left-outer partner. -/
+theorem HasSwappedRightOuterContributionClass.exists_leftOuter
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : HasSwappedRightOuterContributionClass x y z w q') :
+    ∃ q : TwoStepQuotient x y z w,
+      SwappedTwoStepClass x y z w q q' ∧
+      HasLeftOuterContributionClass x y z w q := by
+  rcases hq' with ⟨h, hh⟩
+  cases h with
+  | mk a b z' haz hbw =>
+      refine ⟨outerLeftWitnessClass (OuterLeftWitness.mk a b z' haz hbw), ?_, ?_⟩
+      · apply swapped_respects_eq_right x y z w hh
+        simpa [outerLeftWitnessClass, outerRightWitnessClass,
+          classOfLeftWitness, codeOfLeftWitness,
+          classOfRightWitness, codeOfRightWitness]
+          using
+            (SwappedTwoStepClass.leftOuter (x := x) (y := y) (z := z) (w := w)
+              a b z' haz hbw)
+      · refine ⟨OuterLeftWitness.mk a b z' haz hbw, rfl⟩
+
+/-- Any swapped-side contribution class transports back to the left. -/
+theorem IsRightContributionClass.exists_left
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : IsRightContributionClass x y z w q') :
+    ∃ q : TwoStepQuotient x y z w,
+      SwappedTwoStepClass x y z w q q' ∧
+      IsLeftContributionClass x y z w q := by
+  rcases hq' with hq' | hq'
+  · rcases HasSwappedRightOuterContributionClass.exists_leftOuter x y z w q' hq' with
+      ⟨q, hs, hq⟩
+    exact ⟨q, hs, Or.inl hq⟩
+  · rcases HasSwappedRightInnerContributionClass.exists_leftInner x y z w q' hq' with
+      ⟨q, hs, hq⟩
+    exact ⟨q, hs, Or.inr hq⟩
+
+
+/-- Left and swapped-right contribution classes correspond across
+`SwappedTwoStepClass`. -/
+theorem contributionClasses_correspond
+    (x y z w : PTree) :
+    (∀ q : TwoStepQuotient x y z w,
+      IsLeftContributionClass x y z w q →
+      ∃ q' : TwoStepQuotient y x z w,
+        SwappedTwoStepClass x y z w q q' ∧
+        IsRightContributionClass x y z w q')
+    ∧
+    (∀ q' : TwoStepQuotient y x z w,
+      IsRightContributionClass x y z w q' →
+      ∃ q : TwoStepQuotient x y z w,
+        SwappedTwoStepClass x y z w q q' ∧
+        IsLeftContributionClass x y z w q) := by
+  constructor
+  · intro q hq
+    exact IsLeftContributionClass.exists_right x y z w q hq
+  · intro q' hq'
+    exact IsRightContributionClass.exists_left x y z w q' hq'
+
+/-- Existence of a left contribution class is equivalent to existence of a
+swapped-right contribution class. -/
+theorem nonempty_contributionClasses_iff
+    (x y z w : PTree) :
+    Nonempty {q : TwoStepQuotient x y z w // IsLeftContributionClass x y z w q} ↔
+    Nonempty {q' : TwoStepQuotient y x z w // IsRightContributionClass x y z w q'} := by
+  constructor
+  · intro h
+    rcases h with ⟨⟨q, hq⟩⟩
+    rcases IsLeftContributionClass.exists_right x y z w q hq with
+      ⟨q', hs, hq'⟩
+    exact ⟨⟨q', hq'⟩⟩
+  · intro h
+    rcases h with ⟨⟨q', hq'⟩⟩
+    rcases IsRightContributionClass.exists_left x y z w q' hq' with
+      ⟨q, hs, hq⟩
+    exact ⟨⟨q, hq⟩⟩
+
+/-- Quotient classes contributing to the left-associated composite. -/
+def LeftAssociatorSupport
+    (x y z w : PTree) : Prop :=
+  ∃ q : TwoStepQuotient x y z w, IsLeftContributionClass x y z w q
+
+/-- Quotient classes contributing to the swapped right-associated composite. -/
+def RightAssociatorSupport
+    (x y z w : PTree) : Prop :=
+  ∃ q' : TwoStepQuotient y x z w, IsRightContributionClass x y z w q'
+
+theorem leftAssociatorSupport_iff_rightAssociatorSupport
+    (x y z w : PTree) :
+    LeftAssociatorSupport x y z w ↔ RightAssociatorSupport x y z w := by
+  constructor
+  · intro h
+    rcases h with ⟨q, hq⟩
+    rcases IsLeftContributionClass.exists_right x y z w q hq with
+      ⟨q', hs, hq'⟩
+    exact ⟨q', hq'⟩
+  · intro h
+    rcases h with ⟨q', hq'⟩
+    rcases IsRightContributionClass.exists_left x y z w q' hq' with
+      ⟨q, hs, hq⟩
+    exact ⟨q, hq⟩
+
+theorem IsLeftContributionClass.outer_or_inner
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : IsLeftContributionClass x y z w q) :
+    HasLeftOuterContributionClass x y z w q ∨
+    HasLeftInnerContributionClass x y z w q := by
+  exact hq
+
+theorem IsRightContributionClass.outer_or_inner
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : IsRightContributionClass x y z w q') :
+    HasSwappedRightOuterContributionClass x y z w q' ∨
+    HasSwappedRightInnerContributionClass x y z w q' := by
+  exact hq'
+
+theorem leftContribution_transport_by_cases
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : IsLeftContributionClass x y z w q) :
+    (HasLeftOuterContributionClass x y z w q →
+      ∃ q' : TwoStepQuotient y x z w,
+        SwappedTwoStepClass x y z w q q' ∧
+        HasSwappedRightOuterContributionClass x y z w q')
+    ∧
+    (HasLeftInnerContributionClass x y z w q →
+      ∃ q' : TwoStepQuotient y x z w,
+        SwappedTwoStepClass x y z w q q' ∧
+        HasSwappedRightInnerContributionClass x y z w q') := by
+  constructor
+  · intro hout
+    exact HasLeftOuterContributionClass.exists_rightOuter x y z w q hout
+  · intro hinn
+    exact HasLeftInnerContributionClass.exists_swappedRightInner x y z w q hinn
+
+  /-- `w` occurs as a quotient-level associator contribution on the left. -/
+def InLeftAssociatorClass
+    (x y z w : PTree) : Prop :=
+  ∃ q : TwoStepQuotient x y z w, IsLeftContributionClass x y z w q
+
+/-- `w` occurs as a quotient-level associator contribution on the swapped side. -/
+def InRightAssociatorClass
+    (x y z w : PTree) : Prop :=
+  ∃ q' : TwoStepQuotient y x z w, IsRightContributionClass x y z w q'
+
+theorem inLeftAssociatorClass_iff_inRightAssociatorClass
+    (x y z w : PTree) :
+    InLeftAssociatorClass x y z w ↔
+    InRightAssociatorClass x y z w := by
+  exact leftAssociatorSupport_iff_rightAssociatorSupport x y z w
+
+
+/-!
+## Total contribution classes
+-/
+
+open Classical
+
+/-- The subtype of left quotient classes supporting total contribution data. -/
+def LeftContributionClasses
+    (x y z w : PTree) :=
+  { q : TwoStepQuotient x y z w // IsLeftContributionClass x y z w q }
+
+/-- The subtype of swapped-right quotient classes supporting total contribution data. -/
+def RightContributionClasses
+    (x y z w : PTree) :=
+  { q' : TwoStepQuotient y x z w // IsRightContributionClass x y z w q' }
+
+/-- Any left contribution class determines some swapped-right contribution class. -/
+noncomputable def transportLeftContributionClassToRight
+    (x y z w : PTree)
+    (h : LeftContributionClasses x y z w) :
+    RightContributionClasses x y z w :=
+  let hx := IsLeftContributionClass.exists_right x y z w h.1 h.2
+  ⟨Classical.choose hx, (Classical.choose_spec hx).2⟩
+
+/-- Any swapped-right contribution class determines some left contribution class. -/
+noncomputable def transportRightContributionClassToLeft
+    (x y z w : PTree)
+    (h : RightContributionClasses x y z w) :
+    LeftContributionClasses x y z w :=
+  let hx := IsRightContributionClass.exists_left x y z w h.1 h.2
+  ⟨Classical.choose hx, (Classical.choose_spec hx).2⟩
+
+/-- Existence of a left contribution class is equivalent to existence of a
+swapped-right contribution class. -/
+theorem nonempty_totalContributionClasses_iff
+    (x y z w : PTree) :
+    Nonempty (LeftContributionClasses x y z w) ↔
+    Nonempty (RightContributionClasses x y z w) := by
+  constructor
+  · intro h
+    rcases h with ⟨h⟩
+    exact ⟨transportLeftContributionClassToRight x y z w h⟩
+  · intro h
+    rcases h with ⟨h⟩
+    exact ⟨transportRightContributionClassToLeft x y z w h⟩
+
+/-- Every left contribution class has a swapped-right partner related by
+`SwappedTwoStepClass`. -/
+theorem LeftContributionClasses.exists_right_partner
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    ∃ t : RightContributionClasses x y z w,
+      SwappedTwoStepClass x y z w s.1 t.1 := by
+  let hx := IsLeftContributionClass.exists_right x y z w s.1 s.2
+  refine ⟨⟨Classical.choose hx, (Classical.choose_spec hx).2⟩, ?_⟩
+  exact (Classical.choose_spec hx).1
+
+/-- Every swapped-right contribution class has a left partner related by
+`SwappedTwoStepClass`. -/
+theorem RightContributionClasses.exists_left_partner
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    ∃ s : LeftContributionClasses x y z w,
+      SwappedTwoStepClass x y z w s.1 t.1 := by
+  let hx := IsRightContributionClass.exists_left x y z w t.1 t.2
+  refine ⟨⟨Classical.choose hx, (Classical.choose_spec hx).2⟩, ?_⟩
+  exact (Classical.choose_spec hx).1
+
+/-- Any left contribution class determines a swapped-side associator shape. -/
+theorem LeftContributionClasses.to_associator_shape
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    ∃ q' : TwoStepQuotient y x z w,
+      SwappedTwoStepClass x y z w s.1 q' ∧
+      IsRightContributionClass x y z w q' := by
+  exact IsLeftContributionClass.exists_right x y z w s.1 s.2
+
+/-- Any swapped-right contribution class determines a left-side associator shape. -/
+theorem RightContributionClasses.to_associator_shape
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    ∃ q : TwoStepQuotient x y z w,
+      SwappedTwoStepClass x y z w q t.1 ∧
+      IsLeftContributionClass x y z w q := by
+  exact IsRightContributionClass.exists_left x y z w t.1 t.2
+
+/-- Left and swapped-right total contribution classes correspond in both directions. -/
+theorem totalContributionClasses_correspond
+    (x y z w : PTree) :
+    (∀ s : LeftContributionClasses x y z w,
+      ∃ t : RightContributionClasses x y z w,
+        SwappedTwoStepClass x y z w s.1 t.1)
+    ∧
+    (∀ t : RightContributionClasses x y z w,
+      ∃ s : LeftContributionClasses x y z w,
+        SwappedTwoStepClass x y z w s.1 t.1) := by
+  constructor
+  · intro s
+    exact LeftContributionClasses.exists_right_partner x y z w s
+  · intro t
+    exact RightContributionClasses.exists_left_partner x y z w t
+
+/-!
+## Swapped-side predicates are just ordinary left-side predicates on swapped inputs
+-/
+
+/-- A swapped right-outer class comes from some left-outer class. -/
+theorem hasSwappedRightOuterContributionClass_exists_leftOuter
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : HasSwappedRightOuterContributionClass x y z w q') :
+    ∃ q : TwoStepQuotient x y z w,
+      SwappedTwoStepClass x y z w q q' ∧
+      HasLeftOuterContributionClass x y z w q := by
+  exact
+    HasSwappedRightOuterContributionClass.exists_leftOuter
+      x y z w q' hq'
+
+/-- A swapped right-inner class comes from some left-inner class. -/
+theorem hasSwappedRightInnerContributionClass_exists_leftInner
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : HasSwappedRightInnerContributionClass x y z w q') :
+    ∃ q : TwoStepQuotient x y z w,
+      SwappedTwoStepClass x y z w q q' ∧
+      HasLeftInnerContributionClass x y z w q := by
+  exact
+    HasSwappedRightInnerContributionClass.exists_leftInner
+      x y z w q' hq'
+
+/-- A left-outer class determines some swapped right-outer class. -/
+theorem hasLeftOuterContributionClass_exists_swappedRightOuter
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : HasLeftOuterContributionClass x y z w q) :
+    ∃ q' : TwoStepQuotient y x z w,
+      SwappedTwoStepClass x y z w q q' ∧
+      HasSwappedRightOuterContributionClass x y z w q' := by
+  exact
+    HasLeftOuterContributionClass.exists_rightOuter
+      x y z w q hq
+
+/-- A left-inner class determines some swapped right-inner class. -/
+theorem hasLeftInnerContributionClass_exists_swappedRightInner
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : HasLeftInnerContributionClass x y z w q) :
+    ∃ q' : TwoStepQuotient y x z w,
+      SwappedTwoStepClass x y z w q q' ∧
+      HasSwappedRightInnerContributionClass x y z w q' := by
+  exact
+    HasLeftInnerContributionClass.exists_swappedRightInner
+      x y z w q hq
+
+/-!
+## Swap symmetry for left contribution classes via the swapped-right side
+-/
+
+/-!
+## Correct swap orientation: right on swapped parameters = left on original parameters
+-/
+
+/-!
+## Partner relation on total contribution classes
+-/
+
+open Classical
+
+/-- Left/right total contribution classes are partners when their underlying
+quotient classes are related by `SwappedTwoStepClass`. -/
+def ContributionClassPartner
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : RightContributionClasses x y z w) : Prop :=
+  SwappedTwoStepClass x y z w s.1 t.1
+
+/-- Choose some swapped-right partner for a left contribution class. -/
+noncomputable def chooseRightContributionPartner
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    RightContributionClasses x y z w :=
+  Classical.choose (LeftContributionClasses.exists_right_partner x y z w s)
+
+/-- The chosen swapped-right partner is related to the original left class. -/
+theorem chooseRightContributionPartner_spec
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    ContributionClassPartner x y z w s
+      (chooseRightContributionPartner x y z w s) := by
+  exact (Classical.choose_spec
+    (LeftContributionClasses.exists_right_partner x y z w s))
+
+/-- Choose some left partner for a swapped-right contribution class. -/
+noncomputable def chooseLeftContributionPartner
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    LeftContributionClasses x y z w :=
+  Classical.choose (RightContributionClasses.exists_left_partner x y z w t)
+
+/-- The chosen left partner is related to the original swapped-right class. -/
+theorem chooseLeftContributionPartner_spec
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    ContributionClassPartner x y z w
+      (chooseLeftContributionPartner x y z w t) t := by
+  exact (Classical.choose_spec
+    (RightContributionClasses.exists_left_partner x y z w t))
+
+/-- Every left contribution class has some partner on the swapped-right side. -/
+theorem leftContributionClass_has_partner
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    ∃ t : RightContributionClasses x y z w,
+      ContributionClassPartner x y z w s t := by
+  exact ⟨chooseRightContributionPartner x y z w s,
+    chooseRightContributionPartner_spec x y z w s⟩
+
+/-- Every swapped-right contribution class has some partner on the left side. -/
+theorem rightContributionClass_has_partner
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    ∃ s : LeftContributionClasses x y z w,
+      ContributionClassPartner x y z w s t := by
+  exact ⟨chooseLeftContributionPartner x y z w t,
+    chooseLeftContributionPartner_spec x y z w t⟩
+
+/-- Nonemptiness of total contribution classes matches on both sides. -/
+theorem nonempty_totalContributionClasses_iff'
+    (x y z w : PTree) :
+    Nonempty (LeftContributionClasses x y z w) ↔
+    Nonempty (RightContributionClasses x y z w) := by
+  constructor
+  · intro h
+    rcases h with ⟨s⟩
+    exact ⟨chooseRightContributionPartner x y z w s⟩
+  · intro h
+    rcases h with ⟨t⟩
+    exact ⟨chooseLeftContributionPartner x y z w t⟩
+
+/-!
+## Fibres of the partner relation
+
+This is the cleanest next step before attempting full uniqueness:
+define the partner fibres explicitly, show they are nonempty, and package the
+chosen-partner maps as points in those fibres.
+
+If the eventual uniqueness theorem is true, it should now become a theorem
+that these fibres are subsingletons.
+-/
+
+open Classical
+
+/-- Right partners of a fixed left contribution class. -/
+def rightPartnerFiber
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    Set (RightContributionClasses x y z w) :=
+  fun t => ContributionClassPartner x y z w s t
+
+/-- Left partners of a fixed swapped-right contribution class. -/
+def leftPartnerFiber
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    Set (LeftContributionClasses x y z w) :=
+  fun s => ContributionClassPartner x y z w s t
+
+/-- The chosen right partner lies in the right partner fibre. -/
+theorem chooseRightContributionPartner_mem_rightPartnerFiber
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    chooseRightContributionPartner x y z w s ∈ rightPartnerFiber x y z w s := by
+  exact chooseRightContributionPartner_spec x y z w s
+
+/-- The chosen left partner lies in the left partner fibre. -/
+theorem chooseLeftContributionPartner_mem_leftPartnerFiber
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    chooseLeftContributionPartner x y z w t ∈ leftPartnerFiber x y z w t := by
+  exact chooseLeftContributionPartner_spec x y z w t
+
+/-- Every right partner fibre is nonempty. -/
+theorem rightPartnerFiber_nonempty
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    (rightPartnerFiber x y z w s).Nonempty := by
+  refine ⟨chooseRightContributionPartner x y z w s, ?_⟩
+  exact chooseRightContributionPartner_mem_rightPartnerFiber x y z w s
+
+/-- Every left partner fibre is nonempty. -/
+theorem leftPartnerFiber_nonempty
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    (leftPartnerFiber x y z w t).Nonempty := by
+  refine ⟨chooseLeftContributionPartner x y z w t, ?_⟩
+  exact chooseLeftContributionPartner_mem_leftPartnerFiber x y z w t
+
+/-- Equality of left contribution classes preserves the right partner fibre. -/
+theorem rightPartnerFiber_congr
+    (x y z w : PTree)
+    {s₁ s₂ : LeftContributionClasses x y z w}
+    (hs : s₁ = s₂) :
+    rightPartnerFiber x y z w s₁ = rightPartnerFiber x y z w s₂ := by
+  subst hs
+  rfl
+
+/-- Equality of right contribution classes preserves the left partner fibre. -/
+theorem leftPartnerFiber_congr
+    (x y z w : PTree)
+    {t₁ t₂ : RightContributionClasses x y z w}
+    (ht : t₁ = t₂) :
+    leftPartnerFiber x y z w t₁ = leftPartnerFiber x y z w t₂ := by
+  subst ht
+  rfl
+
+/-- A convenient reformulation: a right class lies in the fibre of `s`
+iff it is related to `s` by `SwappedTwoStepClass`. -/
+theorem mem_rightPartnerFiber_iff
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : RightContributionClasses x y z w) :
+    t ∈ rightPartnerFiber x y z w s ↔
+      SwappedTwoStepClass x y z w s.1 t.1 := by
+  rfl
+
+/-- A convenient reformulation: a left class lies in the fibre of `t`
+iff it is related to `t` by `SwappedTwoStepClass`. -/
+theorem mem_leftPartnerFiber_iff
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : RightContributionClasses x y z w) :
+    s ∈ leftPartnerFiber x y z w t ↔
+      SwappedTwoStepClass x y z w s.1 t.1 := by
+  rfl
+
+/-!
+## First uniqueness attempt for partner fibres
+-/
+
+/-!
+## Chosen partner maps between fibres
+-/
+
+open Classical
+
+/-- Send a left contribution class to one chosen right partner. -/
+noncomputable def leftToRightPartner
+    (x y z w : PTree) :
+    LeftContributionClasses x y z w → RightContributionClasses x y z w :=
+  chooseRightContributionPartner x y z w
+
+/-- Send a right contribution class to one chosen left partner. -/
+noncomputable def rightToLeftPartner
+    (x y z w : PTree) :
+    RightContributionClasses x y z w → LeftContributionClasses x y z w :=
+  chooseLeftContributionPartner x y z w
+
+/-- The chosen right partner is genuinely a partner. -/
+theorem leftToRightPartner_spec
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    ContributionClassPartner x y z w s (leftToRightPartner x y z w s) := by
+  exact chooseRightContributionPartner_spec x y z w s
+
+/-- The chosen left partner is genuinely a partner. -/
+theorem rightToLeftPartner_spec
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    ContributionClassPartner x y z w (rightToLeftPartner x y z w t) t := by
+  exact chooseLeftContributionPartner_spec x y z w t
+
+/-- Every left class has at least one right partner. -/
+theorem exists_rightPartner
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    ∃ t : RightContributionClasses x y z w,
+      ContributionClassPartner x y z w s t := by
+  exact ⟨leftToRightPartner x y z w s, leftToRightPartner_spec x y z w s⟩
+
+/-- Every right class has at least one left partner. -/
+theorem exists_leftPartner
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    ∃ s : LeftContributionClasses x y z w,
+      ContributionClassPartner x y z w s t := by
+  exact ⟨rightToLeftPartner x y z w t, rightToLeftPartner_spec x y z w t⟩
+
+/-- A right partner fibre, viewed as a subtype. -/
+def RightPartnerFiberType
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :=
+  { t : RightContributionClasses x y z w // ContributionClassPartner x y z w s t }
+
+/-- A left partner fibre, viewed as a subtype. -/
+def LeftPartnerFiberType
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :=
+  { s : LeftContributionClasses x y z w // ContributionClassPartner x y z w s t }
+
+/-- Every left class has a nonempty right partner fibre. -/
+theorem rightPartnerFiberType_nonempty
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    Nonempty (RightPartnerFiberType x y z w s) := by
+  exact ⟨⟨leftToRightPartner x y z w s, leftToRightPartner_spec x y z w s⟩⟩
+
+/-- Every right class has a nonempty left partner fibre. -/
+theorem leftPartnerFiberType_nonempty
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    Nonempty (LeftPartnerFiberType x y z w t) := by
+  exact ⟨⟨rightToLeftPartner x y z w t, rightToLeftPartner_spec x y z w t⟩⟩
+
+
+/-!
+## Incidence objects for partner fibres
+
+The right way to prepare for counting is to package *all partner relations*
+as a single incidence type. Then each fibre is just the collection of incidences
+above a fixed left or right class.
+
+This avoids premature uniqueness assumptions and gives a clean bridge toward
+cardinality / bijection arguments.
+-/
+
+open Classical
+
+/-- A partner incidence is a left/right contribution-class pair related by
+`SwappedTwoStepClass`. -/
+def PartnerIncidence
+    (x y z w : PTree) :=
+  { p : LeftContributionClasses x y z w × RightContributionClasses x y z w //
+      ContributionClassPartner x y z w p.1 p.2 }
+
+/-- The left endpoint of a partner incidence. -/
+def PartnerIncidence.left
+    (x y z w : PTree)
+    (e : PartnerIncidence x y z w) :
+    LeftContributionClasses x y z w :=
+  e.1.1
+
+/-- The right endpoint of a partner incidence. -/
+def PartnerIncidence.right
+    (x y z w : PTree)
+    (e : PartnerIncidence x y z w) :
+    RightContributionClasses x y z w :=
+  e.1.2
+
+/-- The defining partner relation carried by an incidence. -/
+theorem PartnerIncidence.rel
+    (x y z w : PTree)
+    (e : PartnerIncidence x y z w) :
+    ContributionClassPartner x y z w
+      (PartnerIncidence.left x y z w e)
+      (PartnerIncidence.right x y z w e) := by
+  exact e.2
+
+/-- Build an incidence from a left class and a point in its right partner fibre. -/
+def incidenceOfRightFiberElem
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : RightPartnerFiberType x y z w s) :
+    PartnerIncidence x y z w :=
+  ⟨(s, t.1), t.2⟩
+
+/-- Build an incidence from a right class and a point in its left partner fibre. -/
+def incidenceOfLeftFiberElem
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : LeftPartnerFiberType x y z w t) :
+    PartnerIncidence x y z w :=
+  ⟨(s.1, t), s.2⟩
+
+/-- Recover a right-fibre element from an incidence and its left endpoint. -/
+def rightFiberElemOfIncidence
+    (x y z w : PTree)
+    (e : PartnerIncidence x y z w) :
+    RightPartnerFiberType x y z w (PartnerIncidence.left x y z w e) :=
+  ⟨PartnerIncidence.right x y z w e, PartnerIncidence.rel x y z w e⟩
+
+/-- Recover a left-fibre element from an incidence and its right endpoint. -/
+def leftFiberElemOfIncidence
+    (x y z w : PTree)
+    (e : PartnerIncidence x y z w) :
+    LeftPartnerFiberType x y z w (PartnerIncidence.right x y z w e) :=
+  ⟨PartnerIncidence.left x y z w e, PartnerIncidence.rel x y z w e⟩
+
+/-- Going from a right-fibre element to an incidence and back changes nothing. -/
+theorem rightFiberElem_roundtrip
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : RightPartnerFiberType x y z w s) :
+    rightFiberElemOfIncidence x y z w (incidenceOfRightFiberElem x y z w s t) = t := by
+  cases t
+  rfl
+
+/-- Going from a left-fibre element to an incidence and back changes nothing. -/
+theorem leftFiberElem_roundtrip
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : LeftPartnerFiberType x y z w t) :
+    leftFiberElemOfIncidence x y z w (incidenceOfLeftFiberElem x y z w t s) = s := by
+  cases s
+  rfl
+
+/-- For fixed left endpoint, right partner fibres are equivalent to incidences
+with that left endpoint. -/
+def rightPartnerFiberEquivIncidence
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    RightPartnerFiberType x y z w s ≃
+      { e : PartnerIncidence x y z w // PartnerIncidence.left x y z w e = s } where
+  toFun := fun t =>
+    ⟨incidenceOfRightFiberElem x y z w s t, rfl⟩
+  invFun := fun e =>
+    match e with
+    | ⟨e, he⟩ =>
+        by
+          cases e with
+          | mk p hp =>
+              cases p with
+              | mk s' t =>
+                  dsimp [PartnerIncidence.left] at he
+                  subst he
+                  exact ⟨t, hp⟩
+  left_inv := by
+    intro t
+    cases t
+    rfl
+  right_inv := by
+    intro e
+    rcases e with ⟨e, he⟩
+    cases e with
+    | mk p hp =>
+        cases p with
+        | mk s' t =>
+            dsimp [PartnerIncidence.left] at he
+            subst he
+            rfl
+
+/-- For fixed right endpoint, left partner fibres are equivalent to incidences
+with that right endpoint. -/
+def leftPartnerFiberEquivIncidence
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    LeftPartnerFiberType x y z w t ≃
+      { e : PartnerIncidence x y z w // PartnerIncidence.right x y z w e = t } where
+  toFun := fun s =>
+    ⟨incidenceOfLeftFiberElem x y z w t s, rfl⟩
+  invFun := fun e =>
+    match e with
+    | ⟨e, he⟩ =>
+        by
+          cases e with
+          | mk p hp =>
+              cases p with
+              | mk s t' =>
+                  dsimp [PartnerIncidence.right] at he
+                  subst he
+                  exact ⟨s, hp⟩
+  left_inv := by
+    intro s
+    cases s
+    rfl
+  right_inv := by
+    intro e
+    rcases e with ⟨e, he⟩
+    cases e with
+    | mk p hp =>
+        cases p with
+        | mk s t' =>
+            dsimp [PartnerIncidence.right] at he
+            subst he
+            rfl
+
+/-- Every left class determines at least one incidence. -/
+theorem PartnerIncidence.exists_of_left
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    ∃ e : PartnerIncidence x y z w, PartnerIncidence.left x y z w e = s := by
+  refine ⟨incidenceOfRightFiberElem x y z w s
+    ⟨chooseRightContributionPartner x y z w s,
+      chooseRightContributionPartner_spec x y z w s⟩, rfl⟩
+
+/-- Every right class determines at least one incidence. -/
+theorem PartnerIncidence.exists_of_right
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    ∃ e : PartnerIncidence x y z w, PartnerIncidence.right x y z w e = t := by
+  refine ⟨incidenceOfLeftFiberElem x y z w t
+    ⟨chooseLeftContributionPartner x y z w t,
+      chooseLeftContributionPartner_spec x y z w t⟩, rfl⟩
+
+/-
+Next natural targets after this block:
+
+1. Prove that the subtype
+     { e : PartnerIncidence x y z w // PartnerIncidence.left x y z w e = s }
+   and the subtype
+     { e : PartnerIncidence x y z w // PartnerIncidence.right x y z w e = t }
+   have the same cardinality when linked by your witness-transport machinery.
+
+2. Or, more concretely, define a transport on `PartnerIncidence` induced by your
+   earlier forward/backward witness constructions, and show it preserves left/right
+   endpoint fibres.
+
+This is the clean setup for the actual counting theorem.
+-/
+
+/-!
+## Endpoint fibres of incidences and their cardinalities
+
+This packages the counting problem cleanly:
+- right partner fibres are the same as incidences over a fixed left endpoint;
+- left partner fibres are the same as incidences over a fixed right endpoint.
+
+So any eventual counting theorem can be phrased either in terms of partner fibres
+or in terms of endpoint fibres of `PartnerIncidence`.
+-/
+
+open Classical
+
+/-- Incidences with fixed left endpoint `s`. -/
+def IncidencesOverLeft
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :=
+  { e : PartnerIncidence x y z w // PartnerIncidence.left x y z w e = s }
+
+/-- Incidences with fixed right endpoint `t`. -/
+def IncidencesOverRight
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :=
+  { e : PartnerIncidence x y z w // PartnerIncidence.right x y z w e = t }
+
+/-- Right partner fibres are equivalent to incidences over the corresponding left endpoint. -/
+def rightPartnerFiberEquivIncidencesOverLeft
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    RightPartnerFiberType x y z w s ≃ IncidencesOverLeft x y z w s :=
+  rightPartnerFiberEquivIncidence x y z w s
+
+/-- Left partner fibres are equivalent to incidences over the corresponding right endpoint. -/
+def leftPartnerFiberEquivIncidencesOverRight
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    LeftPartnerFiberType x y z w t ≃ IncidencesOverRight x y z w t :=
+  leftPartnerFiberEquivIncidence x y z w t
+
+/-- Every left endpoint supports at least one incidence. -/
+theorem incidencesOverLeft_nonempty
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    Nonempty (IncidencesOverLeft x y z w s) := by
+  rcases PartnerIncidence.exists_of_left x y z w s with ⟨e, he⟩
+  exact ⟨⟨e, he⟩⟩
+
+/-- Every right endpoint supports at least one incidence. -/
+theorem incidencesOverRight_nonempty
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    Nonempty (IncidencesOverRight x y z w t) := by
+  rcases PartnerIncidence.exists_of_right x y z w t with ⟨e, he⟩
+  exact ⟨⟨e, he⟩⟩
+
+/-- Cardinality of the right partner fibre of a fixed left contribution class. -/
+noncomputable def rightPartnerFiberCard
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) : Cardinal :=
+  Cardinal.lift (Cardinal.mk (RightPartnerFiberType x y z w s))
+
+/-- Cardinality of the left partner fibre of a fixed right contribution class. -/
+noncomputable def leftPartnerFiberCard
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) : Cardinal :=
+  Cardinal.lift (Cardinal.mk (LeftPartnerFiberType x y z w t))
+
+/-- Cardinality of incidences over a fixed left endpoint. -/
+noncomputable def incidencesOverLeftCard
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) : Cardinal :=
+  Cardinal.lift (Cardinal.mk (IncidencesOverLeft x y z w s))
+
+/-- Cardinality of incidences over a fixed right endpoint. -/
+noncomputable def incidencesOverRightCard
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) : Cardinal :=
+  Cardinal.lift (Cardinal.mk (IncidencesOverRight x y z w t))
+
+/-- Counting right partners is the same as counting incidences over the left endpoint. -/
+theorem rightPartnerFiberCard_eq_incidencesOverLeftCard
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    rightPartnerFiberCard x y z w s = incidencesOverLeftCard x y z w s := by
+  unfold rightPartnerFiberCard incidencesOverLeftCard
+  exact congrArg Cardinal.lift (Cardinal.mk_congr
+    (rightPartnerFiberEquivIncidencesOverLeft x y z w s))
+
+/-- Counting left partners is the same as counting incidences over the right endpoint. -/
+theorem leftPartnerFiberCard_eq_incidencesOverRightCard
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    leftPartnerFiberCard x y z w t = incidencesOverRightCard x y z w t := by
+  unfold leftPartnerFiberCard incidencesOverRightCard
+  exact congrArg Cardinal.lift (Cardinal.mk_congr
+    (leftPartnerFiberEquivIncidencesOverRight x y z w t))
+
+/-- A chosen incidence over a fixed left endpoint. -/
+noncomputable def chosenIncidenceOverLeft
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    IncidencesOverLeft x y z w s :=
+  Classical.choice (incidencesOverLeft_nonempty x y z w s)
+
+/-- A chosen incidence over a fixed right endpoint. -/
+noncomputable def chosenIncidenceOverRight
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    IncidencesOverRight x y z w t :=
+  Classical.choice (incidencesOverRight_nonempty x y z w t)
+
+/-- The chosen left-endpoint incidence really has the stated left endpoint. -/
+theorem chosenIncidenceOverLeft_spec
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    PartnerIncidence.left x y z w (chosenIncidenceOverLeft x y z w s).1 = s := by
+  exact (chosenIncidenceOverLeft x y z w s).2
+
+/-- The chosen right-endpoint incidence really has the stated right endpoint. -/
+theorem chosenIncidenceOverRight_spec
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    PartnerIncidence.right x y z w (chosenIncidenceOverRight x y z w t).1 = t := by
+  exact (chosenIncidenceOverRight x y z w t).2
+
+/-!
+## Global decomposition of incidences by endpoint fibres
+
+Having identified the fibres over fixed left/right endpoints, the next clean step
+is to show that the total type of incidences is equivalent to:
+- a sigma type of incidences over left endpoints, and
+- a sigma type of incidences over right endpoints.
+
+This is the standard “incidence object decomposes into endpoint fibres” package,
+and it is the right setup for later cardinal-sum / double-counting arguments.
+-/
+
+/-- A partner incidence determines its left endpoint together with its position
+in the fibre over that endpoint. -/
+def partnerIncidenceEquivSigmaLeft
+    (x y z w : PTree) :
+    PartnerIncidence x y z w ≃
+      Σ s : LeftContributionClasses x y z w, IncidencesOverLeft x y z w s where
+  toFun := fun e =>
+    ⟨PartnerIncidence.left x y z w e, ⟨e, rfl⟩⟩
+  invFun := fun p => p.2.1
+  left_inv := by
+    intro e
+    rfl
+  right_inv := by
+    intro p
+    rcases p with ⟨s, e⟩
+    rcases e with ⟨e, he⟩
+    cases he
+    rfl
+
+/-- A partner incidence determines its right endpoint together with its position
+in the fibre over that endpoint. -/
+def partnerIncidenceEquivSigmaRight
+    (x y z w : PTree) :
+    PartnerIncidence x y z w ≃
+      Σ t : RightContributionClasses x y z w, IncidencesOverRight x y z w t where
+  toFun := fun e =>
+    ⟨PartnerIncidence.right x y z w e, ⟨e, rfl⟩⟩
+  invFun := fun p => p.2.1
+  left_inv := by
+    intro e
+    rfl
+  right_inv := by
+    intro p
+    rcases p with ⟨t, e⟩
+    rcases e with ⟨e, he⟩
+    cases he
+    rfl
+
+/-- The total incidence type is equivalent to the sigma of its left-endpoint fibres. -/
+theorem Cardinal.mk_partnerIncidence_eq_sigma_left
+    (x y z w : PTree) :
+    Cardinal.mk (PartnerIncidence x y z w) =
+      Cardinal.mk (Σ s : LeftContributionClasses x y z w, IncidencesOverLeft x y z w s) := by
+  exact Cardinal.mk_congr (partnerIncidenceEquivSigmaLeft x y z w)
+
+/-- The total incidence type is equivalent to the sigma of its right-endpoint fibres. -/
+theorem Cardinal.mk_partnerIncidence_eq_sigma_right
+    (x y z w : PTree) :
+    Cardinal.mk (PartnerIncidence x y z w) =
+      Cardinal.mk (Σ t : RightContributionClasses x y z w, IncidencesOverRight x y z w t) := by
+  exact Cardinal.mk_congr (partnerIncidenceEquivSigmaRight x y z w)
+
+/-- Lifted-cardinal version of the decomposition over left endpoints. -/
+theorem Cardinal.lift_mk_partnerIncidence_eq_sigma_left
+    (x y z w : PTree) :
+    Cardinal.lift (Cardinal.mk (PartnerIncidence x y z w)) =
+      Cardinal.lift
+        (Cardinal.mk (Σ s : LeftContributionClasses x y z w, IncidencesOverLeft x y z w s)) := by
+  exact congrArg Cardinal.lift (Cardinal.mk_partnerIncidence_eq_sigma_left x y z w)
+
+/-- Lifted-cardinal version of the decomposition over right endpoints. -/
+theorem Cardinal.lift_mk_partnerIncidence_eq_sigma_right
+    (x y z w : PTree) :
+    Cardinal.lift (Cardinal.mk (PartnerIncidence x y z w)) =
+      Cardinal.lift
+        (Cardinal.mk (Σ t : RightContributionClasses x y z w, IncidencesOverRight x y z w t)) := by
+  exact congrArg Cardinal.lift (Cardinal.mk_partnerIncidence_eq_sigma_right x y z w)
+
+/-- Re-express a left fibre as a subtype of all incidences with the chosen endpoint. -/
+def sigmaLeftFiberEquivSubtype
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    IncidencesOverLeft x y z w s ≃
+      { e : PartnerIncidence x y z w // PartnerIncidence.left x y z w e = s } where
+  toFun := fun e => e
+  invFun := fun e => e
+  left_inv := by
+    intro e
+    rfl
+  right_inv := by
+    intro e
+    rfl
+
+/-- Re-express a right fibre as a subtype of all incidences with the chosen endpoint. -/
+def sigmaRightFiberEquivSubtype
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    IncidencesOverRight x y z w t ≃
+      { e : PartnerIncidence x y z w // PartnerIncidence.right x y z w e = t } where
+  toFun := fun e => e
+  invFun := fun e => e
+  left_inv := by
+    intro e
+    rfl
+  right_inv := by
+    intro e
+    rfl
+
+/-- Every incidence appears in the left sigma decomposition with the expected endpoint. -/
+theorem partnerIncidenceEquivSigmaLeft_fst
+    (x y z w : PTree)
+    (e : PartnerIncidence x y z w) :
+    (partnerIncidenceEquivSigmaLeft x y z w e).1 = PartnerIncidence.left x y z w e := by
+  rfl
+
+/-- Every incidence appears in the right sigma decomposition with the expected endpoint. -/
+theorem partnerIncidenceEquivSigmaRight_fst
+    (x y z w : PTree)
+    (e : PartnerIncidence x y z w) :
+    (partnerIncidenceEquivSigmaRight x y z w e).1 = PartnerIncidence.right x y z w e := by
+  rfl
+
+/-- Forgetting the sigma packaging on the left returns the original incidence. -/
+theorem partnerIncidenceEquivSigmaLeft_snd_val
+    (x y z w : PTree)
+    (e : PartnerIncidence x y z w) :
+    (partnerIncidenceEquivSigmaLeft x y z w e).2.1 = e := by
+  rfl
+
+/-- Forgetting the sigma packaging on the right returns the original incidence. -/
+theorem partnerIncidenceEquivSigmaRight_snd_val
+    (x y z w : PTree)
+    (e : PartnerIncidence x y z w) :
+    (partnerIncidenceEquivSigmaRight x y z w e).2.1 = e := by
+  rfl
+
+/-!
+## First actual double-counting theorem
+
+The total incidence type can be decomposed either by left endpoints or by right
+endpoints. Therefore the corresponding sigma-types have the same cardinality.
+This is the abstract double-counting statement.
+-/
+
+open Classical
+
+/-- The sigma decomposition over left endpoints and the sigma decomposition over
+right endpoints have the same cardinality, because both classify the same
+incidence type. -/
+theorem Cardinal.mk_sigma_left_eq_mk_sigma_right
+    (x y z w : PTree) :
+    Cardinal.mk (Σ s : LeftContributionClasses x y z w, IncidencesOverLeft x y z w s) =
+    Cardinal.mk (Σ t : RightContributionClasses x y z w, IncidencesOverRight x y z w t) := by
+  calc
+    Cardinal.mk (Σ s : LeftContributionClasses x y z w, IncidencesOverLeft x y z w s)
+        = Cardinal.mk (PartnerIncidence x y z w) := by
+            symm
+            exact Cardinal.mk_congr (partnerIncidenceEquivSigmaLeft x y z w)
+    _   = Cardinal.mk (Σ t : RightContributionClasses x y z w, IncidencesOverRight x y z w t) := by
+            exact Cardinal.mk_congr (partnerIncidenceEquivSigmaRight x y z w)
+
+/-- Lifted-cardinal version of the abstract double-counting theorem. -/
+theorem Cardinal.lift_mk_sigma_left_eq_lift_mk_sigma_right
+    (x y z w : PTree) :
+    Cardinal.lift
+      (Cardinal.mk (Σ s : LeftContributionClasses x y z w, IncidencesOverLeft x y z w s)) =
+    Cardinal.lift
+      (Cardinal.mk (Σ t : RightContributionClasses x y z w, IncidencesOverRight x y z w t)) := by
+  exact congrArg Cardinal.lift (Cardinal.mk_sigma_left_eq_mk_sigma_right x y z w)
+
+/-- The total incidence cardinal, expressed through left-endpoint fibres. -/
+noncomputable def totalLeftIncidenceCard
+    (x y z w : PTree) : Cardinal :=
+  Cardinal.lift
+    (Cardinal.mk (Σ s : LeftContributionClasses x y z w, IncidencesOverLeft x y z w s))
+
+/-- The total incidence cardinal, expressed through right-endpoint fibres. -/
+noncomputable def totalRightIncidenceCard
+    (x y z w : PTree) : Cardinal :=
+  Cardinal.lift
+    (Cardinal.mk (Σ t : RightContributionClasses x y z w, IncidencesOverRight x y z w t))
+
+/-- The total left- and right-fibre incidence cardinals agree. -/
+theorem totalLeftIncidenceCard_eq_totalRightIncidenceCard
+    (x y z w : PTree) :
+    totalLeftIncidenceCard x y z w = totalRightIncidenceCard x y z w := by
+  exact Cardinal.lift_mk_sigma_left_eq_lift_mk_sigma_right x y z w
+
+/-- The total left incidence cardinal is the cardinal of the incidence type itself. -/
+theorem totalLeftIncidenceCard_eq_partnerIncidence
+    (x y z w : PTree) :
+    totalLeftIncidenceCard x y z w =
+      Cardinal.lift (Cardinal.mk (PartnerIncidence x y z w)) := by
+  unfold totalLeftIncidenceCard
+  exact congrArg Cardinal.lift
+    (Cardinal.mk_congr (partnerIncidenceEquivSigmaLeft x y z w)).symm
+
+/-- The total right incidence cardinal is the cardinal of the incidence type itself. -/
+theorem totalRightIncidenceCard_eq_partnerIncidence
+    (x y z w : PTree) :
+    totalRightIncidenceCard x y z w =
+      Cardinal.lift (Cardinal.mk (PartnerIncidence x y z w)) := by
+  unfold totalRightIncidenceCard
+  exact congrArg Cardinal.lift
+    (Cardinal.mk_congr (partnerIncidenceEquivSigmaRight x y z w)).symm
+
+/-- The two total-cardinality presentations agree because they are both equal to
+the cardinality of the incidence type. -/
+theorem totalIncidenceCard_double_count
+    (x y z w : PTree) :
+    totalLeftIncidenceCard x y z w =
+      Cardinal.lift (Cardinal.mk (PartnerIncidence x y z w))
+    ∧
+    totalRightIncidenceCard x y z w =
+      Cardinal.lift (Cardinal.mk (PartnerIncidence x y z w)) := by
+  constructor
+  · exact totalLeftIncidenceCard_eq_partnerIncidence x y z w
+  · exact totalRightIncidenceCard_eq_partnerIncidence x y z w
+
+/-!
+## The underlying left-right incidence relation
+
+The bundled type `PartnerIncidence x y z w` can be viewed as the edge set of a
+bipartite incidence graph whose vertices are:
+- left contribution classes, and
+- right contribution classes.
+
+The next step is to expose that underlying relation explicitly, and connect it
+to the previously defined partner fibres.
+-/
+
+open Classical
+
+/-- Left/right contribution classes are incident if they occur as the two
+endpoints of some partner incidence. -/
+def ArePartnerIncident
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : RightContributionClasses x y z w) : Prop :=
+  ∃ e : PartnerIncidence x y z w,
+    PartnerIncidence.left x y z w e = s ∧
+    PartnerIncidence.right x y z w e = t
+
+/-- The set of right endpoints incident to a fixed left endpoint. -/
+def IncidentRights
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :=
+  { t : RightContributionClasses x y z w // ArePartnerIncident x y z w s t }
+
+/-- The set of left endpoints incident to a fixed right endpoint. -/
+def IncidentLefts
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :=
+  { s : LeftContributionClasses x y z w // ArePartnerIncident x y z w s t }
+
+/-- Any right partner fibre element yields an incident right endpoint. -/
+def incidentRightOfRightPartnerFiber
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    RightPartnerFiberType x y z w s → IncidentRights x y z w s := by
+  intro u
+  rcases u with ⟨t, ht⟩
+  refine ⟨t, ?_⟩
+  refine ⟨incidenceOfRightFiberElem x y z w s ⟨t, ht⟩, rfl, ?_⟩
+  rfl
+
+/-- Any left partner fibre element yields an incident left endpoint. -/
+def incidentLeftOfLeftPartnerFiber
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    LeftPartnerFiberType x y z w t → IncidentLefts x y z w t := by
+  intro u
+  rcases u with ⟨s, hs⟩
+  refine ⟨s, ?_⟩
+  refine ⟨incidenceOfLeftFiberElem x y z w t ⟨s, hs⟩, ?_, rfl⟩
+  rfl
+
+/-- Any incident pair gives an incidence whose left endpoint is the specified one. -/
+theorem ArePartnerIncident.exists_incidence_left
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : RightContributionClasses x y z w)
+    (h : ArePartnerIncident x y z w s t) :
+    ∃ e : PartnerIncidence x y z w,
+      PartnerIncidence.left x y z w e = s := by
+  rcases h with ⟨e, hs, ht⟩
+  exact ⟨e, hs⟩
+
+/-- Any incident pair gives an incidence whose right endpoint is the specified one. -/
+theorem ArePartnerIncident.exists_incidence_right
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : RightContributionClasses x y z w)
+    (h : ArePartnerIncident x y z w s t) :
+    ∃ e : PartnerIncidence x y z w,
+      PartnerIncidence.right x y z w e = t := by
+  rcases h with ⟨e, hs, ht⟩
+  exact ⟨e, ht⟩
+
+/-- A right partner fibre element witnesses incidence with its underlying right endpoint. -/
+theorem rightPartnerFiber_implies_incident
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (u : RightPartnerFiberType x y z w s) :
+    ArePartnerIncident x y z w s (incidentRightOfRightPartnerFiber x y z w s u).1 := by
+  exact (incidentRightOfRightPartnerFiber x y z w s u).2
+
+/-- A left partner fibre element witnesses incidence with its underlying left endpoint. -/
+theorem leftPartnerFiber_implies_incident
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (u : LeftPartnerFiberType x y z w t) :
+    ArePartnerIncident x y z w (incidentLeftOfLeftPartnerFiber x y z w t u).1 t := by
+  exact (incidentLeftOfLeftPartnerFiber x y z w t u).2
+
+/-- Every left endpoint has at least one incident right endpoint. -/
+theorem IncidentRights.nonempty
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    Nonempty (IncidentRights x y z w s) := by
+  let u : RightPartnerFiberType x y z w s :=
+    ⟨chooseRightContributionPartner x y z w s,
+      chooseRightContributionPartner_spec x y z w s⟩
+  exact ⟨incidentRightOfRightPartnerFiber x y z w s u⟩
+
+/-- Every right endpoint has at least one incident left endpoint. -/
+theorem IncidentLefts.nonempty
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    Nonempty (IncidentLefts x y z w t) := by
+  let u : LeftPartnerFiberType x y z w t :=
+    ⟨chooseLeftContributionPartner x y z w t,
+      chooseLeftContributionPartner_spec x y z w t⟩
+  exact ⟨incidentLeftOfLeftPartnerFiber x y z w t u⟩
+
+/-- A chosen incident right endpoint for each left endpoint. -/
+noncomputable def chosenIncidentRight
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    IncidentRights x y z w s :=
+  Classical.choice (IncidentRights.nonempty x y z w s)
+
+/-- A chosen incident left endpoint for each right endpoint. -/
+noncomputable def chosenIncidentLeft
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    IncidentLefts x y z w t :=
+  Classical.choice (IncidentLefts.nonempty x y z w t)
+
+/-- The chosen incident right endpoint is genuinely incident to the given left endpoint. -/
+theorem chosenIncidentRight_spec
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    ArePartnerIncident x y z w s (chosenIncidentRight x y z w s).1 := by
+  exact (chosenIncidentRight x y z w s).2
+
+/-- The chosen incident left endpoint is genuinely incident to the given right endpoint. -/
+theorem chosenIncidentLeft_spec
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    ArePartnerIncident x y z w (chosenIncidentLeft x y z w t).1 t := by
+  exact (chosenIncidentLeft x y z w t).2
+
+
+/-!
+## Incident neighbour sets: forward maps and chosen representatives
+
+Important: `ArePartnerIncident ... s t` is a proposition. So we may freely map
+a concrete partner-fibre element to an incident neighbour, but we cannot in
+general recover a concrete fibre element from mere incidence data by pattern
+matching on the existential witness in `Prop`.
+
+Accordingly, we construct:
+- forward maps from partner fibres to incident neighbour sets;
+- existence of fibre elements over any incident neighbour;
+- noncomputable chosen representatives.
+-/
+
+open Classical
+
+
+/-- Any incident right endpoint admits some right partner fibre element. -/
+theorem exists_rightPartnerFiber_of_incidentRight
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (u : IncidentRights x y z w s) :
+    ∃ v : RightPartnerFiberType x y z w s, v.1 = u.1 := by
+  rcases u with ⟨t, hinc⟩
+  rcases hinc with ⟨e, hs, ht⟩
+  cases e with
+  | mk p hp =>
+      cases p with
+      | mk s' t' =>
+          dsimp [PartnerIncidence.left, PartnerIncidence.right] at hs ht
+          subst hs
+          subst ht
+          exact ⟨⟨t', hp⟩, rfl⟩
+
+/-- Any incident left endpoint admits some left partner fibre element. -/
+theorem exists_leftPartnerFiber_of_incidentLeft
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (u : IncidentLefts x y z w t) :
+    ∃ v : LeftPartnerFiberType x y z w t, v.1 = u.1 := by
+  rcases u with ⟨s, hinc⟩
+  rcases hinc with ⟨e, hs, ht⟩
+  cases e with
+  | mk p hp =>
+      cases p with
+      | mk s' t' =>
+          dsimp [PartnerIncidence.left, PartnerIncidence.right] at hs ht
+          subst hs
+          subst ht
+          exact ⟨⟨s', hp⟩, rfl⟩
+
+/-- A chosen right partner fibre element over an incident right endpoint. -/
+noncomputable def chosenRightPartnerFiberOfIncidentRight
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (u : IncidentRights x y z w s) :
+    RightPartnerFiberType x y z w s :=
+  Classical.choose (exists_rightPartnerFiber_of_incidentRight x y z w s u)
+
+/-- A chosen left partner fibre element over an incident left endpoint. -/
+noncomputable def chosenLeftPartnerFiberOfIncidentLeft
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (u : IncidentLefts x y z w t) :
+    LeftPartnerFiberType x y z w t :=
+  Classical.choose (exists_leftPartnerFiber_of_incidentLeft x y z w t u)
+
+/-- The chosen right partner fibre element has the prescribed right endpoint. -/
+theorem chosenRightPartnerFiberOfIncidentRight_spec
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (u : IncidentRights x y z w s) :
+    (chosenRightPartnerFiberOfIncidentRight x y z w s u).1 = u.1 := by
+  exact Classical.choose_spec
+    (exists_rightPartnerFiber_of_incidentRight x y z w s u)
+
+/-- The chosen left partner fibre element has the prescribed left endpoint. -/
+theorem chosenLeftPartnerFiberOfIncidentLeft_spec
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (u : IncidentLefts x y z w t) :
+    (chosenLeftPartnerFiberOfIncidentLeft x y z w t u).1 = u.1 := by
+  exact Classical.choose_spec
+    (exists_leftPartnerFiber_of_incidentLeft x y z w t u)
+
+/-- Going from a right partner fibre element to an incident neighbour preserves
+the underlying right endpoint. -/
+theorem incidentRightOfRightPartnerFiber_fst
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (u : RightPartnerFiberType x y z w s) :
+    (incidentRightOfRightPartnerFiber x y z w s u).1 = u.1 := by
+  cases u
+  rfl
+
+/-- Going from a left partner fibre element to an incident neighbour preserves
+the underlying left endpoint. -/
+theorem incidentLeftOfLeftPartnerFiber_fst
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (u : LeftPartnerFiberType x y z w t) :
+    (incidentLeftOfLeftPartnerFiber x y z w t u).1 = u.1 := by
+  cases u
+  rfl
+
+/-- The incident-neighbour map on the right is surjective on underlying endpoints. -/
+theorem incidentRightOfRightPartnerFiber_surj_on_endpoints
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (u : IncidentRights x y z w s) :
+    ∃ v : RightPartnerFiberType x y z w s,
+      (incidentRightOfRightPartnerFiber x y z w s v).1 = u.1 := by
+  refine ⟨chosenRightPartnerFiberOfIncidentRight x y z w s u, ?_⟩
+  rw [incidentRightOfRightPartnerFiber_fst, chosenRightPartnerFiberOfIncidentRight_spec]
+
+/-- The incident-neighbour map on the left is surjective on underlying endpoints. -/
+theorem incidentLeftOfLeftPartnerFiber_surj_on_endpoints
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (u : IncidentLefts x y z w t) :
+    ∃ v : LeftPartnerFiberType x y z w t,
+      (incidentLeftOfLeftPartnerFiber x y z w t v).1 = u.1 := by
+  refine ⟨chosenLeftPartnerFiberOfIncidentLeft x y z w t u, ?_⟩
+  rw [incidentLeftOfLeftPartnerFiber_fst, chosenLeftPartnerFiberOfIncidentLeft_spec]
+
+/-!
+## Local uniqueness of partner data over a fixed endpoint
+
+A right partner over a fixed left endpoint is determined entirely by its
+underlying right contribution class, and dually on the left.
+
+Since the partner condition is a proposition, this is just subtype extensionality.
+This is the key fact that lets us identify witness-bearing partner sets with
+ordinary neighbour sets in the bipartite incidence graph.
+-/
+
+open Classical
+
+/-- Two right partner fibre elements over the same left endpoint are equal if
+their underlying right endpoints are equal. -/
+theorem rightPartnerFiber_ext
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (u v : RightPartnerFiberType x y z w s)
+    (h : u.1 = v.1) :
+    u = v := by
+  exact Subtype.ext h
+
+/-- Two left partner fibre elements over the same right endpoint are equal if
+their underlying left endpoints are equal. -/
+theorem leftPartnerFiber_ext
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (u v : LeftPartnerFiberType x y z w t)
+    (h : u.1 = v.1) :
+    u = v := by
+  exact Subtype.ext h
+
+/-- Noncomputably recover a right partner fibre element from an incident right
+endpoint. -/
+noncomputable def rightPartnerFiberOfIncidentRight
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    IncidentRights x y z w s → RightPartnerFiberType x y z w s :=
+  fun u => chosenRightPartnerFiberOfIncidentRight x y z w s u
+
+/-- Noncomputably recover a left partner fibre element from an incident left
+endpoint. -/
+noncomputable def leftPartnerFiberOfIncidentLeft
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    IncidentLefts x y z w t → LeftPartnerFiberType x y z w t :=
+  fun u => chosenLeftPartnerFiberOfIncidentLeft x y z w t u
+
+/-- Recovering a right partner from an incident right endpoint and then
+forgetting back to the neighbourhood gives the original incident neighbour. -/
+theorem incidentRight_rightPartnerFiber_roundtrip
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (u : IncidentRights x y z w s) :
+    incidentRightOfRightPartnerFiber x y z w s
+      (rightPartnerFiberOfIncidentRight x y z w s u) = u := by
+  apply Subtype.ext
+  exact chosenRightPartnerFiberOfIncidentRight_spec x y z w s u
+
+/-- Recovering a left partner from an incident left endpoint and then
+forgetting back to the neighbourhood gives the original incident neighbour. -/
+theorem incidentLeft_leftPartnerFiber_roundtrip
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (u : IncidentLefts x y z w t) :
+    incidentLeftOfLeftPartnerFiber x y z w t
+      (leftPartnerFiberOfIncidentLeft x y z w t u) = u := by
+  apply Subtype.ext
+  exact chosenLeftPartnerFiberOfIncidentLeft_spec x y z w t u
+
+/-- Forgetting a right partner fibre element to an incident neighbour and then
+recovering a partner gives back the original partner. -/
+theorem rightPartnerFiber_incidentRight_roundtrip
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (u : RightPartnerFiberType x y z w s) :
+    rightPartnerFiberOfIncidentRight x y z w s
+      (incidentRightOfRightPartnerFiber x y z w s u) = u := by
+  apply rightPartnerFiber_ext
+  unfold rightPartnerFiberOfIncidentRight
+  rw [chosenRightPartnerFiberOfIncidentRight_spec]
+  exact incidentRightOfRightPartnerFiber_fst x y z w s u
+
+/-- Forgetting a left partner fibre element to an incident neighbour and then
+recovering a partner gives back the original partner. -/
+theorem leftPartnerFiber_incidentLeft_roundtrip
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (u : LeftPartnerFiberType x y z w t) :
+    leftPartnerFiberOfIncidentLeft x y z w t
+      (incidentLeftOfLeftPartnerFiber x y z w t u) = u := by
+  apply leftPartnerFiber_ext
+  unfold leftPartnerFiberOfIncidentLeft
+  rw [chosenLeftPartnerFiberOfIncidentLeft_spec]
+  exact incidentLeftOfLeftPartnerFiber_fst x y z w t u
+
+/-- Over a fixed left endpoint, the right partner set is equivalent to the
+ordinary set of incident right neighbours. -/
+noncomputable def rightPartnerFiberEquivIncidentRights
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    RightPartnerFiberType x y z w s ≃ IncidentRights x y z w s where
+  toFun := incidentRightOfRightPartnerFiber x y z w s
+  invFun := rightPartnerFiberOfIncidentRight x y z w s
+  left_inv := rightPartnerFiber_incidentRight_roundtrip x y z w s
+  right_inv := incidentRight_rightPartnerFiber_roundtrip x y z w s
+
+/-- Over a fixed right endpoint, the left partner set is equivalent to the
+ordinary set of incident left neighbours. -/
+noncomputable def leftPartnerFiberEquivIncidentLefts
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    LeftPartnerFiberType x y z w t ≃ IncidentLefts x y z w t where
+  toFun := incidentLeftOfLeftPartnerFiber x y z w t
+  invFun := leftPartnerFiberOfIncidentLeft x y z w t
+  left_inv := leftPartnerFiber_incidentLeft_roundtrip x y z w t
+  right_inv := incidentLeft_leftPartnerFiber_roundtrip x y z w t
+
+/-- Counting right partners is the same as counting incident right neighbours. -/
+theorem rightPartnerFiberCard_eq_incidentRightsCard
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    rightPartnerFiberCard x y z w s =
+      Cardinal.lift (Cardinal.mk (IncidentRights x y z w s)) := by
+  unfold rightPartnerFiberCard
+  exact congrArg Cardinal.lift
+    (Cardinal.mk_congr (rightPartnerFiberEquivIncidentRights x y z w s))
+
+/-- Counting left partners is the same as counting incident left neighbours. -/
+theorem leftPartnerFiberCard_eq_incidentLeftsCard
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    leftPartnerFiberCard x y z w t =
+      Cardinal.lift (Cardinal.mk (IncidentLefts x y z w t)) := by
+  unfold leftPartnerFiberCard
+  exact congrArg Cardinal.lift
+    (Cardinal.mk_congr (leftPartnerFiberEquivIncidentLefts x y z w t))
+
+
+/-!
+## Reduce partner uniqueness to uniqueness of `SwappedTwoStepClass`
+
+At this point, partner uniqueness is exactly the statement that
+`SwappedTwoStepClass` is functional in each argument.
+-/
+
+#check (fun (x y z w : PTree) (s : LeftContributionClasses x y z w) => s.1)
+#check (fun (x y z w : PTree) (t : RightContributionClasses x y z w) => t.1)
+
+/-!
+## Reduce partner uniqueness to uniqueness of `SwappedTwoStepClass`
+
+Since
+  ContributionClassPartner x y z w s t := SwappedTwoStepClass x y z w s.1 t.1,
+partner uniqueness is exactly the statement that `SwappedTwoStepClass` is
+functional in each argument.
+-/
+
+/-- If `SwappedTwoStepClass` is right-functional, then each fixed left class has
+at most one right partner. -/
+theorem rightPartnerFiber_subsingleton_of_swapped_right_unique
+    (x y z w : PTree)
+    (huniq :
+      ∀ {q : TwoStepQuotient x y z w}
+        {q₁ q₂ : TwoStepQuotient y x z w},
+        SwappedTwoStepClass x y z w q q₁ →
+        SwappedTwoStepClass x y z w q q₂ →
+        q₁ = q₂)
+    (s : LeftContributionClasses x y z w) :
+    Subsingleton (RightPartnerFiberType x y z w s) := by
+  constructor
+  intro u v
+  apply rightPartnerFiber_ext
+  apply Subtype.ext
+  exact huniq u.2 v.2
+
+/-- If `SwappedTwoStepClass` is left-functional, then each fixed right class has
+at most one left partner. -/
+theorem leftPartnerFiber_subsingleton_of_swapped_left_unique
+    (x y z w : PTree)
+    (huniq :
+      ∀ {q₁ q₂ : TwoStepQuotient x y z w}
+        {q : TwoStepQuotient y x z w},
+        SwappedTwoStepClass x y z w q₁ q →
+        SwappedTwoStepClass x y z w q₂ q →
+        q₁ = q₂)
+    (t : RightContributionClasses x y z w) :
+    Subsingleton (LeftPartnerFiberType x y z w t) := by
+  constructor
+  intro u v
+  apply leftPartnerFiber_ext
+  apply Subtype.ext
+  exact huniq u.2 v.2
+
+
+/-- If `SwappedTwoStepClass` is right-functional, then any two right partners of
+a fixed left class are equal. -/
+theorem rightPartnerFiber_unique_of_swapped_right_unique
+    (x y z w : PTree)
+    (huniq :
+      ∀ {q : TwoStepQuotient x y z w}
+        {q₁ q₂ : TwoStepQuotient y x z w},
+        SwappedTwoStepClass x y z w q q₁ →
+        SwappedTwoStepClass x y z w q q₂ →
+        q₁ = q₂)
+    (s : LeftContributionClasses x y z w)
+    (u v : RightPartnerFiberType x y z w s) :
+    u = v :=
+  (rightPartnerFiber_subsingleton_of_swapped_right_unique x y z w huniq s).elim u v
+
+/-- If `SwappedTwoStepClass` is left-functional, then any two left partners of
+a fixed right class are equal. -/
+theorem leftPartnerFiber_unique_of_swapped_left_unique
+    (x y z w : PTree)
+    (huniq :
+      ∀ {q₁ q₂ : TwoStepQuotient x y z w}
+        {q : TwoStepQuotient y x z w},
+        SwappedTwoStepClass x y z w q₁ q →
+        SwappedTwoStepClass x y z w q₂ q →
+        q₁ = q₂)
+    (t : RightContributionClasses x y z w)
+    (u v : LeftPartnerFiberType x y z w t) :
+    u = v :=
+  (leftPartnerFiber_subsingleton_of_swapped_left_unique x y z w huniq t).elim u v
+
+
+
+
+
+
+
+
+
+/-!
+## Uniqueness of partners over a fixed endpoint
+
+The chosen-partner maps can only be inverse if, for each fixed endpoint, there is
+at most one partner on the opposite side.  So the real next target is to prove
+that the partner fibres are subsingletons.
+-/
+
+open Classical
+
+/-- Over a fixed left contribution class, there is at most one right partner. -/
+theorem rightPartnerFiber_subsingleton
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    Subsingleton (RightPartnerFiberType x y z w s) := by
+  constructor
+  intro u v
+  apply rightPartnerFiber_ext
+  /-
+  Real proof needed here:
+  show that `u.1 = v.1`, i.e. that two right contribution classes partnered with
+  the same left contribution class must coincide.
+  This should come from your earlier quotient/witness uniqueness machinery,
+  not from incidence packaging.
+  -/
+  sorry
+
+/-- Over a fixed right contribution class, there is at most one left partner. -/
+theorem leftPartnerFiber_subsingleton
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    Subsingleton (LeftPartnerFiberType x y z w t) := by
+  constructor
+  intro u v
+  apply leftPartnerFiber_ext
+  /-
+  Real proof needed here:
+  show that `u.1 = v.1`, i.e. that two left contribution classes partnered with
+  the same right contribution class must coincide.
+  Again, this should be proved from the quotient/witness theory.
+  -/
+  sorry
+
+/-- Any two right partner fibre elements over the same left endpoint are equal. -/
+theorem rightPartnerFiber_unique
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (u v : RightPartnerFiberType x y z w s) :
+    u = v :=
+  (rightPartnerFiber_subsingleton x y z w s).elim u v
+
+/-- Any two left partner fibre elements over the same right endpoint are equal. -/
+theorem leftPartnerFiber_unique
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (u v : LeftPartnerFiberType x y z w t) :
+    u = v :=
+  (leftPartnerFiber_subsingleton x y z w t).elim u v
+
+
+
+
+
+
+
+/--
+Inner reassociation is already canonical up to swapping `x` and `y`.
+
+This is the quotient-level inner contribution to pre-Lie symmetry:
+the nested case on the left with parameters `(x,y,z,w)` is literally the
+nested case on the right with parameters `(y,x,z,w)`.
+-/
+theorem inner_symmetry_on_classes
+    (x y z w : PTree)
+    (a b : Address) (y' : PTree)
+    (hay : (a, y') ∈ matchingLeafGraftWitnesses y x)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y' z) :
+    classOfLeftInner a b y' hay hbw =
+      classOfRightInner (x := x) (y := y) a b y' hay hbw := by
+  rfl
 
 
 
