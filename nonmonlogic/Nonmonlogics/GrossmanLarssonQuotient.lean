@@ -5830,6 +5830,7 @@ that the partner fibres are subsingletons.
 
 open Classical
 
+/-
 /-- Over a fixed left contribution class, there is at most one right partner. -/
 theorem rightPartnerFiber_subsingleton
     (x y z w : PTree)
@@ -5862,7 +5863,8 @@ theorem leftPartnerFiber_subsingleton
   Again, this should be proved from the quotient/witness theory.
   -/
   sorry
-
+  -/
+/-
 /-- Any two right partner fibre elements over the same left endpoint are equal. -/
 theorem rightPartnerFiber_unique
     (x y z w : PTree)
@@ -5878,9 +5880,2093 @@ theorem leftPartnerFiber_unique
     (u v : LeftPartnerFiberType x y z w t) :
     u = v :=
   (leftPartnerFiber_subsingleton x y z w t).elim u v
+-/
 
 
 
+  /-!
+NEXT PHASE: stop trying to prove uniqueness of partners.
+`SwappedTwoStepClass` should now be treated as a many-valued correspondence on
+quotient classes.
+
+What to do next:
+1. Define the right-neighbourhood of a left quotient class, and the left-
+   neighbourhood of a right quotient class.
+2. State nonemptiness transfer theorems for these neighbourhoods, using the
+   witness-transport / support lemmas already proved earlier.
+3. Then try to prove local cardinal/equinumerosity results for these
+   neighbourhoods, rather than subsingleton/uniqueness.
+-/
+
+/-- Right neighbourhood of a left quotient class under `SwappedTwoStepClass`. -/
+def swappedRightNeighbors
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) :=
+  { q' : TwoStepQuotient y x z w // SwappedTwoStepClass x y z w q q' }
+
+/-- Left neighbourhood of a right quotient class under `SwappedTwoStepClass`. -/
+def swappedLeftNeighbors
+    (x y z w : PTree)
+    (q : TwoStepQuotient y x z w) :=
+  { q' : TwoStepQuotient x y z w // SwappedTwoStepClass x y z w q' q }
+
+/-!
+## Swapped-neighbourhood nonemptiness
+
+At this stage we stop treating swapped transport as functional.
+Instead, we show that any contribution class has at least one neighbour
+on the opposite side.
+-/
+
+open Classical
+
+
+/-- Any left contribution class has a nonempty swapped-right neighbourhood. -/
+theorem swappedRightNeighbors_nonempty
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : IsLeftContributionClass x y z w q) :
+    Nonempty (swappedRightNeighbors x y z w q) := by
+  /-
+  Replace `IsLeftContributionClass.exists_right` with the actual theorem name
+  you already proved:
+    from a left contribution class, obtain some swapped-right class that is a
+    right contribution class.
+  -/
+  rcases IsLeftContributionClass.exists_right x y z w q hq with
+    ⟨q', hs, hq'⟩
+  exact ⟨⟨q', hs⟩⟩
+
+/-- Any right contribution class has a nonempty swapped-left neighbourhood. -/
+theorem swappedLeftNeighbors_nonempty
+    (x y z w : PTree)
+    (q : TwoStepQuotient y x z w)
+    (hq : IsRightContributionClass x y z w q) :
+    Nonempty (swappedLeftNeighbors x y z w q) := by
+  /-
+  Replace `IsRightContributionClass.exists_left` with the actual dual theorem
+  name you already proved:
+    from a right contribution class, obtain some swapped-left class that is a
+    left contribution class.
+  -/
+  rcases IsRightContributionClass.exists_left x y z w q hq with
+    ⟨q', hs, hq'⟩
+  exact ⟨⟨q', hs⟩⟩
+
+/-- A concrete chosen swapped-right neighbour of a left contribution class. -/
+noncomputable def someSwappedRightNeighbor
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : IsLeftContributionClass x y z w q) :
+    swappedRightNeighbors x y z w q :=
+  Classical.choice (swappedRightNeighbors_nonempty x y z w q hq)
+
+/-- A concrete chosen swapped-left neighbour of a right contribution class. -/
+noncomputable def someSwappedLeftNeighbor
+    (x y z w : PTree)
+    (q : TwoStepQuotient y x z w)
+    (hq : IsRightContributionClass x y z w q) :
+    swappedLeftNeighbors x y z w q :=
+  Classical.choice (swappedLeftNeighbors_nonempty x y z w q hq)
+
+/-- The chosen swapped-right neighbour really is related by `SwappedTwoStepClass`. -/
+theorem someSwappedRightNeighbor_spec
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : IsLeftContributionClass x y z w q) :
+    SwappedTwoStepClass x y z w q
+      (someSwappedRightNeighbor x y z w q hq).1 :=
+  (someSwappedRightNeighbor x y z w q hq).2
+
+/-- The chosen swapped-left neighbour really is related by `SwappedTwoStepClass`. -/
+theorem someSwappedLeftNeighbor_spec
+    (x y z w : PTree)
+    (q : TwoStepQuotient y x z w)
+    (hq : IsRightContributionClass x y z w q) :
+    SwappedTwoStepClass x y z w
+      (someSwappedLeftNeighbor x y z w q hq).1 q :=
+  (someSwappedLeftNeighbor x y z w q hq).2
+
+
+/-!
+## Contribution-supporting swapped neighbourhoods
+
+The raw swapped neighbourhoods are too broad for counting arguments.
+What we really want are neighbours which are themselves contribution classes
+on the opposite side.
+-/
+
+/-- Right contribution neighbours of a left contribution class. -/
+def swappedRightContributionNeighbors
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) :=
+  { q' : TwoStepQuotient y x z w //
+      SwappedTwoStepClass x y z w q q' ∧
+      IsRightContributionClass x y z w q' }
+
+/-- Left contribution neighbours of a right contribution class. -/
+def swappedLeftContributionNeighbors
+    (x y z w : PTree)
+    (q : TwoStepQuotient y x z w) :=
+  { q' : TwoStepQuotient x y z w //
+      SwappedTwoStepClass x y z w q' q ∧
+      IsLeftContributionClass x y z w q' }
+
+/-- Any left contribution class has a nonempty swapped-right contribution neighbourhood. -/
+theorem swappedRightContributionNeighbors_nonempty
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : IsLeftContributionClass x y z w q) :
+    Nonempty (swappedRightContributionNeighbors x y z w q) := by
+  rcases IsLeftContributionClass.exists_right x y z w q hq with
+    ⟨q', hs, hq'⟩
+  exact ⟨⟨q', hs, hq'⟩⟩
+
+/-- Any right contribution class has a nonempty swapped-left contribution neighbourhood. -/
+theorem swappedLeftContributionNeighbors_nonempty
+    (x y z w : PTree)
+    (q : TwoStepQuotient y x z w)
+    (hq : IsRightContributionClass x y z w q) :
+    Nonempty (swappedLeftContributionNeighbors x y z w q) := by
+  rcases IsRightContributionClass.exists_left x y z w q hq with
+    ⟨q', hs, hq'⟩
+  exact ⟨⟨q', hs, hq'⟩⟩
+
+/-- A chosen swapped-right contribution neighbour of a left contribution class. -/
+noncomputable def someSwappedRightContributionNeighbor
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : IsLeftContributionClass x y z w q) :
+    swappedRightContributionNeighbors x y z w q :=
+  Classical.choice (swappedRightContributionNeighbors_nonempty x y z w q hq)
+
+/-- A chosen swapped-left contribution neighbour of a right contribution class. -/
+noncomputable def someSwappedLeftContributionNeighbor
+    (x y z w : PTree)
+    (q : TwoStepQuotient y x z w)
+    (hq : IsRightContributionClass x y z w q) :
+    swappedLeftContributionNeighbors x y z w q :=
+  Classical.choice (swappedLeftContributionNeighbors_nonempty x y z w q hq)
+
+/-- The chosen swapped-right contribution neighbour is swapped-related. -/
+theorem someSwappedRightContributionNeighbor_swapped
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : IsLeftContributionClass x y z w q) :
+    SwappedTwoStepClass x y z w q
+      (someSwappedRightContributionNeighbor x y z w q hq).1 :=
+  (someSwappedRightContributionNeighbor x y z w q hq).2.1
+
+/-- The chosen swapped-right contribution neighbour is a right contribution class. -/
+theorem someSwappedRightContributionNeighbor_isRight
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : IsLeftContributionClass x y z w q) :
+    IsRightContributionClass x y z w
+      (someSwappedRightContributionNeighbor x y z w q hq).1 :=
+  (someSwappedRightContributionNeighbor x y z w q hq).2.2
+
+/-- The chosen swapped-left contribution neighbour is swapped-related. -/
+theorem someSwappedLeftContributionNeighbor_swapped
+    (x y z w : PTree)
+    (q : TwoStepQuotient y x z w)
+    (hq : IsRightContributionClass x y z w q) :
+    SwappedTwoStepClass x y z w
+      (someSwappedLeftContributionNeighbor x y z w q hq).1 q :=
+  (someSwappedLeftContributionNeighbor x y z w q hq).2.1
+
+/-- The chosen swapped-left contribution neighbour is a left contribution class. -/
+theorem someSwappedLeftContributionNeighbor_isLeft
+    (x y z w : PTree)
+    (q : TwoStepQuotient y x z w)
+    (hq : IsRightContributionClass x y z w q) :
+    IsLeftContributionClass x y z w
+      (someSwappedLeftContributionNeighbor x y z w q hq).1 :=
+  (someSwappedLeftContributionNeighbor x y z w q hq).2.2
+
+
+/-!
+## Bundled neighbour transport
+
+We now repackage contribution-supporting neighbours as actual bundled
+`LeftContributionClasses` and `RightContributionClasses`.
+This makes later comparison theorems cleaner.
+-/
+
+/-- Turn a swapped-right contribution neighbour into a bundled right contribution class. -/
+def toRightContributionClassOfNeighbor
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (r : swappedRightContributionNeighbors x y z w q) :
+    RightContributionClasses x y z w :=
+  ⟨r.1, r.2.2⟩
+
+/-- Turn a swapped-left contribution neighbour into a bundled left contribution class. -/
+def toLeftContributionClassOfNeighbor
+    (x y z w : PTree)
+    (q : TwoStepQuotient y x z w)
+    (r : swappedLeftContributionNeighbors x y z w q) :
+    LeftContributionClasses x y z w :=
+  ⟨r.1, r.2.2⟩
+
+/-- The underlying quotient of the bundled right contribution class from a neighbour. -/
+@[simp] theorem toRightContributionClassOfNeighbor_val
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (r : swappedRightContributionNeighbors x y z w q) :
+    (toRightContributionClassOfNeighbor x y z w q r).1 = r.1 :=
+  rfl
+
+/-- The underlying quotient of the bundled left contribution class from a neighbour. -/
+@[simp] theorem toLeftContributionClassOfNeighbor_val
+    (x y z w : PTree)
+    (q : TwoStepQuotient y x z w)
+    (r : swappedLeftContributionNeighbors x y z w q) :
+    (toLeftContributionClassOfNeighbor x y z w q r).1 = r.1 :=
+  rfl
+
+/-- A swapped-right contribution neighbour yields swapped incidence with its bundled class. -/
+theorem toRightContributionClassOfNeighbor_swapped
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (r : swappedRightContributionNeighbors x y z w q) :
+    SwappedTwoStepClass x y z w q
+      (toRightContributionClassOfNeighbor x y z w q r).1 :=
+  r.2.1
+
+/-- A swapped-left contribution neighbour yields swapped incidence with its bundled class. -/
+theorem toLeftContributionClassOfNeighbor_swapped
+    (x y z w : PTree)
+    (q : TwoStepQuotient y x z w)
+    (r : swappedLeftContributionNeighbors x y z w q) :
+    SwappedTwoStepClass x y z w
+      (toLeftContributionClassOfNeighbor x y z w q r).1 q :=
+  r.2.1
+
+/-- Any bundled left contribution class has a bundled right contribution neighbour. -/
+noncomputable def someRightContributionClassNeighbor
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    RightContributionClasses x y z w :=
+  toRightContributionClassOfNeighbor x y z w s.1
+    (Classical.choice (swappedRightContributionNeighbors_nonempty x y z w s.1 s.2))
+
+/-- Any bundled right contribution class has a bundled left contribution neighbour. -/
+noncomputable def someLeftContributionClassNeighbor
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    LeftContributionClasses x y z w :=
+  toLeftContributionClassOfNeighbor x y z w t.1
+    (Classical.choice (swappedLeftContributionNeighbors_nonempty x y z w t.1 t.2))
+
+/-- The chosen bundled right neighbour is swapped-related to the original left class. -/
+theorem someRightContributionClassNeighbor_swapped
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    SwappedTwoStepClass x y z w s.1
+      (someRightContributionClassNeighbor x y z w s).1 := by
+  unfold someRightContributionClassNeighbor
+  let r : swappedRightContributionNeighbors x y z w s.1 :=
+    Classical.choice (swappedRightContributionNeighbors_nonempty x y z w s.1 s.2)
+  change SwappedTwoStepClass x y z w s.1
+    (toRightContributionClassOfNeighbor x y z w s.1 r).1
+  exact toRightContributionClassOfNeighbor_swapped x y z w s.1 r
+
+/-- The chosen bundled left neighbour is swapped-related to the original right class. -/
+theorem someLeftContributionClassNeighbor_swapped
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    SwappedTwoStepClass x y z w
+      (someLeftContributionClassNeighbor x y z w t).1 t.1 := by
+  unfold someLeftContributionClassNeighbor
+  let r : swappedLeftContributionNeighbors x y z w t.1 :=
+    Classical.choice (swappedLeftContributionNeighbors_nonempty x y z w t.1 t.2)
+  change SwappedTwoStepClass x y z w
+    (toLeftContributionClassOfNeighbor x y z w t.1 r).1 t.1
+  exact toLeftContributionClassOfNeighbor_swapped x y z w t.1 r
+
+/-- The chosen bundled right neighbour is indeed a right contribution class. -/
+theorem someRightContributionClassNeighbor_isRight
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    IsRightContributionClass x y z w
+      (someRightContributionClassNeighbor x y z w s).1 :=
+  (someRightContributionClassNeighbor x y z w s).2
+
+/-- The chosen bundled left neighbour is indeed a left contribution class. -/
+theorem someLeftContributionClassNeighbor_isLeft
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    IsLeftContributionClass x y z w
+      (someLeftContributionClassNeighbor x y z w t).1 :=
+  (someLeftContributionClassNeighbor x y z w t).2
+
+/-!
+## Bundled contribution-neighbour fibres
+
+These are the local fibres we actually want to study:
+for a fixed bundled contribution class on one side, the bundled contribution
+classes on the other side which are swapped-related to it.
+-/
+
+/-- Bundled right contribution neighbours of a fixed left contribution class. -/
+def rightContributionNeighborClasses
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :=
+  { t : RightContributionClasses x y z w //
+      SwappedTwoStepClass x y z w s.1 t.1 }
+
+/-- Bundled left contribution neighbours of a fixed right contribution class. -/
+def leftContributionNeighborClasses
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :=
+  { s : LeftContributionClasses x y z w //
+      SwappedTwoStepClass x y z w s.1 t.1 }
+
+/-- Any left contribution class has a nonempty bundled right-neighbour fibre. -/
+theorem rightContributionNeighborClasses_nonempty
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    Nonempty (rightContributionNeighborClasses x y z w s) := by
+  refine ⟨⟨someRightContributionClassNeighbor x y z w s,
+    someRightContributionClassNeighbor_swapped x y z w s⟩⟩
+
+/-- Any right contribution class has a nonempty bundled left-neighbour fibre. -/
+theorem leftContributionNeighborClasses_nonempty
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    Nonempty (leftContributionNeighborClasses x y z w t) := by
+  refine ⟨⟨someLeftContributionClassNeighbor x y z w t,
+    someLeftContributionClassNeighbor_swapped x y z w t⟩⟩
+
+/-- A chosen bundled right neighbour of a fixed left contribution class. -/
+noncomputable def someRightContributionNeighborClass
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    rightContributionNeighborClasses x y z w s :=
+  Classical.choice (rightContributionNeighborClasses_nonempty x y z w s)
+
+/-- A chosen bundled left neighbour of a fixed right contribution class. -/
+noncomputable def someLeftContributionNeighborClass
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    leftContributionNeighborClasses x y z w t :=
+  Classical.choice (leftContributionNeighborClasses_nonempty x y z w t)
+
+/-- The chosen bundled right neighbour is swapped-related to the fixed left class. -/
+theorem someRightContributionNeighborClass_spec
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    SwappedTwoStepClass x y z w s.1
+      (someRightContributionNeighborClass x y z w s).1.1 :=
+  (someRightContributionNeighborClass x y z w s).2
+
+/-- The chosen bundled left neighbour is swapped-related to the fixed right class. -/
+theorem someLeftContributionNeighborClass_spec
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    SwappedTwoStepClass x y z w
+      (someLeftContributionNeighborClass x y z w t).1.1 t.1 :=
+  (someLeftContributionNeighborClass x y z w t).2
+
+
+
+
+/-!
+## Repackaging equivalences for local neighbour fibres
+
+The raw neighbour subtypes and the bundled neighbour fibres contain the same
+information; they are just packaged differently.
+-/
+
+/-- Repackage a raw swapped-right contribution neighbour as a bundled right neighbour fibre element. -/
+def rightContributionNeighborClasses_of_swapped
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    swappedRightContributionNeighbors x y z w s.1 →
+      rightContributionNeighborClasses x y z w s
+  | r => ⟨⟨r.1, r.2.2⟩, r.2.1⟩
+
+/-- Repackage a bundled right neighbour fibre element as a raw swapped-right contribution neighbour. -/
+def swappedRightContributionNeighbors_of_rightClass
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    rightContributionNeighborClasses x y z w s →
+      swappedRightContributionNeighbors x y z w s.1
+  | t => ⟨t.1.1, t.2, t.1.2⟩
+
+/-- Repackage a raw swapped-left contribution neighbour as a bundled left neighbour fibre element. -/
+def leftContributionNeighborClasses_of_swapped
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    swappedLeftContributionNeighbors x y z w t.1 →
+      leftContributionNeighborClasses x y z w t
+  | s => ⟨⟨s.1, s.2.2⟩, s.2.1⟩
+
+/-- Repackage a bundled left neighbour fibre element as a raw swapped-left contribution neighbour. -/
+def swappedLeftContributionNeighbors_of_leftClass
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    leftContributionNeighborClasses x y z w t →
+      swappedLeftContributionNeighbors x y z w t.1
+  | s => ⟨s.1.1, s.2, s.1.2⟩
+
+@[simp] theorem rightContributionNeighborClasses_of_swapped_val
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (r : swappedRightContributionNeighbors x y z w s.1) :
+    (rightContributionNeighborClasses_of_swapped x y z w s r).1.1 = r.1 :=
+  rfl
+
+@[simp] theorem swappedRightContributionNeighbors_of_rightClass_val
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    (swappedRightContributionNeighbors_of_rightClass x y z w s t).1 = t.1.1 :=
+  rfl
+
+@[simp] theorem leftContributionNeighborClasses_of_swapped_val
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (r : swappedLeftContributionNeighbors x y z w t.1) :
+    (leftContributionNeighborClasses_of_swapped x y z w t r).1.1 = r.1 :=
+  rfl
+
+@[simp] theorem swappedLeftContributionNeighbors_of_leftClass_val
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    (swappedLeftContributionNeighbors_of_leftClass x y z w t s).1 = s.1.1 :=
+  rfl
+
+@[simp] theorem rightContributionNeighborClasses_roundtrip
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (r : swappedRightContributionNeighbors x y z w s.1) :
+    swappedRightContributionNeighbors_of_rightClass x y z w s
+      (rightContributionNeighborClasses_of_swapped x y z w s r) = r := by
+  cases r
+  rfl
+
+@[simp] theorem swappedRightContributionNeighbors_roundtrip
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    rightContributionNeighborClasses_of_swapped x y z w s
+      (swappedRightContributionNeighbors_of_rightClass x y z w s t) = t := by
+  cases t
+  rfl
+
+@[simp] theorem leftContributionNeighborClasses_roundtrip
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (r : swappedLeftContributionNeighbors x y z w t.1) :
+    swappedLeftContributionNeighbors_of_leftClass x y z w t
+      (leftContributionNeighborClasses_of_swapped x y z w t r) = r := by
+  cases r
+  rfl
+
+@[simp] theorem swappedLeftContributionNeighbors_roundtrip
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    leftContributionNeighborClasses_of_swapped x y z w t
+      (swappedLeftContributionNeighbors_of_leftClass x y z w t s) = s := by
+  cases s
+  rfl
+
+/-- The raw and bundled right neighbour presentations are equivalent. -/
+def rightContributionNeighborClasses_equiv
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    swappedRightContributionNeighbors x y z w s.1 ≃
+      rightContributionNeighborClasses x y z w s where
+  toFun := rightContributionNeighborClasses_of_swapped x y z w s
+  invFun := swappedRightContributionNeighbors_of_rightClass x y z w s
+  left_inv := rightContributionNeighborClasses_roundtrip x y z w s
+  right_inv := swappedRightContributionNeighbors_roundtrip x y z w s
+
+/-- The raw and bundled left neighbour presentations are equivalent. -/
+def leftContributionNeighborClasses_equiv
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    swappedLeftContributionNeighbors x y z w t.1 ≃
+      leftContributionNeighborClasses x y z w t where
+  toFun := leftContributionNeighborClasses_of_swapped x y z w t
+  invFun := swappedLeftContributionNeighbors_of_leftClass x y z w t
+  left_inv := leftContributionNeighborClasses_roundtrip x y z w t
+  right_inv := swappedLeftContributionNeighbors_roundtrip x y z w t
+
+
+/-!
+## Transport across bundled neighbour fibres
+
+A bundled neighbour on one side determines a nonempty bundled neighbour fibre
+on the other side.  These are the first local transport maps for the swapped
+correspondence.
+-/
+
+/-- A right neighbour of `s` determines a nonempty left neighbour fibre over itself. -/
+theorem leftContributionNeighborClasses_nonempty_of_rightNeighbor
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    Nonempty (leftContributionNeighborClasses x y z w t.1) := by
+  exact leftContributionNeighborClasses_nonempty x y z w t.1
+
+/-- A left neighbour of `t` determines a nonempty right neighbour fibre over itself. -/
+theorem rightContributionNeighborClasses_nonempty_of_leftNeighbor
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    Nonempty (rightContributionNeighborClasses x y z w s.1) := by
+  exact rightContributionNeighborClasses_nonempty x y z w s.1
+
+/-- Choose a left neighbour fibre element over a bundled right neighbour. -/
+noncomputable def chooseLeftContributionNeighborOfRightNeighbor
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    leftContributionNeighborClasses x y z w t.1 :=
+  Classical.choice
+    (leftContributionNeighborClasses_nonempty_of_rightNeighbor x y z w s t)
+
+/-- Choose a right neighbour fibre element over a bundled left neighbour. -/
+noncomputable def chooseRightContributionNeighborOfLeftNeighbor
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    rightContributionNeighborClasses x y z w s.1 :=
+  Classical.choice
+    (rightContributionNeighborClasses_nonempty_of_leftNeighbor x y z w t s)
+
+/-- The chosen left neighbour of a right neighbour is swapped-related to that right class. -/
+theorem chooseLeftContributionNeighborOfRightNeighbor_spec
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    SwappedTwoStepClass x y z w
+      (chooseLeftContributionNeighborOfRightNeighbor x y z w s t).1.1
+      t.1.1 :=
+  (chooseLeftContributionNeighborOfRightNeighbor x y z w s t).2
+
+/-- The chosen right neighbour of a left neighbour is swapped-related to that left class. -/
+theorem chooseRightContributionNeighborOfLeftNeighbor_spec
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    SwappedTwoStepClass x y z w
+      s.1.1
+      (chooseRightContributionNeighborOfLeftNeighbor x y z w t s).1.1 :=
+  (chooseRightContributionNeighborOfLeftNeighbor x y z w t s).2
+
+/-- Forgetting the proof, a bundled right neighbour of `s` gives a right contribution class. -/
+def rightContributionNeighborClasses_to_rightClass
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    rightContributionNeighborClasses x y z w s → RightContributionClasses x y z w
+  | t => t.1
+
+/-- Forgetting the proof, a bundled left neighbour of `t` gives a left contribution class. -/
+def leftContributionNeighborClasses_to_leftClass
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    leftContributionNeighborClasses x y z w t → LeftContributionClasses x y z w
+  | s => s.1
+
+@[simp] theorem rightContributionNeighborClasses_to_rightClass_val
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    (rightContributionNeighborClasses_to_rightClass x y z w s t).1 = t.1.1 :=
+  rfl
+
+@[simp] theorem leftContributionNeighborClasses_to_leftClass_val
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    (leftContributionNeighborClasses_to_leftClass x y z w t s).1 = s.1.1 :=
+  rfl
+
+
+/-!
+## Basic projection lemmas for bundled neighbour fibres
+
+These are the elementary facts we will use when extracting witness/support data
+from local neighbour-fibre elements.
+-/
+
+/-- The underlying right contribution class of a bundled right neighbour fibre element. -/
+def rightNeighborClass
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    RightContributionClasses x y z w :=
+  t.1
+
+/-- The underlying left contribution class of a bundled left neighbour fibre element. -/
+def leftNeighborClass
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    LeftContributionClasses x y z w :=
+  s.1
+
+@[simp] theorem rightNeighborClass_val
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    (rightNeighborClass x y z w s t).1 = t.1.1 :=
+  rfl
+
+@[simp] theorem leftNeighborClass_val
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    (leftNeighborClass x y z w t s).1 = s.1.1 :=
+  rfl
+
+/-- A bundled right neighbour fibre element is swapped-related to its source left class. -/
+theorem rightNeighborClass_swapped
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    SwappedTwoStepClass x y z w s.1 (rightNeighborClass x y z w s t).1 :=
+  t.2
+
+/-- A bundled left neighbour fibre element is swapped-related to its source right class. -/
+theorem leftNeighborClass_swapped
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    SwappedTwoStepClass x y z w (leftNeighborClass x y z w t s).1 t.1 :=
+  s.2
+
+/-- A bundled right neighbour fibre element really determines a right contribution class. -/
+theorem rightNeighborClass_isRight
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    IsRightContributionClass x y z w (rightNeighborClass x y z w s t).1 :=
+  (rightNeighborClass x y z w s t).2
+
+/-- A bundled left neighbour fibre element really determines a left contribution class. -/
+theorem leftNeighborClass_isLeft
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    IsLeftContributionClass x y z w (leftNeighborClass x y z w t s).1 :=
+  (leftNeighborClass x y z w t s).2
+
+/-- Extensionality for bundled right neighbour fibre elements via the underlying right class. -/
+theorem rightContributionNeighborClasses_ext
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t₁ t₂ : rightContributionNeighborClasses x y z w s)
+    (h : t₁.1 = t₂.1) :
+    t₁ = t₂ := by
+  cases t₁
+  cases t₂
+  cases h
+  rfl
+
+/-- Extensionality for bundled left neighbour fibre elements via the underlying left class. -/
+theorem leftContributionNeighborClasses_ext
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s₁ s₂ : leftContributionNeighborClasses x y z w t)
+    (h : s₁.1 = s₂.1) :
+    s₁ = s₂ := by
+  cases s₁
+  cases s₂
+  cases h
+  rfl
+
+
+open Classical
+
+/-!
+## Contribution classes lie in support
+-/
+
+/-- Any left-outer contribution class lies in left support. -/
+theorem HasLeftOuterContributionClass.to_inLeftSupport
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : HasLeftOuterContributionClass x y z w q) :
+    InLeftSupportClass x y z w q := by
+  rcases hq with ⟨h, rfl⟩
+  cases h with
+  | mk a b z' haz hbw =>
+      exact classOfLeftWitness_in_leftSupport x y z w
+        (TwoStepWitnessLeft.outer a b z' haz hbw)
+
+/-- Any swapped-right-outer contribution class lies in swapped right support. -/
+theorem HasSwappedRightOuterContributionClass.to_inRightSupport
+    (x y z w : PTree)
+    (q : TwoStepQuotient y x z w)
+    (hq : HasSwappedRightOuterContributionClass x y z w q) :
+    InRightSupportClass y x z w q := by
+  rcases hq with ⟨h, rfl⟩
+  cases h with
+  | mk a b z' haz hbw =>
+      exact classOfRightWitness_in_rightSupport y x z w
+        (TwoStepWitnessRight.outer a b z' haz hbw)
+
+theorem HasLeftInnerContributionClass.to_inLeftSupport
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : HasLeftInnerContributionClass x y z w q) :
+    InLeftSupportClass x y z w q := by
+  rcases hq with ⟨h⟩
+  exact ⟨h.1.1, by
+    simpa [leftInnerWitnessClass] using h.2⟩
+
+theorem HasSwappedRightInnerContributionClass.to_inRightSupport
+    (x y z w : PTree)
+    (q : TwoStepQuotient y x z w)
+    (hq : HasSwappedRightInnerContributionClass x y z w q) :
+    InRightSupportClass y x z w q := by
+  rcases hq with ⟨h⟩
+  exact ⟨h.1.1, by
+    simpa [swappedRightInnerWitnessClass] using h.2⟩
+
+/-- Any right contribution class lies in swapped right support. -/
+theorem IsRightContributionClass.to_inRightSupport
+    (x y z w : PTree)
+    (q : TwoStepQuotient y x z w)
+    (hq : IsRightContributionClass x y z w q) :
+    InRightSupportClass y x z w q := by
+  rcases hq with hq | hq
+  · exact HasSwappedRightOuterContributionClass.to_inRightSupport x y z w q hq
+  · exact HasSwappedRightInnerContributionClass.to_inRightSupport x y z w q hq
+
+/-- Any left contribution class lies in left support. -/
+theorem IsLeftContributionClass.to_inLeftSupport
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : IsLeftContributionClass x y z w q) :
+    InLeftSupportClass x y z w q := by
+  rcases hq with hq | hq
+  · exact HasLeftOuterContributionClass.to_inLeftSupport x y z w q hq
+  · exact HasLeftInnerContributionClass.to_inLeftSupport x y z w q hq
+
+/-!
+## First local bridge theorems
+-/
+
+/-- Any bundled right neighbour yields a left-fibre alternative. -/
+theorem rightNeighbor_has_matching_leftFiber
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    Nonempty (LeftFiber y x z w t.1.1)
+    ∨
+    (∃ q' : TwoStepQuotient x y z w,
+        Nonempty (LeftFiber x y z w q') ∧
+        SwappedTwoStepClass y x z w t.1.1 q') := by
+  have ht_sup : InRightSupportClass y x z w t.1.1 :=
+    IsRightContributionClass.to_inRightSupport x y z w t.1.1 t.1.2
+  simpa using
+    rightSupport_has_matching_leftFiber y x z w t.1.1 ht_sup
+
+/-- Any bundled left neighbour yields a right-fibre alternative. -/
+theorem leftNeighbor_has_matching_rightFiber
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    (∃ q' : TwoStepQuotient x y z w,
+        Nonempty (RightFiber x y z w q') ∧
+        s.1.1 = q')
+    ∨
+    (∃ q' : TwoStepQuotient y x z w,
+        Nonempty (SwappedRightFiber x y z w q') ∧
+        SwappedTwoStepClass x y z w s.1.1 q') := by
+  have hs_sup : InLeftSupportClass x y z w s.1.1 :=
+    IsLeftContributionClass.to_inLeftSupport x y z w s.1.1 s.1.2
+  simpa [eq_comm] using
+    leftSupport_has_matching_rightFiber x y z w s.1.1 hs_sup
+
+
+/-- Choose some bundled right neighbour of a bundled left neighbour. -/
+noncomputable def someRightContributionNeighborOfLeftNeighbor
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    rightContributionNeighborClasses x y z w s.1 :=
+  Classical.choice <|
+    rightContributionNeighborClasses_nonempty_of_leftNeighbor x y z w t s
+
+/-- The chosen bundled right neighbour is swapped-related to the source
+bundled left neighbour. -/
+theorem someRightContributionNeighborOfLeftNeighbor_swapped
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    SwappedTwoStepClass x y z w s.1.1
+      (someRightContributionNeighborOfLeftNeighbor x y z w t s).1.1 :=
+  (someRightContributionNeighborOfLeftNeighbor x y z w t s).2
+
+/-- The underlying class of the chosen bundled right neighbour is indeed
+a right contribution class. -/
+theorem someRightContributionNeighborOfLeftNeighbor_isRight
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    IsRightContributionClass x y z w
+      (someRightContributionNeighborOfLeftNeighbor x y z w t s).1.1 :=
+  (someRightContributionNeighborOfLeftNeighbor x y z w t s).1.2
+
+/-- Choose some bundled left neighbour of a bundled right neighbour. -/
+noncomputable def someLeftContributionNeighborOfRightNeighbor
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    leftContributionNeighborClasses x y z w t.1 :=
+  Classical.choice <|
+    leftContributionNeighborClasses_nonempty_of_rightNeighbor x y z w s t
+
+/-- The chosen bundled left neighbour is swapped-related to the source
+bundled right neighbour. -/
+theorem someLeftContributionNeighborOfRightNeighbor_swapped
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    SwappedTwoStepClass x y z w
+      (someLeftContributionNeighborOfRightNeighbor x y z w s t).1.1 t.1.1 :=
+  (someLeftContributionNeighborOfRightNeighbor x y z w s t).2
+
+/-- The underlying class of the chosen bundled left neighbour is indeed
+a left contribution class. -/
+theorem someLeftContributionNeighborOfRightNeighbor_isLeft
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    IsLeftContributionClass x y z w
+      (someLeftContributionNeighborOfRightNeighbor x y z w s t).1.1 :=
+  (someLeftContributionNeighborOfRightNeighbor x y z w s t).1.2
+
+
+@[simp] theorem rightContributionNeighborClasses_equiv_apply
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (r : swappedRightContributionNeighbors x y z w s.1) :
+    rightContributionNeighborClasses_equiv x y z w s r =
+      rightContributionNeighborClasses_of_swapped x y z w s r := rfl
+
+@[simp] theorem rightContributionNeighborClasses_equiv_symm_apply
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    (rightContributionNeighborClasses_equiv x y z w s).symm t =
+      swappedRightContributionNeighbors_of_rightClass x y z w s t := rfl
+
+@[simp] theorem leftContributionNeighborClasses_equiv_apply
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (r : swappedLeftContributionNeighbors x y z w t.1) :
+    leftContributionNeighborClasses_equiv x y z w t r =
+      leftContributionNeighborClasses_of_swapped x y z w t r := rfl
+
+@[simp] theorem leftContributionNeighborClasses_equiv_symm_apply
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    (leftContributionNeighborClasses_equiv x y z w t).symm s =
+      swappedLeftContributionNeighbors_of_leftClass x y z w t s := rfl
+
+/-- Nonemptiness transports from raw swapped-right neighbours
+to bundled right neighbours. -/
+theorem rightContributionNeighborClasses_nonempty_iff_swapped
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    Nonempty (rightContributionNeighborClasses x y z w s) ↔
+      Nonempty (swappedRightContributionNeighbors x y z w s.1) := by
+  constructor
+  · intro h
+    rcases h with ⟨t⟩
+    exact ⟨(rightContributionNeighborClasses_equiv x y z w s).symm t⟩
+  · intro h
+    rcases h with ⟨r⟩
+    exact ⟨(rightContributionNeighborClasses_equiv x y z w s) r⟩
+
+/-- Nonemptiness transports from raw swapped-left neighbours
+to bundled left neighbours. -/
+theorem leftContributionNeighborClasses_nonempty_iff_swapped
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    Nonempty (leftContributionNeighborClasses x y z w t) ↔
+      Nonempty (swappedLeftContributionNeighbors x y z w t.1) := by
+  constructor
+  · intro h
+    rcases h with ⟨s⟩
+    exact ⟨(leftContributionNeighborClasses_equiv x y z w t).symm s⟩
+  · intro h
+    rcases h with ⟨r⟩
+    exact ⟨(leftContributionNeighborClasses_equiv x y z w t) r⟩
+
+/-- Extensionality for bundled right neighbours can be checked
+after transporting to the raw swapped presentation. -/
+theorem rightContributionNeighborClasses_ext_of_symm
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t₁ t₂ : rightContributionNeighborClasses x y z w s)
+    (h :
+      swappedRightContributionNeighbors_of_rightClass x y z w s t₁ =
+      swappedRightContributionNeighbors_of_rightClass x y z w s t₂) :
+    t₁ = t₂ := by
+  have h' := congrArg
+    (rightContributionNeighborClasses_of_swapped x y z w s) h
+  simpa using h'
+
+/-- Extensionality for bundled left neighbours can be checked
+after transporting to the raw swapped presentation. -/
+theorem leftContributionNeighborClasses_ext_of_symm
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s₁ s₂ : leftContributionNeighborClasses x y z w t)
+    (h :
+      swappedLeftContributionNeighbors_of_leftClass x y z w t s₁ =
+      swappedLeftContributionNeighbors_of_leftClass x y z w t s₂) :
+    s₁ = s₂ := by
+  have h' := congrArg
+    (leftContributionNeighborClasses_of_swapped x y z w t) h
+  simpa using h'
+
+
+
+open Classical
+
+/-!
+## Chosen opposite-neighbour maps and roundtrips
+-/
+
+/-- Choose a bundled right neighbour of a bundled left neighbour. -/
+noncomputable def chooseRightNeighborOfLeftNeighbor
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    rightContributionNeighborClasses x y z w s.1 :=
+  Classical.choice <|
+    rightContributionNeighborClasses_nonempty x y z w s.1
+
+/-- Choose a bundled left neighbour of a bundled right neighbour. -/
+noncomputable def chooseLeftNeighborOfRightNeighbor
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    leftContributionNeighborClasses x y z w t.1 :=
+  Classical.choice <|
+    leftContributionNeighborClasses_nonempty x y z w t.1
+
+/-- The chosen right neighbour of a left neighbour is swapped-related
+to the source left neighbour. -/
+theorem chooseRightNeighborOfLeftNeighbor_swapped
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    SwappedTwoStepClass x y z w s.1.1
+      (chooseRightNeighborOfLeftNeighbor x y z w t s).1.1 :=
+  (chooseRightNeighborOfLeftNeighbor x y z w t s).2
+
+/-- The chosen left neighbour of a right neighbour is swapped-related
+to the source right neighbour. -/
+theorem chooseLeftNeighborOfRightNeighbor_swapped
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    SwappedTwoStepClass x y z w
+      (chooseLeftNeighborOfRightNeighbor x y z w s t).1.1 t.1.1 :=
+  (chooseLeftNeighborOfRightNeighbor x y z w s t).2
+
+/-- The chosen right neighbour of a left neighbour is indeed right. -/
+theorem chooseRightNeighborOfLeftNeighbor_isRight
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    IsRightContributionClass x y z w
+      (chooseRightNeighborOfLeftNeighbor x y z w t s).1.1 :=
+  (chooseRightNeighborOfLeftNeighbor x y z w t s).1.2
+
+/-- The chosen left neighbour of a right neighbour is indeed left. -/
+theorem chooseLeftNeighborOfRightNeighbor_isLeft
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    IsLeftContributionClass x y z w
+      (chooseLeftNeighborOfRightNeighbor x y z w s t).1.1 :=
+  (chooseLeftNeighborOfRightNeighbor x y z w s t).1.2
+
+/-- Transport the chosen right neighbour back to the raw swapped presentation. -/
+noncomputable def chooseSwappedRightNeighborOfLeftNeighbor
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    swappedRightContributionNeighbors x y z w s.1.1 :=
+  swappedRightContributionNeighbors_of_rightClass x y z w s.1
+    (chooseRightNeighborOfLeftNeighbor x y z w t s)
+
+/-- Transport the chosen left neighbour back to the raw swapped presentation. -/
+noncomputable def chooseSwappedLeftNeighborOfRightNeighbor
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    swappedLeftContributionNeighbors x y z w t.1.1 :=
+  swappedLeftContributionNeighbors_of_leftClass x y z w t.1
+    (chooseLeftNeighborOfRightNeighbor x y z w s t)
+
+@[simp] theorem chooseRightNeighborOfLeftNeighbor_eq_of_swapped
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    rightContributionNeighborClasses_of_swapped x y z w s.1
+      (chooseSwappedRightNeighborOfLeftNeighbor x y z w t s)
+      =
+      chooseRightNeighborOfLeftNeighbor x y z w t s := by
+  simp [chooseSwappedRightNeighborOfLeftNeighbor]
+
+@[simp] theorem chooseLeftNeighborOfRightNeighbor_eq_of_swapped
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    leftContributionNeighborClasses_of_swapped x y z w t.1
+      (chooseSwappedLeftNeighborOfRightNeighbor x y z w s t)
+      =
+      chooseLeftNeighborOfRightNeighbor x y z w s t := by
+  simp [chooseSwappedLeftNeighborOfRightNeighbor]
+
+@[simp] theorem chooseSwappedRightNeighborOfLeftNeighbor_eta
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    swappedRightContributionNeighbors_of_rightClass x y z w s.1
+      (rightContributionNeighborClasses_of_swapped x y z w s.1
+        (chooseSwappedRightNeighborOfLeftNeighbor x y z w t s))
+      =
+      chooseSwappedRightNeighborOfLeftNeighbor x y z w t s := by
+  simp [chooseSwappedRightNeighborOfLeftNeighbor]
+
+@[simp] theorem chooseSwappedLeftNeighborOfRightNeighbor_eta
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    swappedLeftContributionNeighbors_of_leftClass x y z w t.1
+      (leftContributionNeighborClasses_of_swapped x y z w t.1
+        (chooseSwappedLeftNeighborOfRightNeighbor x y z w s t))
+      =
+      chooseSwappedLeftNeighborOfRightNeighbor x y z w s t := by
+  simp [chooseSwappedLeftNeighborOfRightNeighbor]
+
+
+open Classical
+
+/-!
+## Canonical opposite-neighbour maps
+-/
+
+/-- The canonical bundled right neighbour attached to a left contribution class. -/
+noncomputable def canonicalRightContributionNeighbor
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    rightContributionNeighborClasses x y z w s :=
+  ⟨someRightContributionClassNeighbor x y z w s,
+    someRightContributionClassNeighbor_swapped x y z w s⟩
+
+/-- The canonical bundled left neighbour attached to a right contribution class. -/
+noncomputable def canonicalLeftContributionNeighbor
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    leftContributionNeighborClasses x y z w t :=
+  ⟨someLeftContributionClassNeighbor x y z w t,
+    someLeftContributionClassNeighbor_swapped x y z w t⟩
+
+@[simp] theorem canonicalRightContributionNeighbor_fst
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    (canonicalRightContributionNeighbor x y z w s).1 =
+      someRightContributionClassNeighbor x y z w s := rfl
+
+@[simp] theorem canonicalLeftContributionNeighbor_fst
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    (canonicalLeftContributionNeighbor x y z w t).1 =
+      someLeftContributionClassNeighbor x y z w t := rfl
+
+@[simp] theorem canonicalRightContributionNeighbor_swapped
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    SwappedTwoStepClass x y z w
+      s.1 (canonicalRightContributionNeighbor x y z w s).1.1 :=
+  (canonicalRightContributionNeighbor x y z w s).2
+
+/-- The canonical right neighbour attached to a bundled left neighbour
+depends only on its underlying left contribution class. -/
+noncomputable def canonicalRightNeighborOfLeftNeighbor
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    rightContributionNeighborClasses x y z w s.1 :=
+  canonicalRightContributionNeighbor x y z w s.1
+
+/-- The canonical left neighbour attached to a bundled right neighbour
+depends only on its underlying right contribution class. -/
+noncomputable def canonicalLeftNeighborOfRightNeighbor
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    leftContributionNeighborClasses x y z w t.1 :=
+  canonicalLeftContributionNeighbor x y z w t.1
+
+
+@[simp] theorem canonicalRightNeighborOfLeftNeighbor_swapped
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    SwappedTwoStepClass x y z w
+      s.1.1 ((canonicalRightNeighborOfLeftNeighbor x y z w t s).1.1) := by
+  let u : rightContributionNeighborClasses x y z w s.1 :=
+    canonicalRightNeighborOfLeftNeighbor x y z w t s
+  change SwappedTwoStepClass x y z w s.1.1 u.1.1
+  exact u.2
+
+@[simp] theorem canonicalLeftContributionNeighbor_swapped
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    SwappedTwoStepClass x y z w
+      (canonicalLeftContributionNeighbor x y z w t).1.1 t.1 :=
+  (canonicalLeftContributionNeighbor x y z w t).2
+
+@[simp] theorem canonicalLeftNeighborOfRightNeighbor_swapped
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    SwappedTwoStepClass x y z w
+      (canonicalLeftNeighborOfRightNeighbor x y z w s t).1.1 t.1.1 :=
+  (canonicalLeftNeighborOfRightNeighbor x y z w s t).2
+
+@[simp] theorem canonicalRightContributionNeighbor_isRight
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    IsRightContributionClass x y z w
+      (canonicalRightContributionNeighbor x y z w s).1.1 :=
+  (canonicalRightContributionNeighbor x y z w s).1.2
+
+@[simp] theorem canonicalLeftContributionNeighbor_isLeft
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    IsLeftContributionClass x y z w
+      (canonicalLeftContributionNeighbor x y z w t).1.1 :=
+  (canonicalLeftContributionNeighbor x y z w t).1.2
+
+
+@[simp] theorem canonicalRightNeighborOfLeftNeighbor_fst
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    (canonicalRightNeighborOfLeftNeighbor x y z w t s).1 =
+      someRightContributionClassNeighbor x y z w s.1 := rfl
+
+@[simp] theorem canonicalLeftNeighborOfRightNeighbor_fst
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    (canonicalLeftNeighborOfRightNeighbor x y z w s t).1 =
+      someLeftContributionClassNeighbor x y z w t.1 := rfl
+
+
+open Classical
+
+/-!
+## Canonical raw swapped neighbours
+-/
+
+/-- The canonical raw swapped-right neighbour attached to a left contribution class. -/
+noncomputable def canonicalSwappedRightContributionNeighbor
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    swappedRightContributionNeighbors x y z w s.1 :=
+  swappedRightContributionNeighbors_of_rightClass x y z w s
+    (canonicalRightContributionNeighbor x y z w s)
+
+/-- The canonical raw swapped-left neighbour attached to a right contribution class. -/
+noncomputable def canonicalSwappedLeftContributionNeighbor
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    swappedLeftContributionNeighbors x y z w t.1 :=
+  swappedLeftContributionNeighbors_of_leftClass x y z w t
+    (canonicalLeftContributionNeighbor x y z w t)
+
+@[simp] theorem canonicalSwappedRightContributionNeighbor_to_bundled
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    rightContributionNeighborClasses_of_swapped x y z w s
+      (canonicalSwappedRightContributionNeighbor x y z w s)
+      =
+      canonicalRightContributionNeighbor x y z w s := by
+  simp [canonicalSwappedRightContributionNeighbor]
+
+@[simp] theorem canonicalSwappedLeftContributionNeighbor_to_bundled
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    leftContributionNeighborClasses_of_swapped x y z w t
+      (canonicalSwappedLeftContributionNeighbor x y z w t)
+      =
+      canonicalLeftContributionNeighbor x y z w t := by
+  simp [canonicalSwappedLeftContributionNeighbor]
+
+@[simp] theorem canonicalRightContributionNeighbor_to_swapped
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    swappedRightContributionNeighbors_of_rightClass x y z w s
+      (canonicalRightContributionNeighbor x y z w s)
+      =
+      canonicalSwappedRightContributionNeighbor x y z w s := by
+  rfl
+
+@[simp] theorem canonicalLeftContributionNeighbor_to_swapped
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    swappedLeftContributionNeighbors_of_leftClass x y z w t
+      (canonicalLeftContributionNeighbor x y z w t)
+      =
+      canonicalSwappedLeftContributionNeighbor x y z w t := by
+  rfl
+
+/-- The canonical raw swapped-right neighbour attached to a bundled left neighbour
+depends only on its underlying left contribution class. -/
+noncomputable def canonicalSwappedRightNeighborOfLeftNeighbor
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    swappedRightContributionNeighbors x y z w s.1.1 :=
+  canonicalSwappedRightContributionNeighbor x y z w s.1
+
+/-- The canonical raw swapped-left neighbour attached to a bundled right neighbour
+depends only on its underlying right contribution class. -/
+noncomputable def canonicalSwappedLeftNeighborOfRightNeighbor
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    swappedLeftContributionNeighbors x y z w t.1.1 :=
+  canonicalSwappedLeftContributionNeighbor x y z w t.1
+
+@[simp] theorem canonicalSwappedRightNeighborOfLeftNeighbor_to_bundled
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    rightContributionNeighborClasses_of_swapped x y z w s.1
+      (canonicalSwappedRightNeighborOfLeftNeighbor x y z w t s)
+      =
+      canonicalRightNeighborOfLeftNeighbor x y z w t s := by
+  rfl
+
+@[simp] theorem canonicalSwappedLeftNeighborOfRightNeighbor_to_bundled
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    leftContributionNeighborClasses_of_swapped x y z w t.1
+      (canonicalSwappedLeftNeighborOfRightNeighbor x y z w s t)
+      =
+      canonicalLeftNeighborOfRightNeighbor x y z w s t := by
+  rfl
+
+@[simp] theorem canonicalRightNeighborOfLeftNeighbor_to_swapped
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    swappedRightContributionNeighbors_of_rightClass x y z w s.1
+      (canonicalRightNeighborOfLeftNeighbor x y z w t s)
+      =
+      canonicalSwappedRightNeighborOfLeftNeighbor x y z w t s := by
+  rfl
+
+@[simp] theorem canonicalLeftNeighborOfRightNeighbor_to_swapped
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    swappedLeftContributionNeighbors_of_leftClass x y z w t.1
+      (canonicalLeftNeighborOfRightNeighbor x y z w s t)
+      =
+      canonicalSwappedLeftNeighborOfRightNeighbor x y z w s t := by
+  rfl
+
+
+/-!
+## Canonical neighbours inherit support and local fibre alternatives
+-/
+
+/-- The canonical right neighbour lies in right support. -/
+theorem canonicalRightContributionNeighbor_inRightSupport
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    InRightSupportClass y x z w
+      (canonicalRightContributionNeighbor x y z w s).1.1 := by
+  exact IsRightContributionClass.to_inRightSupport x y z w
+    (canonicalRightContributionNeighbor x y z w s).1.1
+    (canonicalRightContributionNeighbor_isRight x y z w s)
+
+/-- The canonical left neighbour lies in left support. -/
+theorem canonicalLeftContributionNeighbor_inLeftSupport
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    InLeftSupportClass x y z w
+      (canonicalLeftContributionNeighbor x y z w t).1.1 := by
+  exact IsLeftContributionClass.to_inLeftSupport x y z w
+    (canonicalLeftContributionNeighbor x y z w t).1.1
+    (canonicalLeftContributionNeighbor_isLeft x y z w t)
+
+/-- The canonical right neighbour of a bundled left neighbour lies in right support. -/
+theorem canonicalRightNeighborOfLeftNeighbor_inRightSupport
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    InRightSupportClass y x z w
+      (canonicalRightNeighborOfLeftNeighbor x y z w t s).1.1 := by
+  exact IsRightContributionClass.to_inRightSupport x y z w
+    (canonicalRightNeighborOfLeftNeighbor x y z w t s).1.1
+    (by
+      simpa [canonicalRightNeighborOfLeftNeighbor] using
+        canonicalRightContributionNeighbor_isRight x y z w s.1)
+
+/-- The canonical left neighbour of a bundled right neighbour lies in left support. -/
+theorem canonicalLeftNeighborOfRightNeighbor_inLeftSupport
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    InLeftSupportClass x y z w
+      (canonicalLeftNeighborOfRightNeighbor x y z w s t).1.1 := by
+  exact IsLeftContributionClass.to_inLeftSupport x y z w
+    (canonicalLeftNeighborOfRightNeighbor x y z w s t).1.1
+    (by
+      simpa [canonicalLeftNeighborOfRightNeighbor] using
+        canonicalLeftContributionNeighbor_isLeft x y z w t.1)
+
+/-- The canonical right neighbour enjoys the generic left-fibre alternative. -/
+theorem canonicalRightContributionNeighbor_has_matching_leftFiber
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    Nonempty (LeftFiber y x z w (canonicalRightContributionNeighbor x y z w s).1.1)
+    ∨
+    (∃ q' : TwoStepQuotient x y z w,
+        Nonempty (LeftFiber x y z w q') ∧
+        SwappedTwoStepClass y x z w
+          (canonicalRightContributionNeighbor x y z w s).1.1 q') := by
+  simpa using
+    rightNeighbor_has_matching_leftFiber x y z w s
+      (canonicalRightContributionNeighbor x y z w s)
+
+/-- The canonical left neighbour enjoys the generic right-fibre alternative. -/
+theorem canonicalLeftContributionNeighbor_has_matching_rightFiber
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    (∃ q' : TwoStepQuotient x y z w,
+        Nonempty (RightFiber x y z w q') ∧
+        (canonicalLeftContributionNeighbor x y z w t).1.1 = q')
+    ∨
+    (∃ q' : TwoStepQuotient y x z w,
+        Nonempty (SwappedRightFiber x y z w q') ∧
+        SwappedTwoStepClass x y z w
+          (canonicalLeftContributionNeighbor x y z w t).1.1 q') := by
+  simpa using
+    leftNeighbor_has_matching_rightFiber x y z w t
+      (canonicalLeftContributionNeighbor x y z w t)
+
+/-- The canonical right neighbour of a bundled left neighbour
+enjoys the generic left-fibre alternative. -/
+theorem canonicalRightNeighborOfLeftNeighbor_has_matching_leftFiber
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    Nonempty (LeftFiber y x z w
+      (canonicalRightNeighborOfLeftNeighbor x y z w t s).1.1)
+    ∨
+    (∃ q' : TwoStepQuotient x y z w,
+        Nonempty (LeftFiber x y z w q') ∧
+        SwappedTwoStepClass y x z w
+          (canonicalRightNeighborOfLeftNeighbor x y z w t s).1.1 q') := by
+  simpa [canonicalRightNeighborOfLeftNeighbor] using
+    canonicalRightContributionNeighbor_has_matching_leftFiber x y z w s.1
+
+/-- The canonical left neighbour of a bundled right neighbour
+enjoys the generic right-fibre alternative. -/
+theorem canonicalLeftNeighborOfRightNeighbor_has_matching_rightFiber
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    (∃ q' : TwoStepQuotient x y z w,
+        Nonempty (RightFiber x y z w q') ∧
+        (canonicalLeftNeighborOfRightNeighbor x y z w s t).1.1 = q')
+    ∨
+    (∃ q' : TwoStepQuotient y x z w,
+        Nonempty (SwappedRightFiber x y z w q') ∧
+        SwappedTwoStepClass x y z w
+          (canonicalLeftNeighborOfRightNeighbor x y z w s t).1.1 q') := by
+  simpa [canonicalLeftNeighborOfRightNeighbor] using
+    canonicalLeftContributionNeighbor_has_matching_rightFiber x y z w t.1
+
+
+
+/-!
+## Canonical neighbours are stable under presentation change
+-/
+
+@[simp] theorem canonicalSwappedRightContributionNeighbor_roundtrip
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    swappedRightContributionNeighbors_of_rightClass x y z w s
+      (rightContributionNeighborClasses_of_swapped x y z w s
+        (canonicalSwappedRightContributionNeighbor x y z w s))
+      =
+      canonicalSwappedRightContributionNeighbor x y z w s := by
+  exact rightContributionNeighborClasses_roundtrip x y z w s
+    (canonicalSwappedRightContributionNeighbor x y z w s)
+
+@[simp] theorem canonicalSwappedLeftContributionNeighbor_roundtrip
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    swappedLeftContributionNeighbors_of_leftClass x y z w t
+      (leftContributionNeighborClasses_of_swapped x y z w t
+        (canonicalSwappedLeftContributionNeighbor x y z w t))
+      =
+      canonicalSwappedLeftContributionNeighbor x y z w t := by
+  exact leftContributionNeighborClasses_roundtrip x y z w t
+    (canonicalSwappedLeftContributionNeighbor x y z w t)
+
+@[simp] theorem canonicalRightContributionNeighbor_roundtrip
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    rightContributionNeighborClasses_of_swapped x y z w s
+      (swappedRightContributionNeighbors_of_rightClass x y z w s
+        (canonicalRightContributionNeighbor x y z w s))
+      =
+      canonicalRightContributionNeighbor x y z w s := by
+  exact swappedRightContributionNeighbors_roundtrip x y z w s
+    (canonicalRightContributionNeighbor x y z w s)
+
+@[simp] theorem canonicalLeftContributionNeighbor_roundtrip
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    leftContributionNeighborClasses_of_swapped x y z w t
+      (swappedLeftContributionNeighbors_of_leftClass x y z w t
+        (canonicalLeftContributionNeighbor x y z w t))
+      =
+      canonicalLeftContributionNeighbor x y z w t := by
+  exact swappedLeftContributionNeighbors_roundtrip x y z w t
+    (canonicalLeftContributionNeighbor x y z w t)
+
+@[simp] theorem canonicalSwappedRightNeighborOfLeftNeighbor_roundtrip
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    swappedRightContributionNeighbors_of_rightClass x y z w s.1
+      (rightContributionNeighborClasses_of_swapped x y z w s.1
+        (canonicalSwappedRightNeighborOfLeftNeighbor x y z w t s))
+      =
+      canonicalSwappedRightNeighborOfLeftNeighbor x y z w t s := by
+  exact rightContributionNeighborClasses_roundtrip x y z w s.1
+    (canonicalSwappedRightNeighborOfLeftNeighbor x y z w t s)
+
+@[simp] theorem canonicalSwappedLeftNeighborOfRightNeighbor_roundtrip
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    swappedLeftContributionNeighbors_of_leftClass x y z w t.1
+      (leftContributionNeighborClasses_of_swapped x y z w t.1
+        (canonicalSwappedLeftNeighborOfRightNeighbor x y z w s t))
+      =
+      canonicalSwappedLeftNeighborOfRightNeighbor x y z w s t := by
+  exact leftContributionNeighborClasses_roundtrip x y z w t.1
+    (canonicalSwappedLeftNeighborOfRightNeighbor x y z w s t)
+
+@[simp] theorem canonicalRightNeighborOfLeftNeighbor_roundtrip
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    rightContributionNeighborClasses_of_swapped x y z w s.1
+      (swappedRightContributionNeighbors_of_rightClass x y z w s.1
+        (canonicalRightNeighborOfLeftNeighbor x y z w t s))
+      =
+      canonicalRightNeighborOfLeftNeighbor x y z w t s := by
+  exact swappedRightContributionNeighbors_roundtrip x y z w s.1
+    (canonicalRightNeighborOfLeftNeighbor x y z w t s)
+
+@[simp] theorem canonicalLeftNeighborOfRightNeighbor_roundtrip
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    leftContributionNeighborClasses_of_swapped x y z w t.1
+      (swappedLeftContributionNeighbors_of_leftClass x y z w t.1
+        (canonicalLeftNeighborOfRightNeighbor x y z w s t))
+      =
+      canonicalLeftNeighborOfRightNeighbor x y z w s t := by
+  exact swappedLeftContributionNeighbors_roundtrip x y z w t.1
+    (canonicalLeftNeighborOfRightNeighbor x y z w s t)
+
+
+
+
+/-!
+## Canonical transports across presentations
+-/
+
+@[simp] theorem canonicalSwappedRightContributionNeighbor_to_rightClass
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    rightContributionNeighborClasses_of_swapped x y z w s
+      (canonicalSwappedRightContributionNeighbor x y z w s)
+      =
+      canonicalRightContributionNeighbor x y z w s := by
+  rfl
+
+
+
+@[simp] theorem canonicalSwappedLeftContributionNeighbor_to_leftClass
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    leftContributionNeighborClasses_of_swapped x y z w t
+      (canonicalSwappedLeftContributionNeighbor x y z w t)
+      =
+      canonicalLeftContributionNeighbor x y z w t := by
+  rfl
+
+
+@[simp] theorem canonicalSwappedRightNeighborOfLeftNeighbor_to_rightClass
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    rightContributionNeighborClasses_of_swapped x y z w s.1
+      (canonicalSwappedRightNeighborOfLeftNeighbor x y z w t s)
+      =
+      canonicalRightNeighborOfLeftNeighbor x y z w t s := by
+  rfl
+
+
+
+@[simp] theorem canonicalSwappedLeftNeighborOfRightNeighbor_to_leftClass
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    leftContributionNeighborClasses_of_swapped x y z w t.1
+      (canonicalSwappedLeftNeighborOfRightNeighbor x y z w s t)
+      =
+      canonicalLeftNeighborOfRightNeighbor x y z w s t := by
+  rfl
+
+
+
+
+/-!
+## First repeated-transport idempotence consequences
+-/
+
+@[simp] theorem canonicalRightContributionNeighbor_transport_twice
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    rightContributionNeighborClasses_of_swapped x y z w s
+      (swappedRightContributionNeighbors_of_rightClass x y z w s
+        (canonicalRightContributionNeighbor x y z w s))
+      =
+      canonicalRightContributionNeighbor x y z w s := by
+  simp
+
+@[simp] theorem canonicalLeftContributionNeighbor_transport_twice
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    leftContributionNeighborClasses_of_swapped x y z w t
+      (swappedLeftContributionNeighbors_of_leftClass x y z w t
+        (canonicalLeftContributionNeighbor x y z w t))
+      =
+      canonicalLeftContributionNeighbor x y z w t := by
+  simp
+
+@[simp] theorem canonicalRightNeighborOfLeftNeighbor_transport_twice
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    rightContributionNeighborClasses_of_swapped x y z w s.1
+      (swappedRightContributionNeighbors_of_rightClass x y z w s.1
+        (canonicalRightNeighborOfLeftNeighbor x y z w t s))
+      =
+      canonicalRightNeighborOfLeftNeighbor x y z w t s := by
+  simp
+
+@[simp] theorem canonicalLeftNeighborOfRightNeighbor_transport_twice
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    leftContributionNeighborClasses_of_swapped x y z w t.1
+      (swappedLeftContributionNeighbors_of_leftClass x y z w t.1
+        (canonicalLeftNeighborOfRightNeighbor x y z w s t))
+      =
+      canonicalLeftNeighborOfRightNeighbor x y z w s t := by
+  simp
+
+
+
+/-!
+## Canonical opposite choice is presentation-independent
+-/
+
+@[simp] theorem canonicalRightContributionNeighbor_stable_under_repackaging
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    canonicalRightContributionNeighbor x y z w s =
+      rightContributionNeighborClasses_of_swapped x y z w s
+        (canonicalSwappedRightContributionNeighbor x y z w s) := by
+  rfl
+
+@[simp] theorem canonicalLeftContributionNeighbor_stable_under_repackaging
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    canonicalLeftContributionNeighbor x y z w t =
+      leftContributionNeighborClasses_of_swapped x y z w t
+        (canonicalSwappedLeftContributionNeighbor x y z w t) := by
+  rfl
+
+/-!
+## Canonical transports preserve contribution/support predicates
+-/
+
+/-!
+## Canonical transports preserve contribution predicates
+-/
+
+theorem canonicalRightContributionNeighbor_isRightContributionClass
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    IsRightContributionClass x y z w
+      (canonicalRightContributionNeighbor x y z w s).1.1 := by
+  exact (canonicalRightContributionNeighbor x y z w s).1.2
+
+theorem canonicalLeftContributionNeighbor_isLeftContributionClass
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    IsLeftContributionClass x y z w
+      (canonicalLeftContributionNeighbor x y z w t).1.1 := by
+  exact (canonicalLeftContributionNeighbor x y z w t).1.2
+
+theorem canonicalRightNeighborOfLeftNeighbor_isRightContributionClass
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    IsRightContributionClass x y z w
+      (canonicalRightNeighborOfLeftNeighbor x y z w t s).1.1 := by
+  exact (canonicalRightNeighborOfLeftNeighbor x y z w t s).1.2
+
+theorem canonicalLeftNeighborOfRightNeighbor_isLeftContributionClass
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    IsLeftContributionClass x y z w
+      (canonicalLeftNeighborOfRightNeighbor x y z w s t).1.1 := by
+  exact (canonicalLeftNeighborOfRightNeighbor x y z w s t).1.2
+
+
+
+/-!
+## Neighbour bundles carry the swapped correspondence explicitly
+-/
+
+/-- A bundled left-neighbour of a right contribution class
+is, by definition, swapped-related to that right class. -/
+theorem leftContributionNeighborClasses_swapped
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    SwappedTwoStepClass x y z w s.1.1 t.1 := by
+  exact s.2
+
+/-- A bundled right-neighbour of a left contribution class
+is, by definition, swapped-related to that left class. -/
+theorem rightContributionNeighborClasses_swapped
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    SwappedTwoStepClass x y z w s.1 t.1.1 := by
+  exact t.2
+
+
+/-!
+## Canonical neighbour-of-neighbour remains swapped-related
+to the source presentation
+-/
+
+theorem canonicalRightNeighborOfLeftNeighbor_swapped_to_source
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    SwappedTwoStepClass x y z w
+      s.1.1
+      (canonicalRightNeighborOfLeftNeighbor x y z w t s).1.1 := by
+  -- This should be the defining witness carried by the canonical rebundling.
+  -- If `rfl` does not close it, try:
+  --   exact (canonicalRightNeighborOfLeftNeighbor x y z w t s).2
+  exact (canonicalRightNeighborOfLeftNeighbor x y z w t s).2
+
+theorem canonicalLeftNeighborOfRightNeighbor_swapped_to_source
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    SwappedTwoStepClass x y z w
+      (canonicalLeftNeighborOfRightNeighbor x y z w s t).1.1
+      t.1.1 := by
+  -- As above: this should be the witness stored in the canonical rebundling.
+  exact (canonicalLeftNeighborOfRightNeighbor x y z w s t).2
+
+
+
+/-!
+## Conditional recovery from neighbour-fibre subsingletonness
+-/
+
+/-- If the right-neighbour fibre over any left class is subsingleton,
+then canonical right-neighbour reconstruction recovers the original target. -/
+theorem canonicalRightNeighborOfLeftNeighbor_recovers_target_bundled_of_subsingleton
+    (x y z w : PTree)
+    (hsub :
+      ∀ s : LeftContributionClasses x y z w,
+        Subsingleton (rightContributionNeighborClasses x y z w s))
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    (canonicalRightNeighborOfLeftNeighbor x y z w t s).1 = t := by
+  have h :
+      canonicalRightNeighborOfLeftNeighbor x y z w t s
+        =
+      ⟨t, s.2⟩ := by
+    exact @Subsingleton.elim
+      (rightContributionNeighborClasses x y z w s.1)
+      (hsub s.1)
+      (canonicalRightNeighborOfLeftNeighbor x y z w t s)
+      ⟨t, s.2⟩
+  exact congrArg Subtype.val h
+
+/-- Dual conditional recovery on the left. -/
+theorem canonicalLeftNeighborOfRightNeighbor_recovers_target_bundled_of_subsingleton
+    (x y z w : PTree)
+    (hsub :
+      ∀ t : RightContributionClasses x y z w,
+        Subsingleton (leftContributionNeighborClasses x y z w t))
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    (canonicalLeftNeighborOfRightNeighbor x y z w s t).1 = s := by
+  have h :
+      canonicalLeftNeighborOfRightNeighbor x y z w s t
+        =
+      ⟨s, t.2⟩ := by
+    exact @Subsingleton.elim
+      (leftContributionNeighborClasses x y z w t.1)
+      (hsub t.1)
+      (canonicalLeftNeighborOfRightNeighbor x y z w s t)
+      ⟨s, t.2⟩
+  exact congrArg Subtype.val h
+
+/-- Under the same hypothesis, recover the underlying right quotient. -/
+theorem canonicalRightNeighborOfLeftNeighbor_recovers_target_of_subsingleton
+    (x y z w : PTree)
+    (hsub :
+      ∀ s : LeftContributionClasses x y z w,
+        Subsingleton (rightContributionNeighborClasses x y z w s))
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    (canonicalRightNeighborOfLeftNeighbor x y z w t s).1.1 = t.1 := by
+  simpa using congrArg Subtype.val
+    (canonicalRightNeighborOfLeftNeighbor_recovers_target_bundled_of_subsingleton
+      x y z w hsub t s)
+
+/-- Dual underlying recovery on the left. -/
+theorem canonicalLeftNeighborOfRightNeighbor_recovers_target_of_subsingleton
+    (x y z w : PTree)
+    (hsub :
+      ∀ t : RightContributionClasses x y z w,
+        Subsingleton (leftContributionNeighborClasses x y z w t))
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    (canonicalLeftNeighborOfRightNeighbor x y z w s t).1.1 = s.1 := by
+  simpa using congrArg Subtype.val
+    (canonicalLeftNeighborOfRightNeighbor_recovers_target_bundled_of_subsingleton
+      x y z w hsub s t)
+
+
+/-!
+## Abstract neighbour-fibre uniqueness hypotheses
+-/
+
+/-- Uniqueness of right-neighbour classes over a fixed left contribution class. -/
+def RightNeighborFiberUnique
+    (x y z w : PTree) : Prop :=
+  ∀ s : LeftContributionClasses x y z w,
+    ∀ u v : rightContributionNeighborClasses x y z w s,
+      u.1 = v.1
+
+/-- Uniqueness of left-neighbour classes over a fixed right contribution class. -/
+def LeftNeighborFiberUnique
+    (x y z w : PTree) : Prop :=
+  ∀ t : RightContributionClasses x y z w,
+    ∀ s₁ s₂ : leftContributionNeighborClasses x y z w t,
+      s₁.1 = s₂.1
+
+
+/-!
+## Subsingleton consequences
+-/
+
+theorem rightContributionNeighborClasses_subsingleton_of_unique
+    (x y z w : PTree)
+    (hUnique : RightNeighborFiberUnique x y z w)
+    (s : LeftContributionClasses x y z w) :
+    Subsingleton (rightContributionNeighborClasses x y z w s) := by
+  refine ⟨?_⟩
+  intro u v
+  apply rightContributionNeighborClasses_ext x y z w s u v
+  exact hUnique s u v
+
+theorem leftContributionNeighborClasses_subsingleton_of_unique
+    (x y z w : PTree)
+    (hUnique : LeftNeighborFiberUnique x y z w)
+    (t : RightContributionClasses x y z w) :
+    Subsingleton (leftContributionNeighborClasses x y z w t) := by
+  refine ⟨?_⟩
+  intro s₁ s₂
+  apply leftContributionNeighborClasses_ext x y z w t s₁ s₂
+  exact hUnique t s₁ s₂
+
+
+/-!
+## Recovery consequences
+-/
+
+theorem canonicalRightNeighborOfLeftNeighbor_recovers_target_bundled_of_unique
+    (x y z w : PTree)
+    (hUnique : RightNeighborFiberUnique x y z w)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    (canonicalRightNeighborOfLeftNeighbor x y z w t s).1 = t := by
+  have hsub :
+      ∀ s : LeftContributionClasses x y z w,
+        Subsingleton (rightContributionNeighborClasses x y z w s) :=
+    rightContributionNeighborClasses_subsingleton_of_unique x y z w hUnique
+  exact
+    canonicalRightNeighborOfLeftNeighbor_recovers_target_bundled_of_subsingleton
+      x y z w hsub t s
+
+theorem canonicalLeftNeighborOfRightNeighbor_recovers_target_bundled_of_unique
+    (x y z w : PTree)
+    (hUnique : LeftNeighborFiberUnique x y z w)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    (canonicalLeftNeighborOfRightNeighbor x y z w s t).1 = s := by
+  have hsub :
+      ∀ t : RightContributionClasses x y z w,
+        Subsingleton (leftContributionNeighborClasses x y z w t) :=
+    leftContributionNeighborClasses_subsingleton_of_unique x y z w hUnique
+  exact
+    canonicalLeftNeighborOfRightNeighbor_recovers_target_bundled_of_subsingleton
+      x y z w hsub s t
+
+theorem canonicalRightNeighborOfLeftNeighbor_recovers_target_of_unique
+    (x y z w : PTree)
+    (hUnique : RightNeighborFiberUnique x y z w)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    (canonicalRightNeighborOfLeftNeighbor x y z w t s).1.1 = t.1 := by
+  simpa using congrArg Subtype.val
+    (canonicalRightNeighborOfLeftNeighbor_recovers_target_bundled_of_unique
+      x y z w hUnique t s)
+
+theorem canonicalLeftNeighborOfRightNeighbor_recovers_target_of_unique
+    (x y z w : PTree)
+    (hUnique : LeftNeighborFiberUnique x y z w)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    (canonicalLeftNeighborOfRightNeighbor x y z w s t).1.1 = s.1 := by
+  simpa using congrArg Subtype.val
+    (canonicalLeftNeighborOfRightNeighbor_recovers_target_bundled_of_unique
+      x y z w hUnique s t)
+
+
+
+
+/-!
+## Bridge goals from mediator rigidity to neighbour-fibre uniqueness
+-/
+
+/--
+Desired bridge: right-mediator uniqueness should imply uniqueness of
+right-neighbour fibres over left contribution classes.
+
+This is the main theorem needed to turn canonical right-neighbour
+recovery into an unconditional statement under the mediator-rigidity
+hypothesis.
+-/
+theorem rightNeighborFiberUnique_of_rightMediator_uniqueness
+    (x y z w : PTree)
+    (hUnique : LeftOuterRightMediatorUnique x y z w) :
+    RightNeighborFiberUnique x y z w := by
+  intro s u v
+  /-
+  Intended strategy:
+  1. unpack `u.2` and `v.2` as swapped correspondences from `s`
+     to the underlying right classes `u.1` and `v.1`;
+  2. convert those correspondences to the witness/fibre layer where
+     `hUnique` applies;
+  3. use mediator uniqueness to show the resulting left-outer data agree;
+  4. conclude `u.1 = v.1`.
+  -/
+  sorry
+
+
+/-
+theorem leftNeighborFiberUnique_of_rightMediator_uniqueness
+    (x y z w : PTree)
+    (hUnique : LeftOuterRightMediatorUnique x y z w) :
+    LeftNeighborFiberUnique x y z w := by
+  intro t s₁ s₂
+  /-
+  Likely options:
+  * prove directly by dropping to the witness/fibre layer; or
+  * derive from the right-neighbour theorem via the canonical
+    transport correspondence already established.
+  -/
+  sorry
+-/
+
+/-!
+## Recovery consequences under mediator rigidity
+-/
+
+theorem canonicalRightNeighborOfLeftNeighbor_recovers_target_bundled_of_rightMediator_uniqueness
+    (x y z w : PTree)
+    (hUnique : LeftOuterRightMediatorUnique x y z w)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    (canonicalRightNeighborOfLeftNeighbor x y z w t s).1 = t := by
+  apply canonicalRightNeighborOfLeftNeighbor_recovers_target_bundled_of_unique
+  exact rightNeighborFiberUnique_of_rightMediator_uniqueness x y z w hUnique
+
+theorem canonicalRightNeighborOfLeftNeighbor_recovers_target_of_rightMediator_uniqueness
+    (x y z w : PTree)
+    (hUnique : LeftOuterRightMediatorUnique x y z w)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    (canonicalRightNeighborOfLeftNeighbor x y z w t s).1.1 = t.1 := by
+  simpa using congrArg Subtype.val
+    (canonicalRightNeighborOfLeftNeighbor_recovers_target_bundled_of_rightMediator_uniqueness
+      x y z w hUnique t s)
+
+/-
+theorem canonicalLeftNeighborOfRightNeighbor_recovers_target_bundled_of_rightMediator_uniqueness
+    (x y z w : PTree)
+    (hUnique : LeftOuterRightMediatorUnique x y z w)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    (canonicalLeftNeighborOfRightNeighbor x y z w s t).1 = s := by
+  apply canonicalLeftNeighborOfRightNeighbor_recovers_target_bundled_of_unique
+  exact leftNeighborFiberUnique_of_rightMediator_uniqueness x y z w hUnique
+-/
+
+/-
+theorem canonicalLeftNeighborOfRightNeighbor_recovers_target_of_rightMediator_uniqueness
+    (x y z w : PTree)
+    (hUnique : LeftOuterRightMediatorUnique x y z w)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    (canonicalLeftNeighborOfRightNeighbor x y z w s t).1.1 = s.1 := by
+  simpa using congrArg Subtype.val
+    (canonicalLeftNeighborOfRightNeighbor_recovers_target_bundled_of_rightMediator_uniqueness
+      x y z w hUnique s t)
+-/
+
+
+
+
+
+
+
+
+
+
+
+/-!
+## Neighbour fibre subsingletonness from mediator uniqueness
+-/
+
+/-- Right-neighbour fibres are subsingleton under mediator uniqueness. -/
+theorem rightContributionNeighborClasses_subsingleton_of_rightMediator_uniqueness
+    (x y z w : PTree)
+    (hUnique : LeftOuterRightMediatorUnique x y z w)
+    (s : LeftContributionClasses x y z w) :
+    Subsingleton (rightContributionNeighborClasses x y z w s) := by
+  refine ⟨?_⟩
+  intro u v
+  apply rightContributionNeighborClasses_ext x y z w s u v
+  -- reduce to equality of underlying quotient classes
+  -- this should follow from your fibre-level uniqueness results
+  -- via `hUnique`
+  sorry
+
+/-- Left-neighbour fibres are subsingleton under mediator uniqueness. -/
+theorem leftContributionNeighborClasses_subsingleton_of_rightMediator_uniqueness
+    (x y z w : PTree)
+    (hUnique : LeftOuterRightMediatorUnique x y z w)
+    (t : RightContributionClasses x y z w) :
+    Subsingleton (leftContributionNeighborClasses x y z w t) := by
+  refine ⟨?_⟩
+  intro s₁ s₂
+  apply leftContributionNeighborClasses_ext x y z w t s₁ s₂
+  -- same story, dualised
+  sorry
+
+
+
+
+
+
+
+
+/-!
+## Bundled recovery forms
+-/
+
+theorem canonicalRightNeighborOfLeftNeighbor_recovers_target_bundled
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (s : leftContributionNeighborClasses x y z w t) :
+    (canonicalRightNeighborOfLeftNeighbor x y z w t s).1 = t := by
+  cases t
+  cases canonicalRightNeighborOfLeftNeighbor x y z w t s
+  simp at *
+  aesop
+
+theorem canonicalLeftNeighborOfRightNeighbor_recovers_target_bundled
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (t : rightContributionNeighborClasses x y z w s) :
+    (canonicalLeftNeighborOfRightNeighbor x y z w s t).1 = s := by
+  cases s
+  cases canonicalLeftNeighborOfRightNeighbor x y z w s t
+  simp at *
+  aesop
+
+
+
+
+/-- Placeholder: local counting theorem.
+Likely target: the neighbour sets on the two sides are equinumerous, or both
+are controlled by the same witness/support data.
+-/
+theorem swappedNeighbors_cardinal_balance
+    (x y z w : PTree)
+    (qL : TwoStepQuotient x y z w)
+    (qR : TwoStepQuotient y x z w) :
+    True := by
+  /-
+  Replace `True` with the correct statement once you decide whether the right
+  theorem is:
+  - equality of cardinalities,
+  - existence of a surjection each way,
+  - or equivalence with previously-defined witness-support fibres.
+  -/
+  trivial
 
 
 
