@@ -9660,6 +9660,848 @@ theorem noIndependentRightOuterToRightInnerEquiv_of_patternInvariant
   have hEqPat := hpat hEq
   simp [codePattern, hcmp] at hEqPat
 
+theorem comparable_symm {a b : Address}
+    (h : PTree.comparable a b) :
+    PTree.comparable b a := by
+  cases h with
+  | inl hab =>
+      exact Or.inr hab
+  | inr hba =>
+      exact Or.inl hba
+
+theorem not_comparable_symm {a b : Address}
+    (h : ¬ PTree.comparable a b) :
+    ¬ PTree.comparable b a := by
+  intro h'
+  exact h (comparable_symm h')
+
+/--
+The tree-level left-to-right transport generated from a left-outer witness can
+always be chosen to preserve the dependency pattern.
+-/
+theorem leftOuter_has_pattern_preserving_rightCode
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses y z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses x z') :
+    ∃ c : TwoStepCode x y z w,
+      TwoStepEquiv x y z w
+        (TwoStepCode.leftOuter a b z' haz hbw) c ∧
+      codePattern (TwoStepCode.leftOuter a b z' haz hbw) = codePattern c := by
+  rw [mem_matchingLeafGraftWitnesses_iff] at haz hbw
+  rcases haz with ⟨_, hyz⟩
+  rcases hbw with ⟨_, hxz'⟩
+  have hdecomp := two_step_graft_decomposition_full x y z a b z' w hyz hxz'
+  cases hdecomp with
+  | inl hinner =>
+      rcases hinner with ⟨c, y', hbEq, hxy, hy'z⟩
+      have hay' : (c, y') ∈ matchingLeafGraftWitnesses x y := by
+        rw [mem_matchingLeafGraftWitnesses_iff]
+        refine ⟨?_, hxy⟩
+        have hg :=
+          PTree.isGraftableLeafAt_of_graftMatchingLeafAt_eq_some x y c y' hxy
+        exact
+          PTree.subtreeAt_some_implies_mem_allAddresses
+            y (PTree.leaf x.conclusion) c
+            ((PTree.IsGraftableLeafAt_iff x y c).mp hg)
+      have hbw' : (a, w) ∈ matchingLeafGraftWitnesses y' z := by
+        rw [mem_matchingLeafGraftWitnesses_iff]
+        refine ⟨?_, hy'z⟩
+        have hg :=
+          PTree.isGraftableLeafAt_of_graftMatchingLeafAt_eq_some y' z a w hy'z
+        exact
+          PTree.subtreeAt_some_implies_mem_allAddresses
+            z (PTree.leaf y'.conclusion) a
+            ((PTree.IsGraftableLeafAt_iff y' z a).mp hg)
+      refine ⟨TwoStepCode.rightInner c a y' hay' hbw', ?_, ?_⟩
+      · exact TwoStepEquiv.outer_comm_inner haz hbw hay' hbw' (by
+          rw [mem_twoStepAddrWitnessesRight_iff]
+          exact Or.inr ⟨y', hay', hbw'⟩)
+      · have hcmp : PTree.comparable a b := by
+          apply PTree.comparable_of_isAncestorOf
+          exact ⟨c, hbEq⟩
+        simp [codePattern, hcmp]
+  | inr hout =>
+      rcases hout with ⟨z₃, hnc, hxz, hyz₃⟩
+      have haz' : (b, z₃) ∈ matchingLeafGraftWitnesses x z := by
+        rw [mem_matchingLeafGraftWitnesses_iff]
+        refine ⟨?_, hxz⟩
+        have hg :=
+          PTree.isGraftableLeafAt_of_graftMatchingLeafAt_eq_some x z b z₃ hxz
+        exact
+          PTree.subtreeAt_some_implies_mem_allAddresses
+            z (PTree.leaf x.conclusion) b
+            ((PTree.IsGraftableLeafAt_iff x z b).mp hg)
+      have hbw' : (a, w) ∈ matchingLeafGraftWitnesses y z₃ := by
+        rw [mem_matchingLeafGraftWitnesses_iff]
+        refine ⟨?_, hyz₃⟩
+        have hg :=
+          PTree.isGraftableLeafAt_of_graftMatchingLeafAt_eq_some y z₃ a w hyz₃
+        exact
+          PTree.subtreeAt_some_implies_mem_allAddresses
+            z₃ (PTree.leaf y.conclusion) a
+            ((PTree.IsGraftableLeafAt_iff y z₃ a).mp hg)
+      refine ⟨TwoStepCode.rightOuter b a z₃ haz' hbw', ?_, ?_⟩
+      · exact TwoStepEquiv.outer_comm_outer haz hbw haz' hbw' (by
+          rw [mem_twoStepAddrWitnessesRight_iff]
+          exact Or.inl ⟨z₃, haz', hbw'⟩)
+      · have hnc' : ¬ PTree.comparable b a := not_comparable_symm hnc
+        simp [codePattern, hnc, hnc']
+
+/--
+The tree-level right-to-left transport generated from a right-outer witness can
+always be chosen to preserve the dependency pattern.
+-/
+theorem rightOuter_has_pattern_preserving_leftCode
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses x z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y z') :
+    ∃ c : TwoStepCode x y z w,
+      TwoStepEquiv x y z w
+        (TwoStepCode.rightOuter a b z' haz hbw) c ∧
+      codePattern (TwoStepCode.rightOuter a b z' haz hbw) = codePattern c := by
+  rw [mem_matchingLeafGraftWitnesses_iff] at haz hbw
+  rcases haz with ⟨_, hxz⟩
+  rcases hbw with ⟨_, hyz'⟩
+  have hdecomp := two_step_graft_decomposition_full y x z a b z' w hxz hyz'
+  cases hdecomp with
+  | inl hinner =>
+      rcases hinner with ⟨c, y', hbEq, hyx, hy'z⟩
+      have hay' : (c, y') ∈ matchingLeafGraftWitnesses y x := by
+        rw [mem_matchingLeafGraftWitnesses_iff]
+        refine ⟨?_, hyx⟩
+        have hg :=
+          PTree.isGraftableLeafAt_of_graftMatchingLeafAt_eq_some y x c y' hyx
+        exact
+          PTree.subtreeAt_some_implies_mem_allAddresses
+            x (PTree.leaf y.conclusion) c
+            ((PTree.IsGraftableLeafAt_iff y x c).mp hg)
+      have hbw' : (a, w) ∈ matchingLeafGraftWitnesses y' z := by
+        rw [mem_matchingLeafGraftWitnesses_iff]
+        refine ⟨?_, hy'z⟩
+        have hg :=
+          PTree.isGraftableLeafAt_of_graftMatchingLeafAt_eq_some y' z a w hy'z
+        exact
+          PTree.subtreeAt_some_implies_mem_allAddresses
+            z (PTree.leaf y'.conclusion) a
+            ((PTree.IsGraftableLeafAt_iff y' z a).mp hg)
+      refine ⟨TwoStepCode.leftInner c a y' hay' hbw', ?_, ?_⟩
+      · exact TwoStepEquiv.outer_comm_back_inner haz hbw hay' hbw' (by
+          rw [mem_twoStepAddrWitnessesLeft_iff]
+          exact Or.inr ⟨y', hay', hbw'⟩)
+      · have hcmp : PTree.comparable a b := by
+          apply PTree.comparable_of_isAncestorOf
+          exact ⟨c, hbEq⟩
+        simp [codePattern, hcmp]
+  | inr hout =>
+      rcases hout with ⟨z₃, hnc, hyz, hxz₃⟩
+      have haz' : (b, z₃) ∈ matchingLeafGraftWitnesses y z := by
+        rw [mem_matchingLeafGraftWitnesses_iff]
+        refine ⟨?_, hyz⟩
+        have hg :=
+          PTree.isGraftableLeafAt_of_graftMatchingLeafAt_eq_some y z b z₃ hyz
+        exact
+          PTree.subtreeAt_some_implies_mem_allAddresses
+            z (PTree.leaf y.conclusion) b
+            ((PTree.IsGraftableLeafAt_iff y z b).mp hg)
+      have hbw' : (a, w) ∈ matchingLeafGraftWitnesses x z₃ := by
+        rw [mem_matchingLeafGraftWitnesses_iff]
+        refine ⟨?_, hxz₃⟩
+        have hg :=
+          PTree.isGraftableLeafAt_of_graftMatchingLeafAt_eq_some x z₃ a w hxz₃
+        exact
+          PTree.subtreeAt_some_implies_mem_allAddresses
+            z₃ (PTree.leaf x.conclusion) a
+            ((PTree.IsGraftableLeafAt_iff x z₃ a).mp hg)
+      refine ⟨TwoStepCode.leftOuter b a z₃ haz' hbw', ?_, ?_⟩
+      · exact TwoStepEquiv.outer_comm_back_outer haz hbw haz' hbw' (by
+          rw [mem_twoStepAddrWitnessesLeft_iff]
+          exact Or.inl ⟨z₃, haz', hbw'⟩)
+      · have hnc' : ¬ PTree.comparable b a := not_comparable_symm hnc
+        simp [codePattern, hnc, hnc']
+
+/-!
+## Raw constructor targets versus canonical pattern-preserving transport
+
+For each outer-presented source witness we now fix a canonical target code
+chosen from the tree-generated, pattern-preserving transport above. Any raw
+target appearing in a `TwoStepEquiv` constructor from that same source is then
+equivalent to this canonical target.
+-/
+
+/-- Canonical right-side code attached to a left-outer source witness. -/
+noncomputable def canonicalRightCodeOfLeftOuter
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses y z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses x z') :
+    TwoStepCode x y z w :=
+  Classical.choose (leftOuter_has_pattern_preserving_rightCode x y z w a b z' haz hbw)
+
+/-- The canonical right-side code is equivalent to its left-outer source. -/
+theorem canonicalRightCodeOfLeftOuter_equiv
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses y z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses x z') :
+    TwoStepEquiv x y z w
+      (TwoStepCode.leftOuter a b z' haz hbw)
+      (canonicalRightCodeOfLeftOuter x y z w a b z' haz hbw) := by
+  exact (Classical.choose_spec
+    (leftOuter_has_pattern_preserving_rightCode x y z w a b z' haz hbw)).1
+
+/-- The canonical right-side code preserves the dependency pattern of its source. -/
+theorem canonicalRightCodeOfLeftOuter_pattern
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses y z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses x z') :
+    codePattern (TwoStepCode.leftOuter a b z' haz hbw) =
+      codePattern (canonicalRightCodeOfLeftOuter x y z w a b z' haz hbw) := by
+  exact (Classical.choose_spec
+    (leftOuter_has_pattern_preserving_rightCode x y z w a b z' haz hbw)).2
+
+/-- Canonical left-side code attached to a right-outer source witness. -/
+noncomputable def canonicalLeftCodeOfRightOuter
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses x z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y z') :
+    TwoStepCode x y z w :=
+  Classical.choose (rightOuter_has_pattern_preserving_leftCode x y z w a b z' haz hbw)
+
+/-- The canonical left-side code is equivalent to its right-outer source. -/
+theorem canonicalLeftCodeOfRightOuter_equiv
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses x z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y z') :
+    TwoStepEquiv x y z w
+      (TwoStepCode.rightOuter a b z' haz hbw)
+      (canonicalLeftCodeOfRightOuter x y z w a b z' haz hbw) := by
+  exact (Classical.choose_spec
+    (rightOuter_has_pattern_preserving_leftCode x y z w a b z' haz hbw)).1
+
+/-- The canonical left-side code preserves the dependency pattern of its source. -/
+theorem canonicalLeftCodeOfRightOuter_pattern
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses x z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y z') :
+    codePattern (TwoStepCode.rightOuter a b z' haz hbw) =
+      codePattern (canonicalLeftCodeOfRightOuter x y z w a b z' haz hbw) := by
+  exact (Classical.choose_spec
+    (rightOuter_has_pattern_preserving_leftCode x y z w a b z' haz hbw)).2
+
+/-- Any raw `outer_comm_outer` target is equivalent to the canonical right target. -/
+theorem outer_comm_outer_target_equiv_canonical
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses y z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses x z')
+    (a' b' : Address) (z'' : PTree)
+    (haz' : (a', z'') ∈ matchingLeafGraftWitnesses x z)
+    (hbw' : (b', w) ∈ matchingLeafGraftWitnesses y z'')
+    (haddr : ((a', b'), w) ∈ twoStepAddrWitnessesRight x y z) :
+    TwoStepEquiv x y z w
+      (TwoStepCode.rightOuter a' b' z'' haz' hbw')
+      (canonicalRightCodeOfLeftOuter x y z w a b z' haz hbw) := by
+  exact TwoStepEquiv.trans
+    (TwoStepEquiv.symm (TwoStepEquiv.outer_comm_outer haz hbw haz' hbw' haddr))
+    (canonicalRightCodeOfLeftOuter_equiv x y z w a b z' haz hbw)
+
+/-- Any raw `outer_comm_inner` target is equivalent to the canonical right target. -/
+theorem outer_comm_inner_target_equiv_canonical
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses y z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses x z')
+    (a' b' : Address) (y'' : PTree)
+    (hay' : (a', y'') ∈ matchingLeafGraftWitnesses x y)
+    (hbw' : (b', w) ∈ matchingLeafGraftWitnesses y'' z)
+    (haddr : ((a', b'), w) ∈ twoStepAddrWitnessesRight x y z) :
+    TwoStepEquiv x y z w
+      (TwoStepCode.rightInner a' b' y'' hay' hbw')
+      (canonicalRightCodeOfLeftOuter x y z w a b z' haz hbw) := by
+  exact TwoStepEquiv.trans
+    (TwoStepEquiv.symm (TwoStepEquiv.outer_comm_inner haz hbw hay' hbw' haddr))
+    (canonicalRightCodeOfLeftOuter_equiv x y z w a b z' haz hbw)
+
+/-- Any raw `outer_comm_back_outer` target is equivalent to the canonical left target. -/
+theorem outer_comm_back_outer_target_equiv_canonical
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses x z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y z')
+    (a' b' : Address) (z'' : PTree)
+    (haz' : (a', z'') ∈ matchingLeafGraftWitnesses y z)
+    (hbw' : (b', w) ∈ matchingLeafGraftWitnesses x z'')
+    (haddr : ((a', b'), w) ∈ twoStepAddrWitnessesLeft x y z) :
+    TwoStepEquiv x y z w
+      (TwoStepCode.leftOuter a' b' z'' haz' hbw')
+      (canonicalLeftCodeOfRightOuter x y z w a b z' haz hbw) := by
+  exact TwoStepEquiv.trans
+    (TwoStepEquiv.symm (TwoStepEquiv.outer_comm_back_outer haz hbw haz' hbw' haddr))
+    (canonicalLeftCodeOfRightOuter_equiv x y z w a b z' haz hbw)
+
+/-- Any raw `outer_comm_back_inner` target is equivalent to the canonical left target. -/
+theorem outer_comm_back_inner_target_equiv_canonical
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses x z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y z')
+    (a' b' : Address) (y'' : PTree)
+    (hay' : (a', y'') ∈ matchingLeafGraftWitnesses y x)
+    (hbw' : (b', w) ∈ matchingLeafGraftWitnesses y'' z)
+    (haddr : ((a', b'), w) ∈ twoStepAddrWitnessesLeft x y z) :
+    TwoStepEquiv x y z w
+      (TwoStepCode.leftInner a' b' y'' hay' hbw')
+      (canonicalLeftCodeOfRightOuter x y z w a b z' haz hbw) := by
+  exact TwoStepEquiv.trans
+    (TwoStepEquiv.symm (TwoStepEquiv.outer_comm_back_inner haz hbw hay' hbw' haddr))
+    (canonicalLeftCodeOfRightOuter_equiv x y z w a b z' haz hbw)
+
+/-!
+## Constructor-level pattern preservation goals
+
+This is the exact bottleneck for upgrading the address-pattern split to a
+quotient-level theorem. The following lemmas describe what each nontrivial
+constructor of `TwoStepEquiv` would need in order to preserve `codePattern`.
+-/
+
+/-- `outer_comm_outer` preserves pattern exactly when source and target have the same comparability behaviour. -/
+theorem codePattern_preserved_by_outer_comm_outer_iff
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses y z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses x z')
+    (a' b' : Address) (z'' : PTree)
+    (haz' : (a', z'') ∈ matchingLeafGraftWitnesses x z)
+    (hbw' : (b', w) ∈ matchingLeafGraftWitnesses y z'') :
+    codePattern (TwoStepCode.leftOuter a b z' haz hbw) =
+      codePattern (TwoStepCode.rightOuter a' b' z'' haz' hbw')
+        ↔ (PTree.comparable a b ↔ PTree.comparable a' b') := by
+  by_cases hab : PTree.comparable a b <;> by_cases hab' : PTree.comparable a' b' <;>
+    simp [codePattern, hab, hab']
+
+/-- `outer_comm_inner` preserves pattern exactly when the source outer presentation is already dependent. -/
+theorem codePattern_preserved_by_outer_comm_inner_iff
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses y z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses x z')
+    (a' b' : Address) (y'' : PTree)
+    (hay' : (a', y'') ∈ matchingLeafGraftWitnesses x y)
+    (hbw' : (b', w) ∈ matchingLeafGraftWitnesses y'' z) :
+    codePattern (TwoStepCode.leftOuter a b z' haz hbw) =
+      codePattern (TwoStepCode.rightInner a' b' y'' hay' hbw')
+        ↔ PTree.comparable a b := by
+  by_cases hab : PTree.comparable a b <;> simp [codePattern, hab]
+
+/-- `outer_comm_back_outer` preserves pattern exactly when source and target have the same comparability behaviour. -/
+theorem codePattern_preserved_by_outer_comm_back_outer_iff
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses x z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y z')
+    (a' b' : Address) (z'' : PTree)
+    (haz' : (a', z'') ∈ matchingLeafGraftWitnesses y z)
+    (hbw' : (b', w) ∈ matchingLeafGraftWitnesses x z'') :
+    codePattern (TwoStepCode.rightOuter a b z' haz hbw) =
+      codePattern (TwoStepCode.leftOuter a' b' z'' haz' hbw')
+        ↔ (PTree.comparable a b ↔ PTree.comparable a' b') := by
+  by_cases hab : PTree.comparable a b <;> by_cases hab' : PTree.comparable a' b' <;>
+    simp [codePattern, hab, hab']
+
+/-- `outer_comm_back_inner` preserves pattern exactly when the source outer presentation is already dependent. -/
+theorem codePattern_preserved_by_outer_comm_back_inner_iff
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses x z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y z')
+    (a' b' : Address) (y'' : PTree)
+    (hay' : (a', y'') ∈ matchingLeafGraftWitnesses y x)
+    (hbw' : (b', w) ∈ matchingLeafGraftWitnesses y'' z) :
+    codePattern (TwoStepCode.rightOuter a b z' haz hbw) =
+      codePattern (TwoStepCode.leftInner a' b' y'' hay' hbw')
+        ↔ PTree.comparable a b := by
+  by_cases hab : PTree.comparable a b <;> simp [codePattern, hab]
+
+/-- Convenient forward form of the previous `outer_comm_outer` criterion. -/
+theorem codePattern_preserved_by_outer_comm_outer
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses y z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses x z')
+    (a' b' : Address) (z'' : PTree)
+    (haz' : (a', z'') ∈ matchingLeafGraftWitnesses x z)
+    (hbw' : (b', w) ∈ matchingLeafGraftWitnesses y z'')
+    (hcmp : PTree.comparable a b ↔ PTree.comparable a' b') :
+    codePattern (TwoStepCode.leftOuter a b z' haz hbw) =
+      codePattern (TwoStepCode.rightOuter a' b' z'' haz' hbw') := by
+  exact (codePattern_preserved_by_outer_comm_outer_iff
+    x y z w a b z' haz hbw a' b' z'' haz' hbw').2 hcmp
+
+/-- Convenient forward form of the previous `outer_comm_inner` criterion. -/
+theorem codePattern_preserved_by_outer_comm_inner
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses y z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses x z')
+    (a' b' : Address) (y'' : PTree)
+    (hay' : (a', y'') ∈ matchingLeafGraftWitnesses x y)
+    (hbw' : (b', w) ∈ matchingLeafGraftWitnesses y'' z)
+    (hcmp : PTree.comparable a b) :
+    codePattern (TwoStepCode.leftOuter a b z' haz hbw) =
+      codePattern (TwoStepCode.rightInner a' b' y'' hay' hbw') := by
+  exact (codePattern_preserved_by_outer_comm_inner_iff
+    x y z w a b z' haz hbw a' b' y'' hay' hbw').2 hcmp
+
+/-- Convenient forward form of the previous `outer_comm_back_outer` criterion. -/
+theorem codePattern_preserved_by_outer_comm_back_outer
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses x z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y z')
+    (a' b' : Address) (z'' : PTree)
+    (haz' : (a', z'') ∈ matchingLeafGraftWitnesses y z)
+    (hbw' : (b', w) ∈ matchingLeafGraftWitnesses x z'')
+    (hcmp : PTree.comparable a b ↔ PTree.comparable a' b') :
+    codePattern (TwoStepCode.rightOuter a b z' haz hbw) =
+      codePattern (TwoStepCode.leftOuter a' b' z'' haz' hbw') := by
+  exact (codePattern_preserved_by_outer_comm_back_outer_iff
+    x y z w a b z' haz hbw a' b' z'' haz' hbw').2 hcmp
+
+/-- Convenient forward form of the previous `outer_comm_back_inner` criterion. -/
+theorem codePattern_preserved_by_outer_comm_back_inner
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses x z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y z')
+    (a' b' : Address) (y'' : PTree)
+    (hay' : (a', y'') ∈ matchingLeafGraftWitnesses y x)
+    (hbw' : (b', w) ∈ matchingLeafGraftWitnesses y'' z)
+    (hcmp : PTree.comparable a b) :
+    codePattern (TwoStepCode.rightOuter a b z' haz hbw) =
+      codePattern (TwoStepCode.leftInner a' b' y'' hay' hbw') := by
+  exact (codePattern_preserved_by_outer_comm_back_inner_iff
+    x y z w a b z' haz hbw a' b' y'' hay' hbw').2 hcmp
+
+/-- Constructor-level obligation for `outer_comm_outer`. -/
+def OuterCommOuterPatternPreserving
+    (x y z w : PTree) : Prop :=
+  ∀ {a b : Address} {z' : PTree}
+    {haz : (a, z') ∈ matchingLeafGraftWitnesses y z}
+    {hbw : (b, w) ∈ matchingLeafGraftWitnesses x z'}
+    {a' b' : Address} {z'' : PTree}
+    {haz' : (a', z'') ∈ matchingLeafGraftWitnesses x z}
+    {hbw' : (b', w) ∈ matchingLeafGraftWitnesses y z''},
+      ((a', b'), w) ∈ twoStepAddrWitnessesRight x y z →
+      codePattern (TwoStepCode.leftOuter a b z' haz hbw) =
+        codePattern (TwoStepCode.rightOuter a' b' z'' haz' hbw')
+
+/-- Constructor-level obligation for `outer_comm_inner`. -/
+def OuterCommInnerPatternPreserving
+    (x y z w : PTree) : Prop :=
+  ∀ {a b : Address} {z' : PTree}
+    {haz : (a, z') ∈ matchingLeafGraftWitnesses y z}
+    {hbw : (b, w) ∈ matchingLeafGraftWitnesses x z'}
+    {a' b' : Address} {y'' : PTree}
+    {hay' : (a', y'') ∈ matchingLeafGraftWitnesses x y}
+    {hbw' : (b', w) ∈ matchingLeafGraftWitnesses y'' z},
+      ((a', b'), w) ∈ twoStepAddrWitnessesRight x y z →
+      codePattern (TwoStepCode.leftOuter a b z' haz hbw) =
+        codePattern (TwoStepCode.rightInner a' b' y'' hay' hbw')
+
+/-- Constructor-level obligation for `outer_comm_back_outer`. -/
+def OuterCommBackOuterPatternPreserving
+    (x y z w : PTree) : Prop :=
+  ∀ {a b : Address} {z' : PTree}
+    {haz : (a, z') ∈ matchingLeafGraftWitnesses x z}
+    {hbw : (b, w) ∈ matchingLeafGraftWitnesses y z'}
+    {a' b' : Address} {z'' : PTree}
+    {haz' : (a', z'') ∈ matchingLeafGraftWitnesses y z}
+    {hbw' : (b', w) ∈ matchingLeafGraftWitnesses x z''},
+      ((a', b'), w) ∈ twoStepAddrWitnessesLeft x y z →
+      codePattern (TwoStepCode.rightOuter a b z' haz hbw) =
+        codePattern (TwoStepCode.leftOuter a' b' z'' haz' hbw')
+
+/-- Constructor-level obligation for `outer_comm_back_inner`. -/
+def OuterCommBackInnerPatternPreserving
+    (x y z w : PTree) : Prop :=
+  ∀ {a b : Address} {z' : PTree}
+    {haz : (a, z') ∈ matchingLeafGraftWitnesses x z}
+    {hbw : (b, w) ∈ matchingLeafGraftWitnesses y z'}
+    {a' b' : Address} {y'' : PTree}
+    {hay' : (a', y'') ∈ matchingLeafGraftWitnesses y x}
+    {hbw' : (b', w) ∈ matchingLeafGraftWitnesses y'' z},
+      ((a', b'), w) ∈ twoStepAddrWitnessesLeft x y z →
+      codePattern (TwoStepCode.rightOuter a b z' haz hbw) =
+        codePattern (TwoStepCode.leftInner a' b' y'' hay' hbw')
+
+/--
+Local transport principle: any code equivalent to the canonical right code
+chosen from a left-outer source has the same pattern as that canonical code.
+-/
+def CanonicalRightCodePatternTransport
+    (x y z w : PTree) : Prop :=
+  ∀ {a b : Address} {z' : PTree}
+    {haz : (a, z') ∈ matchingLeafGraftWitnesses y z}
+    {hbw : (b, w) ∈ matchingLeafGraftWitnesses x z'}
+    {d : TwoStepCode x y z w},
+      TwoStepEquiv x y z w d
+        (canonicalRightCodeOfLeftOuter x y z w a b z' haz hbw) →
+      codePattern d =
+        codePattern (canonicalRightCodeOfLeftOuter x y z w a b z' haz hbw)
+
+/--
+Local transport principle: any code equivalent to the canonical left code
+chosen from a right-outer source has the same pattern as that canonical code.
+-/
+def CanonicalLeftCodePatternTransport
+    (x y z w : PTree) : Prop :=
+  ∀ {a b : Address} {z' : PTree}
+    {haz : (a, z') ∈ matchingLeafGraftWitnesses x z}
+    {hbw : (b, w) ∈ matchingLeafGraftWitnesses y z'}
+    {d : TwoStepCode x y z w},
+      TwoStepEquiv x y z w d
+        (canonicalLeftCodeOfRightOuter x y z w a b z' haz hbw) →
+      codePattern d =
+        codePattern (canonicalLeftCodeOfRightOuter x y z w a b z' haz hbw)
+
+/--
+The canonical-right transport principle immediately discharges the
+`outer_comm_outer` constructor obligation.
+-/
+theorem outerCommOuterPatternPreserving_of_canonicalTransport
+    (x y z w : PTree)
+    (htrans : CanonicalRightCodePatternTransport x y z w) :
+    OuterCommOuterPatternPreserving x y z w := by
+  intro a b z' haz hbw a' b' z'' haz' hbw' haddr
+  have h₁ :
+      codePattern (TwoStepCode.leftOuter a b z' haz hbw) =
+        codePattern (canonicalRightCodeOfLeftOuter x y z w a b z' haz hbw) :=
+    canonicalRightCodeOfLeftOuter_pattern x y z w a b z' haz hbw
+  have h₂ :
+      codePattern (TwoStepCode.rightOuter a' b' z'' haz' hbw') =
+        codePattern (canonicalRightCodeOfLeftOuter x y z w a b z' haz hbw) :=
+    htrans (outer_comm_outer_target_equiv_canonical
+      x y z w a b z' haz hbw a' b' z'' haz' hbw' haddr)
+  exact h₁.trans h₂.symm
+
+/--
+The canonical-right transport principle immediately discharges the
+`outer_comm_inner` constructor obligation.
+-/
+theorem outerCommInnerPatternPreserving_of_canonicalTransport
+    (x y z w : PTree)
+    (htrans : CanonicalRightCodePatternTransport x y z w) :
+    OuterCommInnerPatternPreserving x y z w := by
+  intro a b z' haz hbw a' b' y'' hay' hbw' haddr
+  have h₁ :
+      codePattern (TwoStepCode.leftOuter a b z' haz hbw) =
+        codePattern (canonicalRightCodeOfLeftOuter x y z w a b z' haz hbw) :=
+    canonicalRightCodeOfLeftOuter_pattern x y z w a b z' haz hbw
+  have h₂ :
+      codePattern (TwoStepCode.rightInner a' b' y'' hay' hbw') =
+        codePattern (canonicalRightCodeOfLeftOuter x y z w a b z' haz hbw) :=
+    htrans (outer_comm_inner_target_equiv_canonical
+      x y z w a b z' haz hbw a' b' y'' hay' hbw' haddr)
+  exact h₁.trans h₂.symm
+
+/--
+The canonical-left transport principle immediately discharges the
+`outer_comm_back_outer` constructor obligation.
+-/
+theorem outerCommBackOuterPatternPreserving_of_canonicalTransport
+    (x y z w : PTree)
+    (htrans : CanonicalLeftCodePatternTransport x y z w) :
+    OuterCommBackOuterPatternPreserving x y z w := by
+  intro a b z' haz hbw a' b' z'' haz' hbw' haddr
+  have h₁ :
+      codePattern (TwoStepCode.rightOuter a b z' haz hbw) =
+        codePattern (canonicalLeftCodeOfRightOuter x y z w a b z' haz hbw) :=
+    canonicalLeftCodeOfRightOuter_pattern x y z w a b z' haz hbw
+  have h₂ :
+      codePattern (TwoStepCode.leftOuter a' b' z'' haz' hbw') =
+        codePattern (canonicalLeftCodeOfRightOuter x y z w a b z' haz hbw) :=
+    htrans (outer_comm_back_outer_target_equiv_canonical
+      x y z w a b z' haz hbw a' b' z'' haz' hbw' haddr)
+  exact h₁.trans h₂.symm
+
+/--
+The canonical-left transport principle immediately discharges the
+`outer_comm_back_inner` constructor obligation.
+-/
+theorem outerCommBackInnerPatternPreserving_of_canonicalTransport
+    (x y z w : PTree)
+    (htrans : CanonicalLeftCodePatternTransport x y z w) :
+    OuterCommBackInnerPatternPreserving x y z w := by
+  intro a b z' haz hbw a' b' y'' hay' hbw' haddr
+  have h₁ :
+      codePattern (TwoStepCode.rightOuter a b z' haz hbw) =
+        codePattern (canonicalLeftCodeOfRightOuter x y z w a b z' haz hbw) :=
+    canonicalLeftCodeOfRightOuter_pattern x y z w a b z' haz hbw
+  have h₂ :
+      codePattern (TwoStepCode.leftInner a' b' y'' hay' hbw') =
+        codePattern (canonicalLeftCodeOfRightOuter x y z w a b z' haz hbw) :=
+    htrans (outer_comm_back_inner_target_equiv_canonical
+      x y z w a b z' haz hbw a' b' y'' hay' hbw' haddr)
+  exact h₁.trans h₂.symm
+
+/--
+If pattern is transportable along equivalences into the canonical right/left
+targets, then all four constructor obligations follow.
+-/
+theorem constructorPatternPreservation_of_canonicalTransport
+    (x y z w : PTree)
+    (hright : CanonicalRightCodePatternTransport x y z w)
+    (hleft : CanonicalLeftCodePatternTransport x y z w) :
+    OuterCommOuterPatternPreserving x y z w ∧
+    OuterCommInnerPatternPreserving x y z w ∧
+    OuterCommBackOuterPatternPreserving x y z w ∧
+    OuterCommBackInnerPatternPreserving x y z w := by
+  refine ⟨?_, ?_, ?_, ?_⟩
+  · exact outerCommOuterPatternPreserving_of_canonicalTransport x y z w hright
+  · exact outerCommInnerPatternPreserving_of_canonicalTransport x y z w hright
+  · exact outerCommBackOuterPatternPreserving_of_canonicalTransport x y z w hleft
+  · exact outerCommBackInnerPatternPreserving_of_canonicalTransport x y z w hleft
+
+/--
+Full pattern invariance reduces exactly to the four nontrivial constructor
+obligations above.
+-/
+theorem codePatternInvariant_of_constructor_preservation
+    (x y z w : PTree)
+    (houtOut : OuterCommOuterPatternPreserving x y z w)
+    (houtIn : OuterCommInnerPatternPreserving x y z w)
+    (hbackOut : OuterCommBackOuterPatternPreserving x y z w)
+    (hbackIn : OuterCommBackInnerPatternPreserving x y z w) :
+    CodePatternInvariant x y z w := by
+  intro c d h
+  induction h with
+  | refl c =>
+      rfl
+  | symm h ih =>
+      exact ih.symm
+  | trans h₁ h₂ ih₁ ih₂ =>
+      exact ih₁.trans ih₂
+  | outer_comm_outer haz hbw haz' hbw' haddr =>
+      exact houtOut haddr
+  | outer_comm_inner haz hbw hay' hbw' haddr =>
+      exact houtIn haddr
+  | outer_comm_back_outer haz hbw haz' hbw' haddr =>
+      exact hbackOut haddr
+  | outer_comm_back_inner haz hbw hay' hbw' haddr =>
+      exact hbackIn haddr
+
+/--
+If pattern transports along equivalences into the canonical right/left targets,
+then full `TwoStepEquiv`-pattern invariance follows.
+-/
+theorem codePatternInvariant_of_canonicalTransport
+    (x y z w : PTree)
+    (hright : CanonicalRightCodePatternTransport x y z w)
+    (hleft : CanonicalLeftCodePatternTransport x y z w) :
+    CodePatternInvariant x y z w := by
+  rcases constructorPatternPreservation_of_canonicalTransport x y z w hright hleft with
+    ⟨houtOut, houtIn, hbackOut, hbackIn⟩
+  exact codePatternInvariant_of_constructor_preservation
+    x y z w houtOut houtIn hbackOut hbackIn
+
+/-- An outer-left witness is independent when its graft addresses are incomparable. -/
+def OuterLeftWitnessIndependent
+    {x y z w : PTree}
+    (h : OuterLeftWitness x y z w) : Prop :=
+  match h with
+  | OuterLeftWitness.mk a b _ _ _ => ¬ PTree.comparable a b
+
+/-- An outer-right witness is independent when its graft addresses are incomparable. -/
+def OuterRightWitnessIndependent
+    {x y z w : PTree}
+    (h : OuterRightWitness x y z w) : Prop :=
+  match h with
+  | OuterRightWitness.mk a b _ _ _ => ¬ PTree.comparable a b
+
+/--
+Weak code-level separation criterion: independent left-outer codes do not
+collapse to left-inner codes.
+-/
+def NoIndependentLeftOuterInnerCodeEquiv
+    (x y z w : PTree) : Prop :=
+  ∀ a b : Address, ∀ z' : PTree,
+    ∀ haz : (a, z') ∈ matchingLeafGraftWitnesses y z,
+    ∀ hbw : (b, w) ∈ matchingLeafGraftWitnesses x z',
+    ¬ PTree.comparable a b →
+    ∀ a' b' : Address, ∀ y' : PTree,
+    ∀ hay : (a', y') ∈ matchingLeafGraftWitnesses y x,
+    ∀ hbw' : (b', w) ∈ matchingLeafGraftWitnesses y' z,
+      ¬ TwoStepEquiv x y z w
+          (TwoStepCode.leftOuter a b z' haz hbw)
+          (TwoStepCode.leftInner a' b' y' hay hbw')
+
+/--
+Weak swapped-right code-level separation criterion: independent swapped-right
+outer codes do not collapse to swapped-right inner codes.
+-/
+def NoIndependentSwappedRightOuterInnerCodeEquiv
+    (x y z w : PTree) : Prop :=
+  ∀ a b : Address, ∀ z' : PTree,
+    ∀ haz : (a, z') ∈ matchingLeafGraftWitnesses y z,
+    ∀ hbw : (b, w) ∈ matchingLeafGraftWitnesses x z',
+    ¬ PTree.comparable a b →
+    ∀ a' b' : Address, ∀ y' : PTree,
+    ∀ hay : (a', y') ∈ matchingLeafGraftWitnesses y x,
+    ∀ hbw' : (b', w) ∈ matchingLeafGraftWitnesses y' z,
+      ¬ TwoStepEquiv y x z w
+          (TwoStepCode.rightOuter a b z' haz hbw)
+          (TwoStepCode.rightInner a' b' y' hay hbw')
+
+/-- An independent outer-left witness supports a quotient class. -/
+def HasIndependentLeftOuterContributionClass
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) : Prop :=
+  ∃ h : OuterLeftWitness x y z w,
+    OuterLeftWitnessIndependent h ∧ outerLeftWitnessClass h = q
+
+/-- An independent swapped-right outer witness supports a swapped quotient class. -/
+def HasIndependentSwappedRightOuterContributionClass
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w) : Prop :=
+  ∃ h : OuterRightWitness y x z w,
+    OuterRightWitnessIndependent h ∧ outerRightWitnessClass h = q'
+
+/--
+Canonical transport on the left implies the expected independent outer-to-inner
+code-level separation.
+-/
+theorem noIndependentLeftOuterInnerCodeEquiv_of_canonicalTransport
+    (x y z w : PTree)
+    (hright : CanonicalRightCodePatternTransport x y z w)
+    (hleft : CanonicalLeftCodePatternTransport x y z w) :
+    NoIndependentLeftOuterInnerCodeEquiv x y z w := by
+  intro a b z' haz hbw hcmp a' b' y' hay hbw'
+  exact noIndependentLeftOuterToLeftInnerEquiv_of_patternInvariant
+    x y z w
+    (codePatternInvariant_of_canonicalTransport x y z w hright hleft)
+    a b z' haz hbw hcmp a' b' y' hay hbw'
+
+/--
+Canonical transport on the swapped-right side implies the expected independent
+outer-to-inner code-level separation there.
+-/
+theorem noIndependentSwappedRightOuterInnerCodeEquiv_of_canonicalTransport
+    (x y z w : PTree)
+    (hright : CanonicalRightCodePatternTransport y x z w)
+    (hleft : CanonicalLeftCodePatternTransport y x z w) :
+    NoIndependentSwappedRightOuterInnerCodeEquiv x y z w := by
+  intro a b z' haz hbw hcmp a' b' y' hay hbw'
+  exact noIndependentRightOuterToRightInnerEquiv_of_patternInvariant
+    x y z w
+    (codePatternInvariant_of_canonicalTransport y x z w hright hleft)
+    a b z' haz hbw hcmp a' b' y' hay hbw'
+
+/--
+Under canonical transport, an independent outer-left witness class cannot
+coincide with a left-inner witness class.
+-/
+theorem independent_outerLeftWitnessClass_ne_leftInnerWitnessClass_of_canonicalTransport
+    (x y z w : PTree)
+    (hright : CanonicalRightCodePatternTransport x y z w)
+    (hleft : CanonicalLeftCodePatternTransport x y z w)
+    (hOut : OuterLeftWitness x y z w)
+    (hInd : OuterLeftWitnessIndependent hOut)
+    (hIn : LeftInnerWitnessData x y z w) :
+    outerLeftWitnessClass hOut ≠ leftInnerWitnessClass x y z w hIn := by
+  cases hOut with
+  | mk a b z' haz hbw =>
+      cases hIn with
+      | mk hw hh =>
+          cases hw with
+          | inner a' b' y' hay hbw' =>
+              intro hEq
+              have hclass :
+                  codeClass (TwoStepCode.leftOuter a b z' haz hbw) =
+                    codeClass (TwoStepCode.leftInner a' b' y' hay hbw') := by
+                simpa [outerLeftWitnessClass, leftInnerWitnessClass,
+                  classOfLeftWitness, codeOfLeftWitness] using hEq
+              exact
+                (noIndependentLeftOuterInnerCodeEquiv_of_canonicalTransport
+                  x y z w hright hleft
+                  a b z' haz hbw hInd a' b' y' hay hbw')
+                  (Quotient.exact hclass)
+          | outer =>
+              cases hh
+
+/--
+Under canonical transport on the swapped-right side, an independent swapped
+right-outer witness class cannot coincide with a swapped right-inner class.
+-/
+theorem independent_outerRightWitnessClass_ne_swappedRightInnerWitnessClass_of_canonicalTransport
+    (x y z w : PTree)
+    (hright : CanonicalRightCodePatternTransport y x z w)
+    (hleft : CanonicalLeftCodePatternTransport y x z w)
+    (hOut : OuterRightWitness y x z w)
+    (hInd : OuterRightWitnessIndependent hOut)
+    (hIn : SwappedRightInnerWitnessData x y z w) :
+    outerRightWitnessClass hOut ≠ swappedRightInnerWitnessClass x y z w hIn := by
+  cases hOut with
+  | mk a b z' haz hbw =>
+      cases hIn with
+      | mk hw hh =>
+          cases hw with
+          | inner a' b' y' hay hbw' =>
+              intro hEq
+              have hclass :
+                  codeClass (TwoStepCode.rightOuter a b z' haz hbw) =
+                    codeClass (TwoStepCode.rightInner a' b' y' hay hbw') := by
+                simpa [outerRightWitnessClass, swappedRightInnerWitnessClass,
+                  classOfRightWitness, codeOfRightWitness] using hEq
+              exact
+                (noIndependentSwappedRightOuterInnerCodeEquiv_of_canonicalTransport
+                  x y z w hright hleft
+                  a b z' haz hbw hInd a' b' y' hay hbw')
+                  (Quotient.exact hclass)
+          | outer =>
+              cases hh
+
+/--
+An independently supported outer-left class cannot also carry left-inner
+support once canonical transport gives pattern invariance.
+-/
+theorem independent_leftOuter_support_not_leftInner_support_of_canonicalTransport
+    (x y z w : PTree)
+    (hright : CanonicalRightCodePatternTransport x y z w)
+    (hleft : CanonicalLeftCodePatternTransport x y z w)
+    (q : TwoStepQuotient x y z w)
+    (hOut : HasIndependentLeftOuterContributionClass x y z w q)
+    (hIn : HasLeftInnerContributionClass x y z w q) :
+    False := by
+  rcases hOut with ⟨hOut, hInd, hhOut⟩
+  rcases hIn with ⟨hIn, hhIn⟩
+  exact
+    independent_outerLeftWitnessClass_ne_leftInnerWitnessClass_of_canonicalTransport
+      x y z w hright hleft hOut hInd hIn (hhOut.trans hhIn.symm)
+
+/--
+An independently supported swapped-right outer class cannot also carry swapped
+right-inner support once canonical transport gives pattern invariance.
+-/
+theorem independent_swappedRightOuter_support_not_swappedRightInner_support_of_canonicalTransport
+    (x y z w : PTree)
+    (hright : CanonicalRightCodePatternTransport y x z w)
+    (hleft : CanonicalLeftCodePatternTransport y x z w)
+    (q' : TwoStepQuotient y x z w)
+    (hOut : HasIndependentSwappedRightOuterContributionClass x y z w q')
+    (hIn : HasSwappedRightInnerContributionClass x y z w q') :
+    False := by
+  rcases hOut with ⟨hOut, hInd, hhOut⟩
+  rcases hIn with ⟨hIn, hhIn⟩
+  exact
+    independent_outerRightWitnessClass_ne_swappedRightInnerWitnessClass_of_canonicalTransport
+      x y z w hright hleft hOut hInd hIn (hhOut.trans hhIn.symm)
+
 
 
 
