@@ -10502,6 +10502,1321 @@ theorem independent_swappedRightOuter_support_not_swappedRightInner_support_of_c
     independent_outerRightWitnessClass_ne_swappedRightInnerWitnessClass_of_canonicalTransport
       x y z w hright hleft hOut hInd hIn (hhOut.trans hhIn.symm)
 
+/--
+Global pattern invariance immediately yields canonical-right transport into the
+chosen left-to-right canonical targets.
+-/
+theorem canonicalRightCodePatternTransport_of_codePatternInvariant
+    (x y z w : PTree)
+    (hpat : CodePatternInvariant x y z w) :
+    CanonicalRightCodePatternTransport x y z w := by
+  intro a b z' haz hbw d hEq
+  exact hpat hEq
+
+/--
+Global pattern invariance immediately yields canonical-left transport into the
+chosen right-to-left canonical targets.
+-/
+theorem canonicalLeftCodePatternTransport_of_codePatternInvariant
+    (x y z w : PTree)
+    (hpat : CodePatternInvariant x y z w) :
+    CanonicalLeftCodePatternTransport x y z w := by
+  intro a b z' haz hbw d hEq
+  exact hpat hEq
+
+/--
+Checkpoint 1 on the original orientation: once canonical transport is
+available, the quotient does not collapse independent outer support into inner
+support on the left.
+-/
+theorem independent_split_checkpoint_left_of_canonicalTransport
+    (x y z w : PTree)
+    (hright : CanonicalRightCodePatternTransport x y z w)
+    (hleft : CanonicalLeftCodePatternTransport x y z w) :
+    CodePatternInvariant x y z w ∧
+    NoIndependentLeftOuterInnerCodeEquiv x y z w ∧
+    (∀ q : TwoStepQuotient x y z w,
+      HasIndependentLeftOuterContributionClass x y z w q →
+      HasLeftInnerContributionClass x y z w q →
+      False) := by
+  refine ⟨?_, ?_, ?_⟩
+  · exact codePatternInvariant_of_canonicalTransport x y z w hright hleft
+  · exact noIndependentLeftOuterInnerCodeEquiv_of_canonicalTransport x y z w hright hleft
+  · intro q hOut hIn
+    exact
+      independent_leftOuter_support_not_leftInner_support_of_canonicalTransport
+        x y z w hright hleft q hOut hIn
+
+/--
+Checkpoint 1 on the swapped-right orientation: once canonical transport is
+available there as well, the quotient does not collapse independent outer
+support into inner support on the swapped-right side.
+-/
+theorem independent_split_checkpoint_right_of_canonicalTransport
+    (x y z w : PTree)
+    (hright : CanonicalRightCodePatternTransport y x z w)
+    (hleft : CanonicalLeftCodePatternTransport y x z w) :
+    CodePatternInvariant y x z w ∧
+    NoIndependentSwappedRightOuterInnerCodeEquiv x y z w ∧
+    (∀ q' : TwoStepQuotient y x z w,
+      HasIndependentSwappedRightOuterContributionClass x y z w q' →
+      HasSwappedRightInnerContributionClass x y z w q' →
+      False) := by
+  refine ⟨?_, ?_, ?_⟩
+  · exact codePatternInvariant_of_canonicalTransport y x z w hright hleft
+  · exact noIndependentSwappedRightOuterInnerCodeEquiv_of_canonicalTransport x y z w hright hleft
+  · intro q' hOut hIn
+    exact
+      independent_swappedRightOuter_support_not_swappedRightInner_support_of_canonicalTransport
+        x y z w hright hleft q' hOut hIn
+
+/--
+Checkpoint 1: if canonical transport exists in both orientations, then the
+quotient respects the independent/dependent proof-theoretic split needed for
+the pre-Lie story.
+-/
+theorem independent_split_checkpoint_of_canonicalTransport
+    (x y z w : PTree)
+    (hxy_right : CanonicalRightCodePatternTransport x y z w)
+    (hxy_left : CanonicalLeftCodePatternTransport x y z w)
+    (hyx_right : CanonicalRightCodePatternTransport y x z w)
+    (hyx_left : CanonicalLeftCodePatternTransport y x z w) :
+    CodePatternInvariant x y z w ∧
+    CodePatternInvariant y x z w ∧
+    NoIndependentLeftOuterInnerCodeEquiv x y z w ∧
+    NoIndependentSwappedRightOuterInnerCodeEquiv x y z w ∧
+    (∀ q : TwoStepQuotient x y z w,
+      HasIndependentLeftOuterContributionClass x y z w q →
+      HasLeftInnerContributionClass x y z w q →
+      False) ∧
+    (∀ q' : TwoStepQuotient y x z w,
+      HasIndependentSwappedRightOuterContributionClass x y z w q' →
+      HasSwappedRightInnerContributionClass x y z w q' →
+      False) := by
+  rcases independent_split_checkpoint_left_of_canonicalTransport
+      x y z w hxy_right hxy_left with
+    ⟨hpatxy, hnoLeft, hsepLeft⟩
+  rcases independent_split_checkpoint_right_of_canonicalTransport
+      x y z w hyx_right hyx_left with
+    ⟨hpatyx, hnoRight, hsepRight⟩
+  exact ⟨hpatxy, hpatyx, hnoLeft, hnoRight, hsepLeft, hsepRight⟩
+
+/--
+An independent left-outer source admits an explicit opposite right-outer
+presentation.
+-/
+theorem independent_leftOuter_has_rightOuter_code
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses y z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses x z')
+    (hinc : ¬ PTree.comparable a b) :
+    ∃ z₃ : PTree,
+      ∃ haz' : (b, z₃) ∈ matchingLeafGraftWitnesses x z,
+        ∃ hbw' : (a, w) ∈ matchingLeafGraftWitnesses y z₃,
+          TwoStepEquiv x y z w
+            (TwoStepCode.leftOuter a b z' haz hbw)
+            (TwoStepCode.rightOuter b a z₃ haz' hbw') := by
+  rw [mem_matchingLeafGraftWitnesses_iff] at haz hbw
+  rcases haz with ⟨_, hyz⟩
+  rcases hbw with ⟨_, hxz'⟩
+  have hdecomp := two_step_graft_decomposition_full x y z a b z' w hyz hxz'
+  cases hdecomp with
+  | inl hinner =>
+      rcases hinner with ⟨c, y', hbEq, hxy, hy'z⟩
+      have hcmp : PTree.comparable a b := by
+        apply PTree.comparable_of_isAncestorOf
+        exact ⟨c, hbEq⟩
+      exact False.elim (hinc hcmp)
+  | inr hout =>
+      rcases hout with ⟨z₃, hnc, hxz, hyz₃⟩
+      have haz' : (b, z₃) ∈ matchingLeafGraftWitnesses x z := by
+        rw [mem_matchingLeafGraftWitnesses_iff]
+        refine ⟨?_, hxz⟩
+        have hg := PTree.isGraftableLeafAt_of_graftMatchingLeafAt_eq_some x z b z₃ hxz
+        exact
+          PTree.subtreeAt_some_implies_mem_allAddresses
+            z (PTree.leaf x.conclusion) b
+            ((PTree.IsGraftableLeafAt_iff x z b).mp hg)
+      have hbw' : (a, w) ∈ matchingLeafGraftWitnesses y z₃ := by
+        rw [mem_matchingLeafGraftWitnesses_iff]
+        refine ⟨?_, hyz₃⟩
+        have hg := PTree.isGraftableLeafAt_of_graftMatchingLeafAt_eq_some y z₃ a w hyz₃
+        exact
+          PTree.subtreeAt_some_implies_mem_allAddresses
+            z₃ (PTree.leaf y.conclusion) a
+            ((PTree.IsGraftableLeafAt_iff y z₃ a).mp hg)
+      refine ⟨z₃, haz', hbw', ?_⟩
+      exact TwoStepEquiv.outer_comm_outer haz hbw haz' hbw' (by
+        rw [mem_twoStepAddrWitnessesRight_iff]
+        exact Or.inl ⟨z₃, haz', hbw'⟩)
+
+/--
+An independent right-outer source admits an explicit opposite left-outer
+presentation.
+-/
+theorem independent_rightOuter_has_leftOuter_code
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses x z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y z')
+    (hinc : ¬ PTree.comparable a b) :
+    ∃ z₃ : PTree,
+      ∃ haz' : (b, z₃) ∈ matchingLeafGraftWitnesses y z,
+        ∃ hbw' : (a, w) ∈ matchingLeafGraftWitnesses x z₃,
+          TwoStepEquiv x y z w
+            (TwoStepCode.rightOuter a b z' haz hbw)
+            (TwoStepCode.leftOuter b a z₃ haz' hbw') := by
+  rw [mem_matchingLeafGraftWitnesses_iff] at haz hbw
+  rcases haz with ⟨_, hxz⟩
+  rcases hbw with ⟨_, hyz'⟩
+  have hdecomp := two_step_graft_decomposition_full y x z a b z' w hxz hyz'
+  cases hdecomp with
+  | inl hinner =>
+      rcases hinner with ⟨c, y', hbEq, hyx, hy'z⟩
+      have hcmp : PTree.comparable a b := by
+        apply PTree.comparable_of_isAncestorOf
+        exact ⟨c, hbEq⟩
+      exact False.elim (hinc hcmp)
+  | inr hout =>
+      rcases hout with ⟨z₃, hnc, hyz, hxz₃⟩
+      have haz' : (b, z₃) ∈ matchingLeafGraftWitnesses y z := by
+        rw [mem_matchingLeafGraftWitnesses_iff]
+        refine ⟨?_, hyz⟩
+        have hg := PTree.isGraftableLeafAt_of_graftMatchingLeafAt_eq_some y z b z₃ hyz
+        exact
+          PTree.subtreeAt_some_implies_mem_allAddresses
+            z (PTree.leaf y.conclusion) b
+            ((PTree.IsGraftableLeafAt_iff y z b).mp hg)
+      have hbw' : (a, w) ∈ matchingLeafGraftWitnesses x z₃ := by
+        rw [mem_matchingLeafGraftWitnesses_iff]
+        refine ⟨?_, hxz₃⟩
+        have hg := PTree.isGraftableLeafAt_of_graftMatchingLeafAt_eq_some x z₃ a w hxz₃
+        exact
+          PTree.subtreeAt_some_implies_mem_allAddresses
+            z₃ (PTree.leaf x.conclusion) a
+            ((PTree.IsGraftableLeafAt_iff x z₃ a).mp hg)
+      refine ⟨z₃, haz', hbw', ?_⟩
+      exact TwoStepEquiv.outer_comm_back_outer haz hbw haz' hbw' (by
+        rw [mem_twoStepAddrWitnessesLeft_iff]
+        exact Or.inl ⟨z₃, haz', hbw'⟩)
+
+/--
+Witness-level packaging of the previous theorem: an independent outer-left
+source has an explicit opposite outer-right witness.
+-/
+theorem independent_outerLeft_gives_rightOuterWitness
+    (x y z w : PTree)
+    (h : OuterLeftWitness x y z w)
+    (hInd : OuterLeftWitnessIndependent h) :
+    Nonempty (OuterRightWitness x y z w) := by
+  cases h with
+  | mk a b z' haz hbw =>
+      rcases independent_leftOuter_has_rightOuter_code x y z w a b z' haz hbw hInd with
+        ⟨z₃, haz', hbw', hEq⟩
+      exact ⟨OuterRightWitness.mk b a z₃ haz' hbw'⟩
+
+/--
+Witness-level packaging of the previous theorem: an independent outer-right
+source has an explicit opposite outer-left witness.
+-/
+theorem independent_outerRight_gives_leftOuterWitness
+    (x y z w : PTree)
+    (h : OuterRightWitness x y z w)
+    (hInd : OuterRightWitnessIndependent h) :
+    Nonempty (OuterLeftWitness x y z w) := by
+  cases h with
+  | mk a b z' haz hbw =>
+      rcases independent_rightOuter_has_leftOuter_code x y z w a b z' haz hbw hInd with
+        ⟨z₃, haz', hbw', hEq⟩
+      exact ⟨OuterLeftWitness.mk b a z₃ haz' hbw'⟩
+
+/-- Raw right-inner witnesses in the original `(x,y,z,w)` orientation. -/
+def RightInnerWitnessData
+    (x y z w : PTree) :=
+  { h : TwoStepWitnessRight x y z w //
+      match h with
+      | TwoStepWitnessRight.inner _ _ _ _ _ => True
+      | _ => False }
+
+/--
+No outer/inner branch overlap on the right: a final tree `w` cannot admit both
+an outer-right witness and an inner-right witness presentation.
+-/
+def RightWitnessBranchExclusive
+    (x y z w : PTree) : Prop :=
+  ∀ hOut : OuterRightWitness x y z w,
+    ∀ hIn : RightInnerWitnessData x y z w,
+      False
+
+/--
+No outer/inner branch overlap on the left: a final tree `w` cannot admit both
+an outer-left witness and a left-inner witness presentation.
+-/
+def LeftWitnessBranchExclusive
+    (x y z w : PTree) : Prop :=
+  ∀ hOut : OuterLeftWitness x y z w,
+    ∀ hIn : LeftInnerWitnessData x y z w,
+      False
+
+/--
+Geometric left-side branch exclusivity at the canonical level: the same final
+tree `w` is not simultaneously realised by an outer and an inner canonical
+two-step decomposition on the left orientation.
+-/
+def LeftCanonicalBranchExclusive
+    (x y z w : PTree) : Prop :=
+  ∀ z₃ : PTree,
+    z₃ ∈ PTree.matchingLeafGraftings y z →
+    w ∈ PTree.matchingLeafGraftings x z₃ →
+    ∀ y' : PTree,
+      y' ∈ PTree.matchingLeafGraftings y x →
+      w ∈ PTree.matchingLeafGraftings y' z →
+      False
+
+/--
+Geometric right-side branch exclusivity at the canonical level: the same final
+tree `w` is not simultaneously realised by an outer and an inner canonical
+two-step decomposition on the right orientation.
+-/
+def RightCanonicalBranchExclusive
+    (x y z w : PTree) : Prop :=
+  ∀ z₃ : PTree,
+    z₃ ∈ PTree.matchingLeafGraftings x z →
+    w ∈ PTree.matchingLeafGraftings y z₃ →
+    ∀ y' : PTree,
+      y' ∈ PTree.matchingLeafGraftings x y →
+      w ∈ PTree.matchingLeafGraftings y' z →
+      False
+
+/--
+Canonical left-side branch exclusivity implies raw witness branch exclusivity
+on the left.
+-/
+theorem leftWitnessBranchExclusive_of_leftCanonicalBranchExclusive
+    (x y z w : PTree)
+    (hExcl : LeftCanonicalBranchExclusive x y z w) :
+    LeftWitnessBranchExclusive x y z w := by
+  intro hOut hIn
+  cases hOut with
+  | mk a b z' haz hbw =>
+      cases hIn with
+      | mk hw hh =>
+          cases hw with
+          | inner a' b' y' hay hbw' =>
+              have hz' : z' ∈ PTree.matchingLeafGraftings y z := by
+                rw [← map_snd_matchingLeafGraftWitnesses]
+                exact List.mem_map.2 ⟨(a, z'), haz, rfl⟩
+              have hwz' : w ∈ PTree.matchingLeafGraftings x z' := by
+                rw [← map_snd_matchingLeafGraftWitnesses]
+                exact List.mem_map.2 ⟨(b, w), hbw, rfl⟩
+              have hy' : y' ∈ PTree.matchingLeafGraftings y x := by
+                rw [← map_snd_matchingLeafGraftWitnesses]
+                exact List.mem_map.2 ⟨(a', y'), hay, rfl⟩
+              have hwy' : w ∈ PTree.matchingLeafGraftings y' z := by
+                rw [← map_snd_matchingLeafGraftWitnesses]
+                exact List.mem_map.2 ⟨(b', w), hbw', rfl⟩
+              exact hExcl z' hz' hwz' y' hy' hwy'
+          | outer =>
+              cases hh
+
+/--
+Canonical right-side branch exclusivity implies raw witness branch exclusivity
+on the right.
+-/
+theorem rightWitnessBranchExclusive_of_rightCanonicalBranchExclusive
+    (x y z w : PTree)
+    (hExcl : RightCanonicalBranchExclusive x y z w) :
+    RightWitnessBranchExclusive x y z w := by
+  intro hOut hIn
+  cases hOut with
+  | mk a b z' haz hbw =>
+      cases hIn with
+      | mk hw hh =>
+          cases hw with
+          | inner a' b' y' hay hbw' =>
+              have hz' : z' ∈ PTree.matchingLeafGraftings x z := by
+                rw [← map_snd_matchingLeafGraftWitnesses]
+                exact List.mem_map.2 ⟨(a, z'), haz, rfl⟩
+              have hwz' : w ∈ PTree.matchingLeafGraftings y z' := by
+                rw [← map_snd_matchingLeafGraftWitnesses]
+                exact List.mem_map.2 ⟨(b, w), hbw, rfl⟩
+              have hy' : y' ∈ PTree.matchingLeafGraftings x y := by
+                rw [← map_snd_matchingLeafGraftWitnesses]
+                exact List.mem_map.2 ⟨(a', y'), hay, rfl⟩
+              have hwy' : w ∈ PTree.matchingLeafGraftings y' z := by
+                rw [← map_snd_matchingLeafGraftWitnesses]
+                exact List.mem_map.2 ⟨(b', w), hbw', rfl⟩
+              exact hExcl z' hz' hwz' y' hy' hwy'
+          | outer =>
+              cases hh
+
+/--
+Raw left witness branch exclusivity already implies canonical left-side branch
+exclusivity.
+-/
+theorem leftCanonicalBranchExclusive_of_leftWitnessBranchExclusive
+    (x y z w : PTree)
+    (hExcl : LeftWitnessBranchExclusive x y z w) :
+    LeftCanonicalBranchExclusive x y z w := by
+  intro z₃ hz₃ hwz₃ y' hy' hwy'
+  rw [← map_snd_matchingLeafGraftWitnesses] at hz₃ hwz₃ hy' hwy'
+  simp only [List.mem_map, Prod.exists, exists_and_left, exists_eq_right] at hz₃ hwz₃ hy' hwy'
+  rcases hz₃ with ⟨a, haz⟩
+  rcases hwz₃ with ⟨b, hbw⟩
+  rcases hy' with ⟨a', hay⟩
+  rcases hwy' with ⟨b', hbw'⟩
+  exact hExcl
+    (OuterLeftWitness.mk a b z₃ haz hbw)
+    ⟨TwoStepWitnessLeft.inner a' b' y' hay hbw', trivial⟩
+
+/--
+Raw right witness branch exclusivity already implies canonical right-side
+branch exclusivity.
+-/
+theorem rightCanonicalBranchExclusive_of_rightWitnessBranchExclusive
+    (x y z w : PTree)
+    (hExcl : RightWitnessBranchExclusive x y z w) :
+    RightCanonicalBranchExclusive x y z w := by
+  intro z₃ hz₃ hwz₃ y' hy' hwy'
+  rw [← map_snd_matchingLeafGraftWitnesses] at hz₃ hwz₃ hy' hwy'
+  simp only [List.mem_map, Prod.exists, exists_and_left, exists_eq_right] at hz₃ hwz₃ hy' hwy'
+  rcases hz₃ with ⟨a, haz⟩
+  rcases hwz₃ with ⟨b, hbw⟩
+  rcases hy' with ⟨a', hay⟩
+  rcases hwy' with ⟨b', hbw'⟩
+  exact hExcl
+    (OuterRightWitness.mk a b z₃ haz hbw)
+    ⟨TwoStepWitnessRight.inner a' b' y' hay hbw', trivial⟩
+
+/--
+The raw and canonical formulations of left-side branch exclusivity are
+equivalent.
+-/
+theorem leftBranchExclusivity_iff_leftCanonicalBranchExclusivity
+    (x y z w : PTree) :
+    LeftWitnessBranchExclusive x y z w ↔
+      LeftCanonicalBranchExclusive x y z w := by
+  constructor
+  · exact leftCanonicalBranchExclusive_of_leftWitnessBranchExclusive x y z w
+  · exact leftWitnessBranchExclusive_of_leftCanonicalBranchExclusive x y z w
+
+/--
+The raw and canonical formulations of right-side branch exclusivity are
+equivalent.
+-/
+theorem rightBranchExclusivity_iff_rightCanonicalBranchExclusivity
+    (x y z w : PTree) :
+    RightWitnessBranchExclusive x y z w ↔
+      RightCanonicalBranchExclusive x y z w := by
+  constructor
+  · exact rightCanonicalBranchExclusive_of_rightWitnessBranchExclusive x y z w
+  · exact rightWitnessBranchExclusive_of_rightCanonicalBranchExclusive x y z w
+
+/--
+Bare `PTree` geometry does not force right-side canonical branch exclusivity:
+a single matching leaf can realize both the outer and inner branches at once.
+-/
+theorem exists_not_rightCanonicalBranchExclusive :
+    ∃ t : PTree, ¬ RightCanonicalBranchExclusive t t t t := by
+  let t : PTree := PTree.leaf (MultiSequent.mk 0 0)
+  have hmem : t ∈ PTree.matchingLeafGraftings t t := by
+    apply PTree.root_matchingLeafGrafting_mem
+    simp [t, PTree.subtreeAt, PTree.conclusion]
+  refine ⟨t, ?_⟩
+  intro hExcl
+  exact hExcl t hmem hmem t hmem hmem
+
+/--
+Bare `PTree` geometry does not force left-side canonical branch exclusivity
+either.
+-/
+theorem exists_not_leftCanonicalBranchExclusive :
+    ∃ t : PTree, ¬ LeftCanonicalBranchExclusive t t t t := by
+  let t : PTree := PTree.leaf (MultiSequent.mk 0 0)
+  have hmem : t ∈ PTree.matchingLeafGraftings t t := by
+    apply PTree.root_matchingLeafGrafting_mem
+    simp [t, PTree.subtreeAt, PTree.conclusion]
+  refine ⟨t, ?_⟩
+  intro hExcl
+  exact hExcl t hmem hmem t hmem hmem
+
+/--
+So right-side raw witness branch exclusivity is not a theorem of bare `PTree`
+geometry alone.
+-/
+theorem exists_not_rightWitnessBranchExclusive :
+    ∃ t : PTree, ¬ RightWitnessBranchExclusive t t t t := by
+  rcases exists_not_rightCanonicalBranchExclusive with ⟨t, ht⟩
+  refine ⟨t, ?_⟩
+  intro hraw
+  exact ht ((rightBranchExclusivity_iff_rightCanonicalBranchExclusivity t t t t).1 hraw)
+
+/--
+And left-side raw witness branch exclusivity is not a theorem of bare `PTree`
+geometry alone.
+-/
+theorem exists_not_leftWitnessBranchExclusive :
+    ∃ t : PTree, ¬ LeftWitnessBranchExclusive t t t t := by
+  rcases exists_not_leftCanonicalBranchExclusive with ⟨t, ht⟩
+  refine ⟨t, ?_⟩
+  intro hraw
+  exact ht ((leftBranchExclusivity_iff_leftCanonicalBranchExclusivity t t t t).1 hraw)
+
+/-!
+## Proper-address restricted grafting layer
+
+The unrestricted geometry admits a degenerate root self-grafting case where the
+outer and inner canonical branches coexist.  We therefore introduce a parallel
+restricted layer in which every primitive graft occurs at a proper address.
+This leaves the original development untouched while isolating the intended
+"genuine subproof insertion" fragment.
+-/
+
+/-- A proper graft address is any non-root address. -/
+def IsProperAddress (a : Address) : Prop := a ≠ []
+
+/-- Matching-leaf graft witnesses restricted to proper addresses. -/
+noncomputable def properMatchingLeafGraftWitnesses
+    (u t : PTree) : List (Address × PTree) :=
+  (matchingLeafGraftWitnesses u t).filter (fun aw => IsProperAddress aw.1)
+
+/-- The corresponding proper-address graftings, forgetting witness addresses. -/
+noncomputable def properMatchingLeafGraftings
+    (u t : PTree) : List PTree :=
+  (properMatchingLeafGraftWitnesses u t).map Prod.snd
+
+/-- Proper-address two-step address witnesses on the left orientation. -/
+noncomputable def properTwoStepAddrWitnessesLeft
+    (x y z : PTree) : List ((Address × Address) × PTree) :=
+  (((properMatchingLeafGraftWitnesses y z).flatMap
+      (fun aw =>
+        let a := aw.1
+        let z' := aw.2
+        (properMatchingLeafGraftWitnesses x z').map
+          (fun bw => ((a, bw.1), bw.2))))
+    ++
+    ((properMatchingLeafGraftWitnesses y x).flatMap
+      (fun aw =>
+        let a := aw.1
+        let y' := aw.2
+        (properMatchingLeafGraftWitnesses y' z).map
+          (fun bw => ((a, bw.1), bw.2)))))
+
+/-- Proper-address two-step address witnesses on the right orientation. -/
+noncomputable def properTwoStepAddrWitnessesRight
+    (x y z : PTree) : List ((Address × Address) × PTree) :=
+  (((properMatchingLeafGraftWitnesses x z).flatMap
+      (fun aw =>
+        let a := aw.1
+        let z' := aw.2
+        (properMatchingLeafGraftWitnesses y z').map
+          (fun bw => ((a, bw.1), bw.2))))
+    ++
+    ((properMatchingLeafGraftWitnesses x y).flatMap
+      (fun aw =>
+        let a := aw.1
+        let y' := aw.2
+        (properMatchingLeafGraftWitnesses y' z).map
+          (fun bw => ((a, bw.1), bw.2)))))
+
+@[simp] theorem mem_properMatchingLeafGraftWitnesses_iff
+    (u t : PTree) (a : Address) (t' : PTree) :
+    (a, t') ∈ properMatchingLeafGraftWitnesses u t ↔
+      (a, t') ∈ matchingLeafGraftWitnesses u t ∧ IsProperAddress a := by
+  unfold properMatchingLeafGraftWitnesses IsProperAddress
+  simp
+
+@[simp] theorem map_snd_properMatchingLeafGraftWitnesses
+    (u t : PTree) :
+    (properMatchingLeafGraftWitnesses u t).map Prod.snd =
+      properMatchingLeafGraftings u t := by
+  rfl
+
+/-- Proper-address grafting into a leaf host is impossible. -/
+@[simp] theorem properMatchingLeafGraftWitnesses_leaf
+    (u : PTree) (s : MultiSequent) :
+    properMatchingLeafGraftWitnesses u (PTree.leaf s) = [] := by
+  apply List.eq_nil_iff_forall_not_mem.2
+  intro aw haw
+  rcases aw with ⟨a, t'⟩
+  rw [mem_properMatchingLeafGraftWitnesses_iff] at haw
+  rcases haw with ⟨hm, hproper⟩
+  rw [mem_matchingLeafGraftWitnesses_iff] at hm
+  rcases hm with ⟨ha, _⟩
+  simp [PTree.allAddresses, PTree.allAddressesGo, PTree.size] at ha
+  exact hproper ha
+
+/-- Hence proper-address graftings into a leaf host are empty. -/
+@[simp] theorem properMatchingLeafGraftings_leaf
+    (u : PTree) (s : MultiSequent) :
+    properMatchingLeafGraftings u (PTree.leaf s) = [] := by
+  simp [properMatchingLeafGraftings]
+
+/--
+Proper right-side canonical branch exclusivity: outer and inner canonical
+branches cannot coexist when every primitive graft address is required to be
+proper.
+-/
+def RightProperCanonicalBranchExclusive
+    (x y z w : PTree) : Prop :=
+  ∀ z₃ : PTree,
+    z₃ ∈ properMatchingLeafGraftings x z →
+    w ∈ properMatchingLeafGraftings y z₃ →
+    ∀ y' : PTree,
+      y' ∈ properMatchingLeafGraftings x y →
+      w ∈ properMatchingLeafGraftings y' z →
+      False
+
+/--
+Proper left-side canonical branch exclusivity: outer and inner canonical
+branches cannot coexist when every primitive graft address is required to be
+proper.
+-/
+def LeftProperCanonicalBranchExclusive
+    (x y z w : PTree) : Prop :=
+  ∀ z₃ : PTree,
+    z₃ ∈ properMatchingLeafGraftings y z →
+    w ∈ properMatchingLeafGraftings x z₃ →
+    ∀ y' : PTree,
+      y' ∈ properMatchingLeafGraftings y x →
+      w ∈ properMatchingLeafGraftings y' z →
+      False
+
+/--
+The root self-grafting counterexample disappears on the proper right-side
+fragment.
+-/
+theorem rightProperCanonicalBranchExclusive_leaf_self
+    (s : MultiSequent) :
+    RightProperCanonicalBranchExclusive
+      (PTree.leaf s) (PTree.leaf s) (PTree.leaf s) (PTree.leaf s) := by
+  intro z₃ hz₃
+  simpa using hz₃
+
+/--
+The same holds on the proper left-side fragment.
+-/
+theorem leftProperCanonicalBranchExclusive_leaf_self
+    (s : MultiSequent) :
+    LeftProperCanonicalBranchExclusive
+      (PTree.leaf s) (PTree.leaf s) (PTree.leaf s) (PTree.leaf s) := by
+  intro z₃ hz₃
+  simpa using hz₃
+
+/--
+A concrete nontrivial tree used to test whether the proper-address restriction
+really removes outer/inner branch overlap.
+-/
+def properOverlapSeq : MultiSequent := MultiSequent.mk 0 0
+
+/-- A single matching leaf. -/
+def properOverlapLeaf : PTree := PTree.leaf properOverlapSeq
+
+/-- A one-step nontrivial tree with a proper graftable leaf at address `[0]`. -/
+def properOverlapTree0 : PTree :=
+  PTree.node RuleTag.baseAx properOverlapSeq [properOverlapLeaf]
+
+/-- Grafting `properOverlapTree0` into itself at `[0]`. -/
+def properOverlapTree1 : PTree :=
+  PTree.node RuleTag.baseAx properOverlapSeq [properOverlapTree0]
+
+/-- One more proper graft step. -/
+def properOverlapTree2 : PTree :=
+  PTree.node RuleTag.baseAx properOverlapSeq [properOverlapTree1]
+
+theorem properOverlapTree1_mem_properMatchingLeafGraftings_self :
+    properOverlapTree1 ∈
+      properMatchingLeafGraftings properOverlapTree0 properOverlapTree0 := by
+  rw [← map_snd_properMatchingLeafGraftWitnesses]
+  refine List.mem_map.2 ?_
+  refine ⟨([0], properOverlapTree1), ?_, rfl⟩
+  rw [mem_properMatchingLeafGraftWitnesses_iff]
+  constructor
+  · rw [mem_matchingLeafGraftWitnesses_iff]
+    constructor
+    · have hleaf :
+          PTree.subtreeAt properOverlapTree0 [0] =
+            some (PTree.leaf properOverlapSeq) := by
+          simp [properOverlapTree0, properOverlapLeaf, PTree.subtreeAt]
+      exact PTree.subtreeAt_some_implies_mem_allAddresses _ _ _ hleaf
+    · have hleaf :
+          PTree.subtreeAt properOverlapTree0 [0] =
+            some (PTree.leaf properOverlapSeq) := by
+          simp [properOverlapTree0, properOverlapLeaf, PTree.subtreeAt]
+      have hmatch : properOverlapTree0.conclusion = properOverlapSeq := by
+        simp [properOverlapTree0, properOverlapSeq, PTree.conclusion]
+      rw [PTree.graftMatchingLeafAt_eq_some_of_match
+        properOverlapTree0 properOverlapTree0 [0] properOverlapSeq hleaf hmatch]
+      simp [properOverlapTree0, properOverlapTree1, properOverlapLeaf,
+        PTree.modifyAt, PTree.replaceNth]
+  · simp [IsProperAddress]
+
+theorem properOverlapTree2_mem_properMatchingLeafGraftings_outer :
+    properOverlapTree2 ∈
+      properMatchingLeafGraftings properOverlapTree0 properOverlapTree1 := by
+  rw [← map_snd_properMatchingLeafGraftWitnesses]
+  refine List.mem_map.2 ?_
+  refine ⟨([0, 0], properOverlapTree2), ?_, rfl⟩
+  rw [mem_properMatchingLeafGraftWitnesses_iff]
+  constructor
+  · rw [mem_matchingLeafGraftWitnesses_iff]
+    constructor
+    · have hleaf :
+          PTree.subtreeAt properOverlapTree1 [0, 0] =
+            some (PTree.leaf properOverlapSeq) := by
+          simp [properOverlapTree1, properOverlapTree0, properOverlapLeaf, PTree.subtreeAt]
+      exact PTree.subtreeAt_some_implies_mem_allAddresses _ _ _ hleaf
+    · have hleaf :
+          PTree.subtreeAt properOverlapTree1 [0, 0] =
+            some (PTree.leaf properOverlapSeq) := by
+          simp [properOverlapTree1, properOverlapTree0, properOverlapLeaf, PTree.subtreeAt]
+      have hmatch : properOverlapTree0.conclusion = properOverlapSeq := by
+        simp [properOverlapTree0, properOverlapSeq, PTree.conclusion]
+      rw [PTree.graftMatchingLeafAt_eq_some_of_match
+        properOverlapTree0 properOverlapTree1 [0, 0] properOverlapSeq hleaf hmatch]
+      simp [properOverlapTree0, properOverlapTree1, properOverlapTree2,
+        properOverlapLeaf, PTree.modifyAt, PTree.replaceNth]
+  · simp [IsProperAddress]
+
+theorem properOverlapTree2_mem_properMatchingLeafGraftings_inner :
+    properOverlapTree2 ∈
+      properMatchingLeafGraftings properOverlapTree1 properOverlapTree0 := by
+  rw [← map_snd_properMatchingLeafGraftWitnesses]
+  refine List.mem_map.2 ?_
+  refine ⟨([0], properOverlapTree2), ?_, rfl⟩
+  rw [mem_properMatchingLeafGraftWitnesses_iff]
+  constructor
+  · rw [mem_matchingLeafGraftWitnesses_iff]
+    constructor
+    · have hleaf :
+          PTree.subtreeAt properOverlapTree0 [0] =
+            some (PTree.leaf properOverlapSeq) := by
+          simp [properOverlapTree0, properOverlapLeaf, PTree.subtreeAt]
+      exact PTree.subtreeAt_some_implies_mem_allAddresses _ _ _ hleaf
+    · have hleaf :
+          PTree.subtreeAt properOverlapTree0 [0] =
+            some (PTree.leaf properOverlapSeq) := by
+          simp [properOverlapTree0, properOverlapLeaf, PTree.subtreeAt]
+      have hmatch : properOverlapTree1.conclusion = properOverlapSeq := by
+        simp [properOverlapTree1, properOverlapSeq, PTree.conclusion]
+      rw [PTree.graftMatchingLeafAt_eq_some_of_match
+        properOverlapTree1 properOverlapTree0 [0] properOverlapSeq hleaf hmatch]
+      simp [properOverlapTree0, properOverlapTree1, properOverlapTree2,
+        properOverlapLeaf, PTree.modifyAt, PTree.replaceNth]
+  · simp [IsProperAddress]
+
+/--
+The proper-address restriction is still not enough in full generality: a
+nontrivial tree can still realize both proper outer and proper inner canonical
+branches.
+-/
+theorem exists_not_rightProperCanonicalBranchExclusive :
+    ¬ RightProperCanonicalBranchExclusive
+      properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 := by
+  intro hExcl
+  exact hExcl
+    properOverlapTree1
+    properOverlapTree1_mem_properMatchingLeafGraftings_self
+    properOverlapTree2_mem_properMatchingLeafGraftings_outer
+    properOverlapTree1
+    properOverlapTree1_mem_properMatchingLeafGraftings_self
+    properOverlapTree2_mem_properMatchingLeafGraftings_inner
+
+/--
+The same nontrivial counterexample defeats left-side proper canonical branch
+exclusivity as well.
+-/
+theorem exists_not_leftProperCanonicalBranchExclusive :
+    ¬ LeftProperCanonicalBranchExclusive
+      properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 := by
+  intro hExcl
+  exact hExcl
+    properOverlapTree1
+    properOverlapTree1_mem_properMatchingLeafGraftings_self
+    properOverlapTree2_mem_properMatchingLeafGraftings_outer
+    properOverlapTree1
+    properOverlapTree1_mem_properMatchingLeafGraftings_self
+    properOverlapTree2_mem_properMatchingLeafGraftings_inner
+
+/--
+The nontrivial proper-fragment overlap comes from explicit raw witness data:
+grafting `properOverlapTree0` into itself at `[0]` yields `properOverlapTree1`.
+-/
+theorem properOverlap_self_matchingWitness :
+    ([0], properOverlapTree1) ∈
+      matchingLeafGraftWitnesses properOverlapTree0 properOverlapTree0 := by
+  rw [mem_matchingLeafGraftWitnesses_iff]
+  constructor
+  · have hleaf :
+        PTree.subtreeAt properOverlapTree0 [0] =
+          some (PTree.leaf properOverlapSeq) := by
+        simp [properOverlapTree0, properOverlapLeaf, PTree.subtreeAt]
+    exact PTree.subtreeAt_some_implies_mem_allAddresses _ _ _ hleaf
+  · have hleaf :
+        PTree.subtreeAt properOverlapTree0 [0] =
+          some (PTree.leaf properOverlapSeq) := by
+        simp [properOverlapTree0, properOverlapLeaf, PTree.subtreeAt]
+    have hmatch : properOverlapTree0.conclusion = properOverlapSeq := by
+      simp [properOverlapTree0, properOverlapSeq, PTree.conclusion]
+    rw [PTree.graftMatchingLeafAt_eq_some_of_match
+      properOverlapTree0 properOverlapTree0 [0] properOverlapSeq hleaf hmatch]
+    simp [properOverlapTree0, properOverlapTree1, properOverlapLeaf,
+      PTree.modifyAt, PTree.replaceNth]
+
+/--
+The corresponding second-step outer witness is also explicit.
+-/
+theorem properOverlap_outer_matchingWitness :
+    ([0, 0], properOverlapTree2) ∈
+      matchingLeafGraftWitnesses properOverlapTree0 properOverlapTree1 := by
+  rw [mem_matchingLeafGraftWitnesses_iff]
+  constructor
+  · have hleaf :
+        PTree.subtreeAt properOverlapTree1 [0, 0] =
+          some (PTree.leaf properOverlapSeq) := by
+        simp [properOverlapTree1, properOverlapTree0, properOverlapLeaf, PTree.subtreeAt]
+    exact PTree.subtreeAt_some_implies_mem_allAddresses _ _ _ hleaf
+  · have hleaf :
+        PTree.subtreeAt properOverlapTree1 [0, 0] =
+          some (PTree.leaf properOverlapSeq) := by
+        simp [properOverlapTree1, properOverlapTree0, properOverlapLeaf, PTree.subtreeAt]
+    have hmatch : properOverlapTree0.conclusion = properOverlapSeq := by
+      simp [properOverlapTree0, properOverlapSeq, PTree.conclusion]
+    rw [PTree.graftMatchingLeafAt_eq_some_of_match
+      properOverlapTree0 properOverlapTree1 [0, 0] properOverlapSeq hleaf hmatch]
+    simp [properOverlapTree0, properOverlapTree1, properOverlapTree2,
+      properOverlapLeaf, PTree.modifyAt, PTree.replaceNth]
+
+/--
+The competing inner second-step witness is explicit too.
+-/
+theorem properOverlap_inner_matchingWitness :
+    ([0], properOverlapTree2) ∈
+      matchingLeafGraftWitnesses properOverlapTree1 properOverlapTree0 := by
+  rw [mem_matchingLeafGraftWitnesses_iff]
+  constructor
+  · have hleaf :
+        PTree.subtreeAt properOverlapTree0 [0] =
+          some (PTree.leaf properOverlapSeq) := by
+        simp [properOverlapTree0, properOverlapLeaf, PTree.subtreeAt]
+    exact PTree.subtreeAt_some_implies_mem_allAddresses _ _ _ hleaf
+  · have hleaf :
+        PTree.subtreeAt properOverlapTree0 [0] =
+          some (PTree.leaf properOverlapSeq) := by
+        simp [properOverlapTree0, properOverlapLeaf, PTree.subtreeAt]
+    have hmatch : properOverlapTree1.conclusion = properOverlapSeq := by
+      simp [properOverlapTree1, properOverlapSeq, PTree.conclusion]
+    rw [PTree.graftMatchingLeafAt_eq_some_of_match
+      properOverlapTree1 properOverlapTree0 [0] properOverlapSeq hleaf hmatch]
+    simp [properOverlapTree0, properOverlapTree1, properOverlapTree2,
+      properOverlapLeaf, PTree.modifyAt, PTree.replaceNth]
+
+/--
+The nontrivial overlap already lies inside the intended quotient: the explicit
+left-outer presentation is equivalent to the explicit right-inner one.
+-/
+theorem properOverlap_leftOuter_rightInner_equiv :
+    TwoStepEquiv
+      properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2
+      (TwoStepCode.leftOuter
+        [0] [0, 0] properOverlapTree1
+        properOverlap_self_matchingWitness
+        properOverlap_outer_matchingWitness)
+      (TwoStepCode.rightInner
+        [0] [0] properOverlapTree1
+        properOverlap_self_matchingWitness
+        properOverlap_inner_matchingWitness) := by
+  refine TwoStepEquiv.outer_comm_inner
+    properOverlap_self_matchingWitness
+    properOverlap_outer_matchingWitness
+    properOverlap_self_matchingWitness
+    properOverlap_inner_matchingWitness
+    ?_
+  rw [mem_twoStepAddrWitnessesRight_iff]
+  exact Or.inr ⟨properOverlapTree1, properOverlap_self_matchingWitness,
+    properOverlap_inner_matchingWitness⟩
+
+/--
+Dually, the explicit right-outer presentation is equivalent to the explicit
+left-inner one.
+-/
+theorem properOverlap_rightOuter_leftInner_equiv :
+    TwoStepEquiv
+      properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2
+      (TwoStepCode.rightOuter
+        [0] [0, 0] properOverlapTree1
+        properOverlap_self_matchingWitness
+        properOverlap_outer_matchingWitness)
+      (TwoStepCode.leftInner
+        [0] [0] properOverlapTree1
+        properOverlap_self_matchingWitness
+        properOverlap_inner_matchingWitness) := by
+  refine TwoStepEquiv.outer_comm_back_inner
+    properOverlap_self_matchingWitness
+    properOverlap_outer_matchingWitness
+    properOverlap_self_matchingWitness
+    properOverlap_inner_matchingWitness
+    ?_
+  rw [mem_twoStepAddrWitnessesLeft_iff]
+  exact Or.inr ⟨properOverlapTree1, properOverlap_self_matchingWitness,
+    properOverlap_inner_matchingWitness⟩
+
+/--
+So the new nontrivial overlap counterexample is already quotient-controlled on
+the left-to-right comparison.
+-/
+theorem properOverlap_leftOuter_rightInner_sameClass :
+    codeClass
+      (TwoStepCode.leftOuter
+        [0] [0, 0] properOverlapTree1
+        properOverlap_self_matchingWitness
+        properOverlap_outer_matchingWitness)
+      =
+    codeClass
+      (TwoStepCode.rightInner
+        [0] [0] properOverlapTree1
+        properOverlap_self_matchingWitness
+        properOverlap_inner_matchingWitness) := by
+  exact codeClass_eq_of_equiv properOverlap_leftOuter_rightInner_equiv
+
+/--
+And likewise on the right-to-left comparison.
+-/
+theorem properOverlap_rightOuter_leftInner_sameClass :
+    codeClass
+      (TwoStepCode.rightOuter
+        [0] [0, 0] properOverlapTree1
+        properOverlap_self_matchingWitness
+        properOverlap_outer_matchingWitness)
+      =
+    codeClass
+      (TwoStepCode.leftInner
+        [0] [0] properOverlapTree1
+        properOverlap_self_matchingWitness
+        properOverlap_inner_matchingWitness) := by
+  exact codeClass_eq_of_equiv properOverlap_rightOuter_leftInner_equiv
+
+/--
+The quotient class of any left-outer witness coincides with the quotient class
+of any right-inner witness in the same `(x,y,z,w)` geometry.
+
+This is the general overlap-to-same-class form of `outer_comm_inner`.
+-/
+theorem outerLeftWitnessClass_eq_rightInnerWitnessClass
+    (x y z w : PTree)
+    (hOut : OuterLeftWitness x y z w)
+    (hIn : RightInnerWitnessData x y z w) :
+    outerLeftWitnessClass hOut = classOfRightWitness hIn.1 := by
+  rcases hOut with ⟨a, b, z', haz, hbw⟩
+  rcases hIn with ⟨h, hh⟩
+  cases h with
+  | inner a' b' y' hay' hbw' =>
+      exact codeClass_eq_of_equiv
+        (TwoStepEquiv.outer_comm_inner haz hbw hay' hbw' (by
+          rw [mem_twoStepAddrWitnessesRight_iff]
+          exact Or.inr ⟨y', hay', hbw'⟩))
+  | outer =>
+      cases hh
+
+/--
+The quotient class of any right-outer witness coincides with the quotient class
+of any left-inner witness in the same `(x,y,z,w)` geometry.
+
+This is the general overlap-to-same-class form of `outer_comm_back_inner`.
+-/
+theorem outerRightWitnessClass_eq_leftInnerWitnessClass
+    (x y z w : PTree)
+    (hOut : OuterRightWitness x y z w)
+    (hIn : LeftInnerWitnessData x y z w) :
+    outerRightWitnessClass hOut = leftInnerWitnessClass x y z w hIn := by
+  rcases hOut with ⟨a, b, z', haz, hbw⟩
+  rcases hIn with ⟨h, hh⟩
+  cases h with
+  | inner a' b' y' hay' hbw' =>
+      exact codeClass_eq_of_equiv
+        (TwoStepEquiv.outer_comm_back_inner haz hbw hay' hbw' (by
+          rw [mem_twoStepAddrWitnessesLeft_iff]
+          exact Or.inr ⟨y', hay', hbw'⟩))
+  | outer =>
+      cases hh
+
+/-- The quotient class attached to a raw right-inner witness. -/
+def rightInnerWitnessClass
+    (x y z w : PTree) :
+    RightInnerWitnessData x y z w → TwoStepQuotient x y z w
+  | ⟨h, _⟩ => classOfRightWitness h
+
+/-- Right-inner witnesses lying over a fixed quotient class `q`. -/
+def RightInnerFiberData
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) :=
+  { h : RightInnerWitnessData x y z w //
+      rightInnerWitnessClass x y z w h = q }
+
+/-- A quotient class on the right/original orientation carries inner data. -/
+def HasRightInnerContributionClass
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) : Prop :=
+  Nonempty (RightInnerFiberData x y z w q)
+
+/--
+Raw overlap is controlled by the quotient on the left-to-right comparison:
+every left-outer witness and every right-inner witness determine the same class.
+-/
+def LeftToRightOverlapControlled
+    (x y z w : PTree) : Prop :=
+  ∀ hOut : OuterLeftWitness x y z w,
+    ∀ hIn : RightInnerWitnessData x y z w,
+      outerLeftWitnessClass hOut = rightInnerWitnessClass x y z w hIn
+
+/--
+Raw overlap is controlled by the quotient on the right-to-left comparison:
+every right-outer witness and every left-inner witness determine the same class.
+-/
+def RightToLeftOverlapControlled
+    (x y z w : PTree) : Prop :=
+  ∀ hOut : OuterRightWitness x y z w,
+    ∀ hIn : LeftInnerWitnessData x y z w,
+      outerRightWitnessClass hOut = leftInnerWitnessClass x y z w hIn
+
+/-- The left-to-right overlap control theorem holds in full generality. -/
+theorem leftToRightOverlapControlled
+    (x y z w : PTree) :
+    LeftToRightOverlapControlled x y z w := by
+  intro hOut hIn
+  exact outerLeftWitnessClass_eq_rightInnerWitnessClass x y z w hOut hIn
+
+/-- The right-to-left overlap control theorem holds in full generality. -/
+theorem rightToLeftOverlapControlled
+    (x y z w : PTree) :
+    RightToLeftOverlapControlled x y z w := by
+  intro hOut hIn
+  exact outerRightWitnessClass_eq_leftInnerWitnessClass x y z w hOut hIn
+
+/--
+Class-level form of left-to-right overlap control: any outer-left-supported
+class and any right-inner-supported class must coincide.
+-/
+theorem HasLeftOuterContributionClass.eq_rightInnerContributionClass
+    (x y z w : PTree)
+    (q q' : TwoStepQuotient x y z w)
+    (hq : HasLeftOuterContributionClass x y z w q)
+    (hq' : HasRightInnerContributionClass x y z w q') :
+    q = q' := by
+  rcases hq with ⟨hOut, rfl⟩
+  rcases hq' with ⟨⟨hIn, hhIn⟩⟩
+  exact (outerLeftWitnessClass_eq_rightInnerWitnessClass x y z w hOut hIn).trans hhIn
+
+/--
+Class-level form of right-to-left overlap control: any right-outer-supported
+class and any left-inner-supported class must coincide.
+-/
+theorem HasRightOuterContributionClass.eq_leftInnerContributionClass
+    (x y z w : PTree)
+    (q q' : TwoStepQuotient x y z w)
+    (hq : HasRightOuterContributionClass x y z w q)
+    (hq' : HasLeftInnerContributionClass x y z w q') :
+    q = q' := by
+  rcases hq with ⟨hOut, rfl⟩
+  rcases hq' with ⟨⟨hIn, hhIn⟩⟩
+  exact (outerRightWitnessClass_eq_leftInnerWitnessClass x y z w hOut hIn).trans hhIn
+
+/--
+Checkpoint 1, restated at the right level:
+all outer/inner overlaps that occur in the geometry are already controlled by
+the quotient at class level.
+-/
+def ClassLevelCheckpoint1
+    (x y z w : PTree) : Prop :=
+  (∀ q q' : TwoStepQuotient x y z w,
+      HasLeftOuterContributionClass x y z w q →
+      HasRightInnerContributionClass x y z w q' →
+      q = q')
+  ∧
+  (∀ q q' : TwoStepQuotient x y z w,
+      HasRightOuterContributionClass x y z w q →
+      HasLeftInnerContributionClass x y z w q' →
+      q = q')
+
+/--
+Checkpoint 1: the quotient accounts for outer/inner overlap rather than
+leaving it as uncontrolled raw ambiguity.
+-/
+theorem classLevelCheckpoint1
+    (x y z w : PTree) :
+    ClassLevelCheckpoint1 x y z w := by
+  constructor
+  · intro q q' hq hq'
+    exact HasLeftOuterContributionClass.eq_rightInnerContributionClass x y z w q q' hq hq'
+  · intro q q' hq hq'
+    exact HasRightOuterContributionClass.eq_leftInnerContributionClass x y z w q q' hq hq'
+
+/--
+Minimal provisional outer-visibility predicate on quotient classes in the
+original orientation.
+-/
+def ClassHasOuterRepresentative
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) : Prop :=
+  HasLeftOuterContributionClass x y z w q ∨
+    HasRightOuterContributionClass x y z w q
+
+/--
+Minimal provisional inner-visibility predicate on quotient classes in the
+original orientation.
+-/
+def ClassHasInnerRepresentative
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) : Prop :=
+  HasLeftInnerContributionClass x y z w q ∨
+    HasRightInnerContributionClass x y z w q
+
+/--
+Left-to-right overlap noise: a class simultaneously admits a left-outer and a
+right-inner presentation, and this coincidence is quotient-trivial by the new
+overlap-control theorem.
+-/
+def LeftToRightOverlapNoiseClass
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) : Prop :=
+  HasLeftOuterContributionClass x y z w q ∧
+    HasRightInnerContributionClass x y z w q
+
+/--
+Right-to-left overlap noise: a class simultaneously admits a right-outer and a
+left-inner presentation, again in a quotient-trivial way.
+-/
+def RightToLeftOverlapNoiseClass
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) : Prop :=
+  HasRightOuterContributionClass x y z w q ∧
+    HasLeftInnerContributionClass x y z w q
+
+/--
+Residual left contribution classes are those left contribution classes left
+over after quotient-trivial overlap noise is removed.
+-/
+def ResidualLeftContributionClass
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) : Prop :=
+  IsLeftContributionClass x y z w q ∧
+    ¬ LeftToRightOverlapNoiseClass x y z w q ∧
+    ¬ RightToLeftOverlapNoiseClass x y z w q
+
+/-- Any left-outer supporting class is outer-visible. -/
+theorem HasLeftOuterContributionClass.to_outerVisible
+    (x y z w : PTree)
+    {q : TwoStepQuotient x y z w}
+    (hq : HasLeftOuterContributionClass x y z w q) :
+    ClassHasOuterRepresentative x y z w q := by
+  exact Or.inl hq
+
+/-- Any right-outer supporting class is outer-visible. -/
+theorem HasRightOuterContributionClass.to_outerVisible
+    (x y z w : PTree)
+    {q : TwoStepQuotient x y z w}
+    (hq : HasRightOuterContributionClass x y z w q) :
+    ClassHasOuterRepresentative x y z w q := by
+  exact Or.inr hq
+
+/-- Any left-inner supporting class is inner-visible. -/
+theorem HasLeftInnerContributionClass.to_innerVisible
+    (x y z w : PTree)
+    {q : TwoStepQuotient x y z w}
+    (hq : HasLeftInnerContributionClass x y z w q) :
+    ClassHasInnerRepresentative x y z w q := by
+  exact Or.inl hq
+
+/-- Any right-inner supporting class is inner-visible. -/
+theorem HasRightInnerContributionClass.to_innerVisible
+    (x y z w : PTree)
+    {q : TwoStepQuotient x y z w}
+    (hq : HasRightInnerContributionClass x y z w q) :
+    ClassHasInnerRepresentative x y z w q := by
+  exact Or.inr hq
+
+/-- Left-to-right overlap noise classes are simultaneously outer- and inner-visible. -/
+theorem LeftToRightOverlapNoiseClass.visible
+    (x y z w : PTree)
+    {q : TwoStepQuotient x y z w}
+    (hq : LeftToRightOverlapNoiseClass x y z w q) :
+    ClassHasOuterRepresentative x y z w q ∧
+      ClassHasInnerRepresentative x y z w q := by
+  exact ⟨hq.1.to_outerVisible x y z w, hq.2.to_innerVisible x y z w⟩
+
+/-- Right-to-left overlap noise classes are simultaneously outer- and inner-visible. -/
+theorem RightToLeftOverlapNoiseClass.visible
+    (x y z w : PTree)
+    {q : TwoStepQuotient x y z w}
+    (hq : RightToLeftOverlapNoiseClass x y z w q) :
+    ClassHasOuterRepresentative x y z w q ∧
+      ClassHasInnerRepresentative x y z w q := by
+  exact ⟨hq.1.to_outerVisible x y z w, hq.2.to_innerVisible x y z w⟩
+
+/--
+The left-to-right overlap noise floor has degree at most one class.
+-/
+theorem LeftToRightOverlapNoiseClass_subsingleton
+    (x y z w : PTree) :
+    Subsingleton { q : TwoStepQuotient x y z w //
+      LeftToRightOverlapNoiseClass x y z w q } := by
+  refine ⟨?_⟩
+  intro u v
+  apply Subtype.ext
+  exact HasLeftOuterContributionClass.eq_rightInnerContributionClass
+    x y z w u.1 v.1 u.2.1 v.2.2
+
+/--
+The right-to-left overlap noise floor also has degree at most one class.
+-/
+theorem RightToLeftOverlapNoiseClass_subsingleton
+    (x y z w : PTree) :
+    Subsingleton { q : TwoStepQuotient x y z w //
+      RightToLeftOverlapNoiseClass x y z w q } := by
+  refine ⟨?_⟩
+  intro u v
+  apply Subtype.ext
+  exact HasRightOuterContributionClass.eq_leftInnerContributionClass
+    x y z w u.1 v.1 u.2.1 v.2.2
+
+/--
+Every left contribution class is either quotient-trivial overlap noise in one
+of the two controlled senses, or else belongs to the residual sector.
+-/
+theorem leftContributionClass_overlapNoise_or_residual
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : IsLeftContributionClass x y z w q) :
+    LeftToRightOverlapNoiseClass x y z w q ∨
+      RightToLeftOverlapNoiseClass x y z w q ∨
+      ResidualLeftContributionClass x y z w q := by
+  classical
+  by_cases hLR : LeftToRightOverlapNoiseClass x y z w q
+  · exact Or.inl hLR
+  · by_cases hRL : RightToLeftOverlapNoiseClass x y z w q
+    · exact Or.inr (Or.inl hRL)
+    · exact Or.inr (Or.inr ⟨hq, hLR, hRL⟩)
+
+/--
+The explicit nontrivial proper-overlap counterexample lands in the
+left-to-right overlap noise floor.
+-/
+theorem properOverlap_class_is_leftToRightOverlapNoise :
+    LeftToRightOverlapNoiseClass
+      properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2
+      (codeClass
+        (TwoStepCode.leftOuter
+          [0] [0, 0] properOverlapTree1
+          properOverlap_self_matchingWitness
+          properOverlap_outer_matchingWitness)) := by
+  constructor
+  · refine ⟨OuterLeftWitness.mk [0] [0, 0] properOverlapTree1
+      properOverlap_self_matchingWitness
+      properOverlap_outer_matchingWitness, rfl⟩
+  · refine ⟨⟨?_, ?_⟩⟩
+    · exact ⟨TwoStepWitnessRight.inner
+        [0] [0] properOverlapTree1
+        properOverlap_self_matchingWitness
+        properOverlap_inner_matchingWitness, trivial⟩
+    · simpa [rightInnerWitnessClass, classOfRightWitness, codeOfRightWitness]
+        using properOverlap_leftOuter_rightInner_sameClass.symm
+
+/--
+If an independent left-outer source had an opposite right-inner witness, then
+the right side would necessarily admit both outer and inner witness branches.
+
+This isolates the exact extra hypothesis still missing if one wants a direct
+contradiction from the current decomposition machinery alone.
+-/
+theorem independent_leftOuter_with_rightInner_forces_rightBranchOverlap
+    (x y z w : PTree)
+    (hOut : OuterLeftWitness x y z w)
+    (hInd : OuterLeftWitnessIndependent hOut)
+    (hIn : RightInnerWitnessData x y z w) :
+    ¬ RightWitnessBranchExclusive x y z w := by
+  intro hExcl
+  rcases independent_outerLeft_gives_rightOuterWitness x y z w hOut hInd with ⟨hOutR⟩
+  exact hExcl hOutR hIn
+
+/--
+Under right-branch exclusivity, an independent left-outer source cannot also
+admit an opposite right-inner witness.
+-/
+theorem independent_leftOuter_excludes_rightInner_of_rightBranchExclusive
+    (x y z w : PTree)
+    (hExcl : RightWitnessBranchExclusive x y z w)
+    (hOut : OuterLeftWitness x y z w)
+    (hInd : OuterLeftWitnessIndependent hOut)
+    (hIn : RightInnerWitnessData x y z w) :
+    False := by
+  exact
+    (independent_leftOuter_with_rightInner_forces_rightBranchOverlap
+      x y z w hOut hInd hIn) hExcl
+
+/--
+If an independent right-outer source had an opposite left-inner witness, then
+the left side would necessarily admit both outer and inner witness branches.
+-/
+theorem independent_rightOuter_with_leftInner_forces_leftBranchOverlap
+    (x y z w : PTree)
+    (hOut : OuterRightWitness x y z w)
+    (hInd : OuterRightWitnessIndependent hOut)
+    (hIn : LeftInnerWitnessData x y z w) :
+    ¬ LeftWitnessBranchExclusive x y z w := by
+  intro hExcl
+  rcases independent_outerRight_gives_leftOuterWitness x y z w hOut hInd with ⟨hOutL⟩
+  exact hExcl hOutL hIn
+
+/--
+Under left-branch exclusivity, an independent right-outer source cannot also
+admit an opposite left-inner witness.
+-/
+theorem independent_rightOuter_excludes_leftInner_of_leftBranchExclusive
+    (x y z w : PTree)
+    (hExcl : LeftWitnessBranchExclusive x y z w)
+    (hOut : OuterRightWitness x y z w)
+    (hInd : OuterRightWitnessIndependent hOut)
+    (hIn : LeftInnerWitnessData x y z w) :
+    False := by
+  exact
+    (independent_rightOuter_with_leftInner_forces_leftBranchOverlap
+      x y z w hOut hInd hIn) hExcl
+
+/--
+Geometric right-side canonical branch exclusivity is sufficient to exclude an
+opposite right-inner witness from an independent left-outer source.
+-/
+theorem independent_leftOuter_excludes_rightInner_of_rightCanonicalBranchExclusive
+    (x y z w : PTree)
+    (hExcl : RightCanonicalBranchExclusive x y z w)
+    (hOut : OuterLeftWitness x y z w)
+    (hInd : OuterLeftWitnessIndependent hOut)
+    (hIn : RightInnerWitnessData x y z w) :
+    False := by
+  exact
+    independent_leftOuter_excludes_rightInner_of_rightBranchExclusive
+      x y z w
+      (rightWitnessBranchExclusive_of_rightCanonicalBranchExclusive x y z w hExcl)
+      hOut hInd hIn
+
+/--
+Geometric left-side canonical branch exclusivity is sufficient to exclude an
+opposite left-inner witness from an independent right-outer source.
+-/
+theorem independent_rightOuter_excludes_leftInner_of_leftCanonicalBranchExclusive
+    (x y z w : PTree)
+    (hExcl : LeftCanonicalBranchExclusive x y z w)
+    (hOut : OuterRightWitness x y z w)
+    (hInd : OuterRightWitnessIndependent hOut)
+    (hIn : LeftInnerWitnessData x y z w) :
+    False := by
+  exact
+    independent_rightOuter_excludes_leftInner_of_leftBranchExclusive
+      x y z w
+      (leftWitnessBranchExclusive_of_leftCanonicalBranchExclusive x y z w hExcl)
+      hOut hInd hIn
+
 
 
 
