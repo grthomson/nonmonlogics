@@ -7784,137 +7784,1887 @@ theorem canonicalLeftNeighborOfRightNeighbor_recovers_target_of_unique
       x y z w hUnique s t)
 
 
+/-!
+## Outer-fragment bridge data
+-/
+
+/-- A left contribution class whose underlying quotient is outer-supported. -/
+def HasOuterSupportLeftContributionClass
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) : Prop :=
+  HasLeftOuterContributionClass x y z w s.1
+
+/-- Any outer-supported left contribution class has some swapped right-outer partner. -/
+theorem HasOuterSupportLeftContributionClass.exists_swapped_rightOuter
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (hs : HasOuterSupportLeftContributionClass x y z w s) :
+    ∃ q' : TwoStepQuotient y x z w,
+      SwappedTwoStepClass x y z w s.1 q' ∧
+      HasSwappedRightOuterContributionClass x y z w q' := by
+  exact HasLeftOuterContributionClass.exists_rightOuter x y z w s.1 hs
+
+/-- A canonical swapped right-outer partner quotient for an outer-supported left class. -/
+noncomputable def canonicalSwappedRightOuterPartner
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (hs : HasOuterSupportLeftContributionClass x y z w s) :
+    TwoStepQuotient y x z w :=
+  Classical.choose
+    (HasOuterSupportLeftContributionClass.exists_swapped_rightOuter x y z w s hs)
+
+/-- The canonical swapped right-outer partner is swapped-related to the source class. -/
+theorem canonicalSwappedRightOuterPartner_swapped
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (hs : HasOuterSupportLeftContributionClass x y z w s) :
+    SwappedTwoStepClass x y z w s.1
+      (canonicalSwappedRightOuterPartner x y z w s hs) := by
+  exact
+    (Classical.choose_spec
+      (HasOuterSupportLeftContributionClass.exists_swapped_rightOuter x y z w s hs)).1
+
+/-- The canonical swapped right-outer partner is right-outer-supported. -/
+theorem canonicalSwappedRightOuterPartner_has_rightOuter
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (hs : HasOuterSupportLeftContributionClass x y z w s) :
+    HasSwappedRightOuterContributionClass x y z w
+      (canonicalSwappedRightOuterPartner x y z w s hs) := by
+  exact
+    (Classical.choose_spec
+      (HasOuterSupportLeftContributionClass.exists_swapped_rightOuter x y z w s hs)).2
+
+/-- Outer-supported left classes admit at least one raw swapped right partner. -/
+theorem HasOuterSupportLeftContributionClass.exists_swapped_rightPartner
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (hs : HasOuterSupportLeftContributionClass x y z w s) :
+    ∃ q' : TwoStepQuotient y x z w,
+      SwappedTwoStepClass x y z w s.1 q' := by
+  refine ⟨canonicalSwappedRightOuterPartner x y z w s hs, ?_⟩
+  exact canonicalSwappedRightOuterPartner_swapped x y z w s hs
 
 
 /-!
-## Bridge goals from mediator rigidity to neighbour-fibre uniqueness
+## Outer-fragment uniqueness hypotheses
+-/
+
+def RightOuterNeighborFiberUnique
+    (x y z w : PTree) : Prop :=
+  ∀ s : LeftContributionClasses x y z w,
+    HasOuterSupportLeftContributionClass x y z w s →
+    ∀ u v : RightContributionClasses x y z w,
+      SwappedTwoStepClass x y z w s.1 u.1 →
+      SwappedTwoStepClass x y z w s.1 v.1 →
+      u = v
+
+theorem rightContributionClass_eq_of_outerUnique
+    (x y z w : PTree)
+    (hUnique : RightOuterNeighborFiberUnique x y z w)
+    (s : LeftContributionClasses x y z w)
+    (hs : HasOuterSupportLeftContributionClass x y z w s)
+    (u v : RightContributionClasses x y z w)
+    (hu : SwappedTwoStepClass x y z w s.1 u.1)
+    (hv : SwappedTwoStepClass x y z w s.1 v.1) :
+    u = v := by
+  exact hUnique s hs u v hu hv
+
+/-!
+## Outer-supported source classes: witness extraction
+-/
+
+/-- Unpack outer support of a left contribution class into an explicit outer-left witness. -/
+theorem HasOuterSupportLeftContributionClass.exists_outerLeftWitness
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (hs : HasOuterSupportLeftContributionClass x y z w s) :
+    ∃ h : OuterLeftWitness x y z w,
+      outerLeftWitnessClass h = s.1 := by
+  exact hs
+
+/-- A canonical outer-left witness attached to an outer-supported left contribution class. -/
+noncomputable def canonicalOuterLeftWitnessOfOuterSupport
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (hs : HasOuterSupportLeftContributionClass x y z w s) :
+    OuterLeftWitness x y z w :=
+  Classical.choose
+    (HasOuterSupportLeftContributionClass.exists_outerLeftWitness x y z w s hs)
+
+/-- The canonical outer-left witness has the expected class. -/
+theorem canonicalOuterLeftWitnessOfOuterSupport_class
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (hs : HasOuterSupportLeftContributionClass x y z w s) :
+    outerLeftWitnessClass
+      (canonicalOuterLeftWitnessOfOuterSupport x y z w s hs) = s.1 := by
+  exact
+    Classical.choose_spec
+      (HasOuterSupportLeftContributionClass.exists_outerLeftWitness x y z w s hs)
+
+/-- Repackage the canonical outer-left witness as outer support again. -/
+theorem canonicalOuterLeftWitnessOfOuterSupport_has_outerSupport
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (hs : HasOuterSupportLeftContributionClass x y z w s) :
+    HasLeftOuterContributionClass x y z w s.1 := by
+  refine ⟨canonicalOuterLeftWitnessOfOuterSupport x y z w s hs, ?_⟩
+  exact canonicalOuterLeftWitnessOfOuterSupport_class x y z w s hs
+
+
+/-!
+## Canonical right-outer partner induced by the canonical outer-left witness
+-/
+
+/-- The canonical outer-left witness determines a swapped right-outer partner. -/
+theorem canonicalOuterLeftWitnessOfOuterSupport_exists_rightOuter
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (hs : HasOuterSupportLeftContributionClass x y z w s) :
+    ∃ q' : TwoStepQuotient y x z w,
+      SwappedTwoStepClass x y z w s.1 q' ∧
+      HasSwappedRightOuterContributionClass x y z w q' := by
+  exact HasLeftOuterContributionClass.exists_rightOuter x y z w s.1
+    (canonicalOuterLeftWitnessOfOuterSupport_has_outerSupport x y z w s hs)
+
+/-- The canonical swapped right-outer partner may be recovered from the canonical outer-left witness. -/
+theorem canonicalSwappedRightOuterPartner_spec
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (hs : HasOuterSupportLeftContributionClass x y z w s) :
+    SwappedTwoStepClass x y z w s.1
+      (canonicalSwappedRightOuterPartner x y z w s hs)
+    ∧
+    HasSwappedRightOuterContributionClass x y z w
+      (canonicalSwappedRightOuterPartner x y z w s hs) := by
+  exact Classical.choose_spec
+    (HasOuterSupportLeftContributionClass.exists_swapped_rightOuter x y z w s hs)
+
+
+
+def outerLeftToOuterRight
+    (x y z w : PTree) :
+    OuterLeftWitness x y z w → OuterRightWitness y x z w
+| .mk a b z' haz hbw => .mk a b z' haz hbw
+
+#check outerLeftToOuterRight
+
+def outerRightToOuterLeft
+    (x y z w : PTree) :
+    OuterRightWitness y x z w → OuterLeftWitness x y z w
+| .mk a b z' haz hbw => .mk a b z' haz hbw
+
+@[simp] theorem outerRightToOuterLeft_outerLeftToOuterRight
+    (x y z w : PTree)
+    (h : OuterLeftWitness x y z w) :
+    outerRightToOuterLeft x y z w (outerLeftToOuterRight x y z w h) = h := by
+  cases h
+  rfl
+
+@[simp] theorem outerLeftToOuterRight_outerRightToOuterLeft
+    (x y z w : PTree)
+    (r : OuterRightWitness y x z w) :
+    outerLeftToOuterRight x y z w (outerRightToOuterLeft x y z w r) = r := by
+  cases r
+  rfl
+
+/-- Outer commutation is a bijection of witness data. -/
+def outerCommute
+    (x y z w : PTree) :
+    OuterLeftWitness x y z w ≃ OuterRightWitness y x z w where
+  toFun := outerLeftToOuterRight x y z w
+  invFun := outerRightToOuterLeft x y z w
+  left_inv := outerRightToOuterLeft_outerLeftToOuterRight x y z w
+  right_inv := outerLeftToOuterRight_outerRightToOuterLeft x y z w
+
+@[simp] theorem outerLeftToOuterRight_swapped
+    (x y z w : PTree)
+    (h : OuterLeftWitness x y z w) :
+    SwappedTwoStepClass x y z w
+      (outerLeftWitnessClass h)
+      (outerRightWitnessClass (outerLeftToOuterRight x y z w h)) := by
+  cases h with
+  | mk a b z' haz hbw =>
+      simpa [outerLeftWitnessClass, outerRightWitnessClass,
+        outerLeftToOuterRight,
+        classOfLeftWitness, classOfRightWitness,
+        codeOfLeftWitness, codeOfRightWitness]
+        using
+          (SwappedTwoStepClass.leftOuter
+            (x := x) (y := y) (z := z) (w := w)
+            a b z' haz hbw)
+
+@[simp] theorem outerRightToOuterLeft_swapped
+    (x y z w : PTree)
+    (r : OuterRightWitness y x z w) :
+    SwappedTwoStepClass x y z w
+      (outerLeftWitnessClass (outerRightToOuterLeft x y z w r))
+      (outerRightWitnessClass r) := by
+  cases r with
+  | mk a b z' haz hbw =>
+      simpa [outerLeftWitnessClass, outerRightWitnessClass,
+        outerRightToOuterLeft,
+        classOfLeftWitness, classOfRightWitness,
+        codeOfLeftWitness, codeOfRightWitness]
+        using
+          (SwappedTwoStepClass.leftOuter
+            (x := x) (y := y) (z := z) (w := w)
+            a b z' haz hbw)
+
+/--
+An explicit outer-left witness determines its swapped right-outer class partner,
+and that target class is visibly outer-supported on the swapped side.
+-/
+theorem outerLeftToOuterRight_class_spec
+    (x y z w : PTree)
+    (h : OuterLeftWitness x y z w) :
+    SwappedTwoStepClass x y z w
+      (outerLeftWitnessClass h)
+      (outerRightWitnessClass (outerLeftToOuterRight x y z w h))
+    ∧
+    HasSwappedRightOuterContributionClass x y z w
+      (outerRightWitnessClass (outerLeftToOuterRight x y z w h)) := by
+  refine ⟨outerLeftToOuterRight_swapped x y z w h, ?_⟩
+  exact ⟨outerLeftToOuterRight x y z w h, rfl⟩
+
+/--
+An explicit swapped right-outer witness determines its left-outer class partner,
+and that source class is visibly outer-supported on the original side.
+-/
+theorem outerRightToOuterLeft_class_spec
+    (x y z w : PTree)
+    (r : OuterRightWitness y x z w) :
+    SwappedTwoStepClass x y z w
+      (outerLeftWitnessClass (outerRightToOuterLeft x y z w r))
+      (outerRightWitnessClass r)
+    ∧
+    HasLeftOuterContributionClass x y z w
+      (outerLeftWitnessClass (outerRightToOuterLeft x y z w r)) := by
+  refine ⟨outerRightToOuterLeft_swapped x y z w r, ?_⟩
+  exact ⟨outerRightToOuterLeft x y z w r, rfl⟩
+
+/--
+Swap the orientation of a raw two-step code by exchanging the left/right
+presentation and simultaneously swapping the first two tree arguments.
+-/
+def swapTwoStepCode
+    (x y z w : PTree) :
+    TwoStepCode x y z w → TwoStepCode y x z w
+  | TwoStepCode.leftOuter a b z' haz hbw =>
+      TwoStepCode.rightOuter a b z' haz hbw
+  | TwoStepCode.leftInner a b y' hay hbw =>
+      TwoStepCode.rightInner a b y' hay hbw
+  | TwoStepCode.rightOuter a b z' haz hbw =>
+      TwoStepCode.leftOuter a b z' haz hbw
+  | TwoStepCode.rightInner a b y' hay hbw =>
+      TwoStepCode.leftInner a b y' hay hbw
+
+@[simp] theorem swapTwoStepCode_involutive
+    (x y z w : PTree)
+    (c : TwoStepCode x y z w) :
+    swapTwoStepCode y x z w (swapTwoStepCode x y z w c) = c := by
+  cases c <;> rfl
+
+/--
+The raw code swap preserves the bureaucratic equivalence relation.
+-/
+theorem swapTwoStepCode_respects_equiv
+    (x y z w : PTree)
+    {c d : TwoStepCode x y z w}
+    (h : TwoStepEquiv x y z w c d) :
+    TwoStepEquiv y x z w
+      (swapTwoStepCode x y z w c)
+      (swapTwoStepCode x y z w d) := by
+  induction h with
+  | refl c =>
+      exact TwoStepEquiv.refl _
+  | symm h ih =>
+      exact TwoStepEquiv.symm ih
+  | trans h₁ h₂ ih₁ ih₂ =>
+      exact TwoStepEquiv.trans ih₁ ih₂
+  | outer_comm_outer haz hbw haz' hbw' haddr =>
+      exact TwoStepEquiv.outer_comm_back_outer haz hbw haz' hbw' (by
+        simpa [mem_twoStepAddrWitnessesRight_iff, mem_twoStepAddrWitnessesLeft_iff]
+          using haddr)
+  | outer_comm_inner haz hbw hay' hbw' haddr =>
+      exact TwoStepEquiv.outer_comm_back_inner haz hbw hay' hbw' (by
+        simpa [mem_twoStepAddrWitnessesRight_iff, mem_twoStepAddrWitnessesLeft_iff]
+          using haddr)
+  | outer_comm_back_outer haz hbw haz' hbw' haddr =>
+      exact TwoStepEquiv.outer_comm_outer haz hbw haz' hbw' (by
+        simpa [mem_twoStepAddrWitnessesLeft_iff, mem_twoStepAddrWitnessesRight_iff]
+          using haddr)
+  | outer_comm_back_inner haz hbw hay' hbw' haddr =>
+      exact TwoStepEquiv.outer_comm_inner haz hbw hay' hbw' (by
+        simpa [mem_twoStepAddrWitnessesLeft_iff, mem_twoStepAddrWitnessesRight_iff]
+          using haddr)
+
+/--
+Equality of quotient classes is preserved by swapping the raw code
+presentation.
+-/
+theorem swapTwoStepCode_respects_class
+    (x y z w : PTree)
+    {c d : TwoStepCode x y z w}
+    (h : codeClass c = codeClass d) :
+    codeClass (swapTwoStepCode x y z w c) =
+      codeClass (swapTwoStepCode x y z w d) := by
+  apply codeClass_eq_of_equiv
+  exact
+    swapTwoStepCode_respects_equiv x y z w
+      (Quotient.exact h)
+
+/--
+The explicit outer transport descends to quotient classes on the left side.
+-/
+theorem outerLeftToOuterRight_respects_class
+    (x y z w : PTree)
+    (h₁ h₂ : OuterLeftWitness x y z w)
+    (hh : outerLeftWitnessClass h₁ = outerLeftWitnessClass h₂) :
+    outerRightWitnessClass (outerLeftToOuterRight x y z w h₁) =
+      outerRightWitnessClass (outerLeftToOuterRight x y z w h₂) := by
+  cases h₁ with
+  | mk a₁ b₁ z₁ haz₁ hbw₁ =>
+      cases h₂ with
+      | mk a₂ b₂ z₂ haz₂ hbw₂ =>
+          have hcode :
+              codeClass (TwoStepCode.leftOuter a₁ b₁ z₁ haz₁ hbw₁) =
+                codeClass (TwoStepCode.leftOuter a₂ b₂ z₂ haz₂ hbw₂) := by
+            simpa [outerLeftWitnessClass, classOfLeftWitness, codeOfLeftWitness]
+              using hh
+          simpa [outerRightWitnessClass, outerLeftToOuterRight,
+            swapTwoStepCode, classOfRightWitness, codeOfRightWitness]
+            using
+              (swapTwoStepCode_respects_class x y z w
+                (c := TwoStepCode.leftOuter a₁ b₁ z₁ haz₁ hbw₁)
+                (d := TwoStepCode.leftOuter a₂ b₂ z₂ haz₂ hbw₂)
+                hcode)
+
+/--
+The inverse explicit outer transport descends to quotient classes on the
+swapped right side.
+-/
+theorem outerRightToOuterLeft_respects_class
+    (x y z w : PTree)
+    (r₁ r₂ : OuterRightWitness y x z w)
+    (hh : outerRightWitnessClass r₁ = outerRightWitnessClass r₂) :
+    outerLeftWitnessClass (outerRightToOuterLeft x y z w r₁) =
+      outerLeftWitnessClass (outerRightToOuterLeft x y z w r₂) := by
+  cases r₁ with
+  | mk a₁ b₁ z₁ haz₁ hbw₁ =>
+      cases r₂ with
+      | mk a₂ b₂ z₂ haz₂ hbw₂ =>
+          have hcode :
+              codeClass (TwoStepCode.rightOuter a₁ b₁ z₁ haz₁ hbw₁) =
+                codeClass (TwoStepCode.rightOuter a₂ b₂ z₂ haz₂ hbw₂) := by
+            simpa [outerRightWitnessClass, classOfRightWitness, codeOfRightWitness]
+              using hh
+          simpa [outerLeftWitnessClass, outerRightToOuterLeft,
+            swapTwoStepCode, classOfLeftWitness, codeOfLeftWitness]
+            using
+              (swapTwoStepCode_respects_class y x z w
+                (c := TwoStepCode.rightOuter a₁ b₁ z₁ haz₁ hbw₁)
+                (d := TwoStepCode.rightOuter a₂ b₂ z₂ haz₂ hbw₂)
+                hcode)
+
+/-- Outer-supported left quotient classes. -/
+def OuterLeftContributionClasses
+    (x y z w : PTree) :=
+  { q : TwoStepQuotient x y z w // HasLeftOuterContributionClass x y z w q }
+
+/-- Swapped right-outer-supported quotient classes. -/
+def SwappedRightOuterContributionClasses
+    (x y z w : PTree) :=
+  { q' : TwoStepQuotient y x z w //
+      HasSwappedRightOuterContributionClass x y z w q' }
+
+/--
+Transport an outer-supported left class to its swapped right-outer class by
+choosing any explicit outer-left witness and applying the witness-level
+commutation bijection.
+-/
+noncomputable def transportOuterLeftContributionClass
+    (x y z w : PTree) :
+    OuterLeftContributionClasses x y z w →
+      SwappedRightOuterContributionClasses x y z w
+  | ⟨q, hq⟩ =>
+      let h : OuterLeftWitness x y z w := Classical.choose hq
+      ⟨outerRightWitnessClass (outerLeftToOuterRight x y z w h),
+        ⟨outerLeftToOuterRight x y z w h, rfl⟩⟩
+
+/--
+Transport a swapped right-outer-supported class back to the original
+left-outer side by applying the inverse witness-level commutation map.
+-/
+noncomputable def transportSwappedRightOuterContributionClass
+    (x y z w : PTree) :
+    SwappedRightOuterContributionClasses x y z w →
+      OuterLeftContributionClasses x y z w
+  | ⟨q', hq'⟩ =>
+      let r : OuterRightWitness y x z w := Classical.choose hq'
+      ⟨outerLeftWitnessClass (outerRightToOuterLeft x y z w r),
+        ⟨outerRightToOuterLeft x y z w r, rfl⟩⟩
+
+/--
+The class-level outer transport is related to its source by
+`SwappedTwoStepClass`.
+-/
+theorem transportOuterLeftContributionClass_swapped
+    (x y z w : PTree)
+    (s : OuterLeftContributionClasses x y z w) :
+    SwappedTwoStepClass x y z w s.1
+      (transportOuterLeftContributionClass x y z w s).1 := by
+  rcases s with ⟨q, hq⟩
+  let h : OuterLeftWitness x y z w := Classical.choose hq
+  have hh : outerLeftWitnessClass h = q := Classical.choose_spec hq
+  exact
+    swapped_respects_eq_left x y z w hh
+      (outerLeftToOuterRight_swapped x y z w h)
+
+/--
+The inverse class-level outer transport is related to its source by
+`SwappedTwoStepClass`.
+-/
+theorem transportSwappedRightOuterContributionClass_swapped
+    (x y z w : PTree)
+    (t : SwappedRightOuterContributionClasses x y z w) :
+    SwappedTwoStepClass x y z w
+      (transportSwappedRightOuterContributionClass x y z w t).1
+      t.1 := by
+  rcases t with ⟨q', hq'⟩
+  let r : OuterRightWitness y x z w := Classical.choose hq'
+  have hr : outerRightWitnessClass r = q' := Classical.choose_spec hq'
+  exact
+    swapped_respects_eq_right x y z w hr
+      (outerRightToOuterLeft_swapped x y z w r)
+
+/--
+The class-level outer transport agrees with the explicit witness-level transport
+for any chosen representative of the source class.
+-/
+theorem transportOuterLeftContributionClass_eq_of_witness
+    (x y z w : PTree)
+    (s : OuterLeftContributionClasses x y z w)
+    (h : OuterLeftWitness x y z w)
+    (hh : outerLeftWitnessClass h = s.1) :
+    (transportOuterLeftContributionClass x y z w s).1 =
+      outerRightWitnessClass (outerLeftToOuterRight x y z w h) := by
+  rcases s with ⟨q, hq⟩
+  let h₀ : OuterLeftWitness x y z w := Classical.choose hq
+  have hh₀ : outerLeftWitnessClass h₀ = q := Classical.choose_spec hq
+  exact
+    outerLeftToOuterRight_respects_class x y z w h₀ h
+      (hh₀.trans hh.symm)
+
+/--
+The inverse class-level outer transport agrees with the inverse witness-level
+transport for any chosen representative of the swapped target class.
+-/
+theorem transportSwappedRightOuterContributionClass_eq_of_witness
+    (x y z w : PTree)
+    (t : SwappedRightOuterContributionClasses x y z w)
+    (r : OuterRightWitness y x z w)
+    (hr : outerRightWitnessClass r = t.1) :
+    (transportSwappedRightOuterContributionClass x y z w t).1 =
+      outerLeftWitnessClass (outerRightToOuterLeft x y z w r) := by
+  rcases t with ⟨q', hq'⟩
+  let r₀ : OuterRightWitness y x z w := Classical.choose hq'
+  have hr₀ : outerRightWitnessClass r₀ = q' := Classical.choose_spec hq'
+  exact
+    outerRightToOuterLeft_respects_class x y z w r₀ r
+      (hr₀.trans hr.symm)
+
+/--
+The two class-level outer transports are inverse on outer-supported left
+classes.
+-/
+theorem transportSwappedRightOuterContributionClass_left_inv
+    (x y z w : PTree)
+    (s : OuterLeftContributionClasses x y z w) :
+    transportSwappedRightOuterContributionClass x y z w
+      (transportOuterLeftContributionClass x y z w s) = s := by
+  apply Subtype.ext
+  rcases s with ⟨q, hq⟩
+  let h : OuterLeftWitness x y z w := Classical.choose hq
+  have hh : outerLeftWitnessClass h = q := Classical.choose_spec hq
+  calc
+    (transportSwappedRightOuterContributionClass x y z w
+        (transportOuterLeftContributionClass x y z w ⟨q, hq⟩)).1
+      = outerLeftWitnessClass
+          (outerRightToOuterLeft x y z w (outerLeftToOuterRight x y z w h)) := by
+            apply transportSwappedRightOuterContributionClass_eq_of_witness
+            exact rfl
+    _ = outerLeftWitnessClass h := by
+          simp
+    _ = q := hh
+
+/--
+The two class-level outer transports are inverse on swapped right-outer
+supported classes.
+-/
+theorem transportOuterLeftContributionClass_right_inv
+    (x y z w : PTree)
+    (t : SwappedRightOuterContributionClasses x y z w) :
+    transportOuterLeftContributionClass x y z w
+      (transportSwappedRightOuterContributionClass x y z w t) = t := by
+  apply Subtype.ext
+  rcases t with ⟨q', hq'⟩
+  let r : OuterRightWitness y x z w := Classical.choose hq'
+  have hr : outerRightWitnessClass r = q' := Classical.choose_spec hq'
+  calc
+    (transportOuterLeftContributionClass x y z w
+        (transportSwappedRightOuterContributionClass x y z w ⟨q', hq'⟩)).1
+      = outerRightWitnessClass
+          (outerLeftToOuterRight x y z w (outerRightToOuterLeft x y z w r)) := by
+            apply transportOuterLeftContributionClass_eq_of_witness
+            exact rfl
+    _ = outerRightWitnessClass r := by
+          simp
+    _ = q' := hr
+
+/-- Outer-supported classes are equivalent across the swapped outer transport. -/
+noncomputable def outerContributionCommute
+    (x y z w : PTree) :
+    OuterLeftContributionClasses x y z w ≃
+      SwappedRightOuterContributionClasses x y z w where
+  toFun := transportOuterLeftContributionClass x y z w
+  invFun := transportSwappedRightOuterContributionClass x y z w
+  left_inv := transportSwappedRightOuterContributionClass_left_inv x y z w
+  right_inv := transportOuterLeftContributionClass_right_inv x y z w
+
+/--
+Any swapped right-outer-supported class mapping back to `s` must be the
+canonical transported outer partner of `s`.
+-/
+theorem transportOuterLeftContributionClass_unique
+    (x y z w : PTree)
+    (s : OuterLeftContributionClasses x y z w)
+    (t : SwappedRightOuterContributionClasses x y z w)
+    (ht : transportSwappedRightOuterContributionClass x y z w t = s) :
+    t = transportOuterLeftContributionClass x y z w s := by
+  calc
+    t = transportOuterLeftContributionClass x y z w
+          (transportSwappedRightOuterContributionClass x y z w t) := by
+            symm
+            exact (outerContributionCommute x y z w).right_inv t
+    _ = transportOuterLeftContributionClass x y z w s := by
+          rw [ht]
+
+/--
+Any outer-supported left class mapping forward to `t` must be the canonical
+inverse-transported source of `t`.
+-/
+theorem transportSwappedRightOuterContributionClass_unique
+    (x y z w : PTree)
+    (s : OuterLeftContributionClasses x y z w)
+    (t : SwappedRightOuterContributionClasses x y z w)
+    (hs : transportOuterLeftContributionClass x y z w s = t) :
+    s = transportSwappedRightOuterContributionClass x y z w t := by
+  calc
+    s = transportSwappedRightOuterContributionClass x y z w
+          (transportOuterLeftContributionClass x y z w s) := by
+            symm
+            exact (outerContributionCommute x y z w).left_inv s
+    _ = transportSwappedRightOuterContributionClass x y z w t := by
+          rw [hs]
+
+/-- The outer right-partner fibre over an outer-supported left class. -/
+def OuterRightContributionFiber
+    (x y z w : PTree)
+    (s : OuterLeftContributionClasses x y z w) :=
+  { t : SwappedRightOuterContributionClasses x y z w //
+      transportSwappedRightOuterContributionClass x y z w t = s }
+
+/-- The outer left-partner fibre over a swapped right-outer-supported class. -/
+def OuterLeftContributionFiber
+    (x y z w : PTree)
+    (t : SwappedRightOuterContributionClasses x y z w) :=
+  { s : OuterLeftContributionClasses x y z w //
+      transportOuterLeftContributionClass x y z w s = t }
+
+/-- The canonical outer right partner lies in the outer right fibre. -/
+noncomputable def canonicalOuterRightContributionFiberPoint
+    (x y z w : PTree)
+    (s : OuterLeftContributionClasses x y z w) :
+    OuterRightContributionFiber x y z w s :=
+  ⟨transportOuterLeftContributionClass x y z w s,
+    (outerContributionCommute x y z w).left_inv s⟩
+
+/-- The canonical outer left partner lies in the outer left fibre. -/
+noncomputable def canonicalOuterLeftContributionFiberPoint
+    (x y z w : PTree)
+    (t : SwappedRightOuterContributionClasses x y z w) :
+    OuterLeftContributionFiber x y z w t :=
+  ⟨transportSwappedRightOuterContributionClass x y z w t,
+    (outerContributionCommute x y z w).right_inv t⟩
+
+/-- The outer right-partner fibre is degree 1. -/
+theorem OuterRightContributionFiber_subsingleton
+    (x y z w : PTree)
+    (s : OuterLeftContributionClasses x y z w) :
+    Subsingleton (OuterRightContributionFiber x y z w s) := by
+  refine ⟨?_⟩
+  intro u v
+  apply Subtype.ext
+  calc
+    u.1 = transportOuterLeftContributionClass x y z w s := by
+      exact transportOuterLeftContributionClass_unique x y z w s u.1 u.2
+    _ = v.1 := by
+      symm
+      exact transportOuterLeftContributionClass_unique x y z w s v.1 v.2
+
+/-- The outer left-partner fibre is degree 1. -/
+theorem OuterLeftContributionFiber_subsingleton
+    (x y z w : PTree)
+    (t : SwappedRightOuterContributionClasses x y z w) :
+    Subsingleton (OuterLeftContributionFiber x y z w t) := by
+  refine ⟨?_⟩
+  intro s₁ s₂
+  apply Subtype.ext
+  calc
+    s₁.1 = transportSwappedRightOuterContributionClass x y z w t := by
+      exact transportSwappedRightOuterContributionClass_unique x y z w s₁.1 t s₁.2
+    _ = s₂.1 := by
+      symm
+      exact transportSwappedRightOuterContributionClass_unique x y z w s₂.1 t s₂.2
+
+/--
+Outer-supported left classes have a unique swapped right-outer partner at the
+class level.
+-/
+theorem outer_supported_left_class_has_unique_swapped_right_outer_partner
+    (x y z w : PTree)
+    (s : OuterLeftContributionClasses x y z w) :
+    ∃! t : SwappedRightOuterContributionClasses x y z w,
+      transportSwappedRightOuterContributionClass x y z w t = s := by
+  refine ⟨transportOuterLeftContributionClass x y z w s, ?_, ?_⟩
+  · exact (outerContributionCommute x y z w).left_inv s
+  · intro t ht
+    exact transportOuterLeftContributionClass_unique x y z w s t ht
+
+/--
+Swapped right-outer-supported classes have a unique outer-supported left partner
+at the class level.
+-/
+theorem swapped_right_outer_class_has_unique_outer_left_partner
+    (x y z w : PTree)
+    (t : SwappedRightOuterContributionClasses x y z w) :
+    ∃! s : OuterLeftContributionClasses x y z w,
+      transportOuterLeftContributionClass x y z w s = t := by
+  refine ⟨transportSwappedRightOuterContributionClass x y z w t, ?_, ?_⟩
+  · exact (outerContributionCommute x y z w).right_inv t
+  · intro s hs
+    exact transportSwappedRightOuterContributionClass_unique x y z w s t hs
+
+/--
+Repackaged in the original left-contribution-class language: an outer-supported
+left class has a canonical swapped right-outer partner, unique among outer
+targets.
+-/
+theorem outer_supported_left_contribution_class_has_degree1_outer_partner
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (hs : HasOuterSupportLeftContributionClass x y z w s) :
+    ∃! t : SwappedRightOuterContributionClasses x y z w,
+      transportSwappedRightOuterContributionClass x y z w t = ⟨s.1, hs⟩ := by
+  exact
+    outer_supported_left_class_has_unique_swapped_right_outer_partner
+      x y z w ⟨s.1, hs⟩
+
+/-!
+## Global outer/inner decomposition of contribution classes
+-/
+
+/-- Total left contribution classes split into outer and inner sectors. -/
+def LeftContributionClassDecomposition
+    (x y z w : PTree) :=
+  OuterLeftContributionClasses x y z w ⊕
+    LeftInnerContributionClasses x y z w
+
+/-- Total swapped-right contribution classes split into outer and inner sectors. -/
+def RightContributionClassDecomposition
+    (x y z w : PTree) :=
+  SwappedRightOuterContributionClasses x y z w ⊕
+    SwappedRightInnerContributionClasses x y z w
+
+/-- Repackage a total left contribution class into its outer/inner sector. -/
+noncomputable def leftContributionClass_decompose
+    (x y z w : PTree) :
+    LeftContributionClasses x y z w →
+      LeftContributionClassDecomposition x y z w
+  | ⟨q, hq⟩ =>
+      if hout : HasLeftOuterContributionClass x y z w q then
+        Sum.inl ⟨q, hout⟩
+      else
+        Sum.inr ⟨q, by
+          rcases hq with hout' | hinn
+          · exact False.elim (hout hout')
+          · exact hinn⟩
+
+/-- Reassemble a total left contribution class from its outer/inner sector. -/
+def leftContributionClass_reassemble
+    (x y z w : PTree) :
+    LeftContributionClassDecomposition x y z w →
+      LeftContributionClasses x y z w
+  | Sum.inl s => ⟨s.1, Or.inl s.2⟩
+  | Sum.inr s => ⟨s.1, Or.inr s.2⟩
+
+/-- Repackage a total swapped-right contribution class into its outer/inner sector. -/
+noncomputable def rightContributionClass_decompose
+    (x y z w : PTree) :
+    RightContributionClasses x y z w →
+      RightContributionClassDecomposition x y z w
+  | ⟨q', hq'⟩ =>
+      if hout : HasSwappedRightOuterContributionClass x y z w q' then
+        Sum.inl ⟨q', hout⟩
+      else
+        Sum.inr ⟨q', by
+          rcases hq' with hout' | hinn
+          · exact False.elim (hout hout')
+          · exact hinn⟩
+
+/-- Reassemble a total swapped-right contribution class from its outer/inner sector. -/
+def rightContributionClass_reassemble
+    (x y z w : PTree) :
+    RightContributionClassDecomposition x y z w →
+      RightContributionClasses x y z w
+  | Sum.inl t => ⟨t.1, Or.inl t.2⟩
+  | Sum.inr t => ⟨t.1, Or.inr t.2⟩
+
+/--
+Every total left contribution class admits an outer/inner decomposition.
+
+This is not asserted to be unique: the same quotient class might, in principle,
+support both kinds of data. The point here is to expose the two sectors cleanly.
+-/
+theorem leftContributionClass_outer_or_inner
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w) :
+    HasOuterSupportLeftContributionClass x y z w s
+    ∨
+    HasLeftInnerContributionClass x y z w s.1 := by
+  simpa [HasOuterSupportLeftContributionClass] using s.2
+
+/--
+Every total swapped-right contribution class admits an outer/inner
+decomposition.
+
+Again, this is a structural case split rather than a disjointness statement.
+-/
+theorem rightContributionClass_outer_or_inner
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w) :
+    HasSwappedRightOuterContributionClass x y z w t.1
+    ∨
+    HasSwappedRightInnerContributionClass x y z w t.1 := by
+  exact t.2
+
+/-- The outer branch of total contribution classes is handled by strict canonical commutation. -/
+noncomputable def outer_branch_solved_by_outerContributionCommute
+    (x y z w : PTree) :
+    OuterLeftContributionClasses x y z w ≃
+      SwappedRightOuterContributionClasses x y z w :=
+  outerContributionCommute x y z w
+
+/-- The inner branch of total contribution classes is the genuinely contextual sector. -/
+theorem inner_branch_is_contextual_sector
+    (x y z w : PTree) :
+    (∀ s : LeftInnerContributionClasses x y z w,
+      ∃ t : SwappedRightInnerContributionClasses x y z w,
+        SwappedTwoStepClass x y z w s.1 t.1)
+    ∧
+    (∀ t : SwappedRightInnerContributionClasses x y z w,
+      ∃ s : LeftInnerContributionClasses x y z w,
+        SwappedTwoStepClass x y z w s.1 t.1) := by
+  exact innerSupportingClasses_correspond x y z w
+
+/--
+Global pre-Lie comparison strategy:
+
+- total contribution classes split into outer and inner sectors;
+- the outer sector is handled by strict canonical commutation;
+- the inner sector is handled by the older swapped/fibre correspondence.
+-/
+theorem preLie_comparison_strategy
+    (x y z w : PTree) :
+    (∀ s : LeftContributionClasses x y z w,
+      HasOuterSupportLeftContributionClass x y z w s
+      ∨
+      HasLeftInnerContributionClass x y z w s.1)
+    ∧
+    (∀ t : RightContributionClasses x y z w,
+      HasSwappedRightOuterContributionClass x y z w t.1
+      ∨
+      HasSwappedRightInnerContributionClass x y z w t.1)
+    ∧
+    Nonempty
+      (OuterLeftContributionClasses x y z w ≃
+        SwappedRightOuterContributionClasses x y z w)
+    ∧
+    ((∀ s : LeftInnerContributionClasses x y z w,
+      ∃ t : SwappedRightInnerContributionClasses x y z w,
+        SwappedTwoStepClass x y z w s.1 t.1)
+    ∧
+    (∀ t : SwappedRightInnerContributionClasses x y z w,
+      ∃ s : LeftInnerContributionClasses x y z w,
+        SwappedTwoStepClass x y z w s.1 t.1)) := by
+  refine ⟨leftContributionClass_outer_or_inner x y z w, ?_⟩
+  refine ⟨rightContributionClass_outer_or_inner x y z w, ?_⟩
+  refine ⟨⟨outer_branch_solved_by_outerContributionCommute x y z w⟩, ?_⟩
+  exact inner_branch_is_contextual_sector x y z w
+
+/-!
+## Outer sector counting collapse
+
+The outer fragment is now rigid enough to contribute a clean degree-1 term to
+the pre-Lie comparison: an outer-supported endpoint determines a unique outer
+partner on the swapped side.
+-/
+
+/-- Outer incidences viewed from their left endpoints. -/
+def OuterIncidencesOverLeft
+    (x y z w : PTree) :=
+  Σ s : OuterLeftContributionClasses x y z w,
+    OuterRightContributionFiber x y z w s
+
+/-- Outer incidences viewed from their swapped-right endpoints. -/
+def OuterIncidencesOverRight
+    (x y z w : PTree) :=
+  Σ t : SwappedRightOuterContributionClasses x y z w,
+    OuterLeftContributionFiber x y z w t
+
+/--
+Because the outer right-partner fibre over a fixed outer-supported left class is
+degree 1, the sigma of outer incidences over left endpoints collapses to its
+endpoint type.
+-/
+noncomputable def outerIncidencesOverLeft_equiv_endpoints
+    (x y z w : PTree) :
+    OuterIncidencesOverLeft x y z w ≃
+      OuterLeftContributionClasses x y z w where
+  toFun := fun p => p.1
+  invFun := fun s => ⟨s, canonicalOuterRightContributionFiberPoint x y z w s⟩
+  left_inv := by
+    intro p
+    rcases p with ⟨s, u⟩
+    have hu :
+        u = canonicalOuterRightContributionFiberPoint x y z w s :=
+      (OuterRightContributionFiber_subsingleton x y z w s).elim u
+        (canonicalOuterRightContributionFiberPoint x y z w s)
+    cases hu
+    rfl
+  right_inv := by
+    intro s
+    rfl
+
+/--
+Because the outer left-partner fibre over a fixed swapped right-outer class is
+degree 1, the sigma of outer incidences over right endpoints collapses to its
+endpoint type.
+-/
+noncomputable def outerIncidencesOverRight_equiv_endpoints
+    (x y z w : PTree) :
+    OuterIncidencesOverRight x y z w ≃
+      SwappedRightOuterContributionClasses x y z w where
+  toFun := fun p => p.1
+  invFun := fun t => ⟨t, canonicalOuterLeftContributionFiberPoint x y z w t⟩
+  left_inv := by
+    intro p
+    rcases p with ⟨t, s⟩
+    have hs :
+        s = canonicalOuterLeftContributionFiberPoint x y z w t :=
+      (OuterLeftContributionFiber_subsingleton x y z w t).elim s
+        (canonicalOuterLeftContributionFiberPoint x y z w t)
+    cases hs
+    rfl
+  right_inv := by
+    intro t
+    rfl
+
+/-- Cardinal of outer incidences when grouped by left endpoints. -/
+noncomputable def outerLeftIncidenceCard
+    (x y z w : PTree) : Cardinal :=
+  Cardinal.lift (Cardinal.mk (OuterIncidencesOverLeft x y z w))
+
+/-- Cardinal of outer incidences when grouped by swapped-right endpoints. -/
+noncomputable def outerRightIncidenceCard
+    (x y z w : PTree) : Cardinal :=
+  Cardinal.lift (Cardinal.mk (OuterIncidencesOverRight x y z w))
+
+/-- The outer-left incidence cardinal is just the cardinal of outer-supported left classes. -/
+theorem outerLeftIncidenceCard_eq_outerLeftClasses
+    (x y z w : PTree) :
+    outerLeftIncidenceCard x y z w =
+      Cardinal.lift (Cardinal.mk (OuterLeftContributionClasses x y z w)) := by
+  unfold outerLeftIncidenceCard
+  exact congrArg Cardinal.lift
+    (Cardinal.mk_congr (outerIncidencesOverLeft_equiv_endpoints x y z w))
+
+/-- The outer-right incidence cardinal is just the cardinal of swapped right-outer classes. -/
+theorem outerRightIncidenceCard_eq_outerRightClasses
+    (x y z w : PTree) :
+    outerRightIncidenceCard x y z w =
+      Cardinal.lift (Cardinal.mk (SwappedRightOuterContributionClasses x y z w)) := by
+  unfold outerRightIncidenceCard
+  exact congrArg Cardinal.lift
+    (Cardinal.mk_congr (outerIncidencesOverRight_equiv_endpoints x y z w))
+
+/--
+The outer sectors contribute equally on the left and right: the outer incidence
+cardinal is the same when grouped from either side.
+-/
+theorem outerLeftIncidenceCard_eq_outerRightIncidenceCard
+    (x y z w : PTree) :
+    outerLeftIncidenceCard x y z w = outerRightIncidenceCard x y z w := by
+  calc
+    outerLeftIncidenceCard x y z w
+      = Cardinal.lift (Cardinal.mk (OuterLeftContributionClasses x y z w)) := by
+          exact outerLeftIncidenceCard_eq_outerLeftClasses x y z w
+    _ = Cardinal.lift
+          (Cardinal.mk (SwappedRightOuterContributionClasses x y z w)) := by
+          exact congrArg Cardinal.lift
+            (Cardinal.mk_congr (outerContributionCommute x y z w))
+    _ = outerRightIncidenceCard x y z w := by
+          symm
+          exact outerRightIncidenceCard_eq_outerRightClasses x y z w
+
+/--
+Counting form of the solved outer branch: once the associator is restricted to
+independent/outer contributions, the two sides are canonically equal.
+-/
+theorem outer_branch_contributes_equally
+    (x y z w : PTree) :
+    outerLeftIncidenceCard x y z w = outerRightIncidenceCard x y z w := by
+  exact outerLeftIncidenceCard_eq_outerRightIncidenceCard x y z w
+
+/-!
+## Inner sector transport and counting
+
+Unlike the outer sector, the inner branch is genuinely contextual.  But the
+earlier fibre machinery already gives a class-level correspondence across the
+swapped quotient, and therefore an equality of the inner contribution counts.
 -/
 
 /--
-Desired bridge: right-mediator uniqueness should imply uniqueness of
-right-neighbour fibres over left contribution classes.
-
-This is the main theorem needed to turn canonical right-neighbour
-recovery into an unconditional statement under the mediator-rigidity
-hypothesis.
+The explicit inner witness transport respects equality of left quotient
+classes.
 -/
-theorem rightNeighborFiberUnique_of_rightMediator_uniqueness
+theorem leftInnerWitnessToSwappedRight_respects_class
     (x y z w : PTree)
-    (hUnique : LeftOuterRightMediatorUnique x y z w) :
-    RightNeighborFiberUnique x y z w := by
-  intro s u v
-  /-
-  Intended strategy:
-  1. unpack `u.2` and `v.2` as swapped correspondences from `s`
-     to the underlying right classes `u.1` and `v.1`;
-  2. convert those correspondences to the witness/fibre layer where
-     `hUnique` applies;
-  3. use mediator uniqueness to show the resulting left-outer data agree;
-  4. conclude `u.1 = v.1`.
-  -/
-  sorry
+    (h₁ h₂ : LeftInnerWitnessData x y z w)
+    (hh : leftInnerWitnessClass x y z w h₁ = leftInnerWitnessClass x y z w h₂) :
+    swappedRightInnerWitnessClass x y z w
+      (leftInnerWitness_to_swappedRightInnerWitness x y z w h₁) =
+    swappedRightInnerWitnessClass x y z w
+      (leftInnerWitness_to_swappedRightInnerWitness x y z w h₂) := by
+  cases h₁ with
+  | mk hw₁ hinner₁ =>
+      cases hw₁ with
+      | inner a₁ b₁ y₁ hay₁ hbw₁ =>
+          cases h₂ with
+          | mk hw₂ hinner₂ =>
+              cases hw₂ with
+              | inner a₂ b₂ y₂ hay₂ hbw₂ =>
+                  have hcode :
+                      codeClass (TwoStepCode.leftInner a₁ b₁ y₁ hay₁ hbw₁) =
+                        codeClass (TwoStepCode.leftInner a₂ b₂ y₂ hay₂ hbw₂) := by
+                    simpa [leftInnerWitnessClass, classOfLeftWitness, codeOfLeftWitness]
+                      using hh
+                  simpa [leftInnerWitness_to_swappedRightInnerWitness,
+                    swappedRightInnerWitnessClass, swapTwoStepCode,
+                    classOfRightWitness, codeOfRightWitness]
+                    using
+                      (swapTwoStepCode_respects_class x y z w
+                        (c := TwoStepCode.leftInner a₁ b₁ y₁ hay₁ hbw₁)
+                        (d := TwoStepCode.leftInner a₂ b₂ y₂ hay₂ hbw₂)
+                        hcode)
+              | outer =>
+                  cases hinner₂
+      | outer =>
+          cases hinner₁
 
-
-/-
-theorem leftNeighborFiberUnique_of_rightMediator_uniqueness
-    (x y z w : PTree)
-    (hUnique : LeftOuterRightMediatorUnique x y z w) :
-    LeftNeighborFiberUnique x y z w := by
-  intro t s₁ s₂
-  /-
-  Likely options:
-  * prove directly by dropping to the witness/fibre layer; or
-  * derive from the right-neighbour theorem via the canonical
-    transport correspondence already established.
-  -/
-  sorry
+/--
+The inverse explicit inner witness transport respects equality of swapped-right
+quotient classes.
 -/
+theorem swappedRightInnerWitnessToLeft_respects_class
+    (x y z w : PTree)
+    (h₁ h₂ : SwappedRightInnerWitnessData x y z w)
+    (hh : swappedRightInnerWitnessClass x y z w h₁ =
+      swappedRightInnerWitnessClass x y z w h₂) :
+    leftInnerWitnessClass x y z w
+      (swappedRightInnerWitness_to_leftInnerWitness x y z w h₁) =
+    leftInnerWitnessClass x y z w
+      (swappedRightInnerWitness_to_leftInnerWitness x y z w h₂) := by
+  cases h₁ with
+  | mk hw₁ hinner₁ =>
+      cases hw₁ with
+      | inner a₁ b₁ y₁ hay₁ hbw₁ =>
+          cases h₂ with
+          | mk hw₂ hinner₂ =>
+              cases hw₂ with
+              | inner a₂ b₂ y₂ hay₂ hbw₂ =>
+                  have hcode :
+                      codeClass (TwoStepCode.rightInner a₁ b₁ y₁ hay₁ hbw₁) =
+                        codeClass (TwoStepCode.rightInner a₂ b₂ y₂ hay₂ hbw₂) := by
+                    simpa [swappedRightInnerWitnessClass, classOfRightWitness,
+                      codeOfRightWitness] using hh
+                  simpa [swappedRightInnerWitness_to_leftInnerWitness,
+                    leftInnerWitnessClass, swapTwoStepCode,
+                    classOfLeftWitness, codeOfLeftWitness]
+                    using
+                      (swapTwoStepCode_respects_class y x z w
+                        (c := TwoStepCode.rightInner a₁ b₁ y₁ hay₁ hbw₁)
+                        (d := TwoStepCode.rightInner a₂ b₂ y₂ hay₂ hbw₂)
+                        hcode)
+              | outer =>
+                  cases hinner₂
+      | outer =>
+          cases hinner₁
+
+/--
+The class-level forward inner transport is determined by any chosen witness in
+the supporting left inner fibre.
+-/
+theorem transportLeftInnerContributionClassToSwapped_eq_of_witness
+    (x y z w : PTree)
+    {q : TwoStepQuotient x y z w}
+    (h : LeftInnerFiberData x y z w q) :
+    transportLeftInnerContributionClassToSwapped x y z w ⟨q, ⟨h⟩⟩ =
+      ⟨(leftInnerFiberData_forward x y z w q h).1,
+        ⟨(leftInnerFiberData_forward x y z w q h).2⟩⟩ := by
+  apply Subtype.ext
+  let h' : LeftInnerFiberData x y z w q :=
+    Classical.choice (show Nonempty (LeftInnerFiberData x y z w q) from ⟨h⟩)
+  have hh' : leftInnerWitnessClass x y z w h'.1 = q := h'.2
+  have hh : leftInnerWitnessClass x y z w h'.1 =
+      leftInnerWitnessClass x y z w h.1 := by
+    exact hh'.trans h.2.symm
+  simpa [transportLeftInnerContributionClassToSwapped,
+    LeftInnerContributionClasses.toTotal,
+    AllLeftInnerFiberData.toContributionClass,
+    AllLeftInnerFiberData.toSwapped,
+    allLeftInnerFiberData_forward,
+    leftInnerFiberData_forward, h']
+    using
+      (leftInnerWitnessToSwappedRight_respects_class x y z w h'.1 h.1 hh)
+
+/--
+The class-level backward inner transport is determined by any chosen witness in
+the supporting swapped-right inner fibre.
+-/
+theorem transportSwappedInnerContributionClassToLeft_eq_of_witness
+    (x y z w : PTree)
+    {q' : TwoStepQuotient y x z w}
+    (h : SwappedRightInnerFiberData x y z w q') :
+    transportSwappedInnerContributionClassToLeft x y z w ⟨q', ⟨h⟩⟩ =
+      ⟨(leftInnerFiberData_backward x y z w ⟨q', h⟩).1,
+        ⟨(leftInnerFiberData_backward x y z w ⟨q', h⟩).2⟩⟩ := by
+  apply Subtype.ext
+  let h' : SwappedRightInnerFiberData x y z w q' :=
+    Classical.choice (show Nonempty (SwappedRightInnerFiberData x y z w q') from ⟨h⟩)
+  have hh' : swappedRightInnerWitnessClass x y z w h'.1 = q' := h'.2
+  have hh : swappedRightInnerWitnessClass x y z w h'.1 =
+      swappedRightInnerWitnessClass x y z w h.1 := by
+    exact hh'.trans h.2.symm
+  simpa [transportSwappedInnerContributionClassToLeft,
+    SwappedRightInnerContributionClasses.toTotal,
+    AllSwappedRightInnerFiberData.toContributionClass,
+    AllSwappedRightInnerFiberData.toLeft,
+    allLeftInnerFiberData_backward,
+    leftInnerFiberData_backward, h']
+    using
+      (swappedRightInnerWitnessToLeft_respects_class x y z w h'.1 h.1 hh)
+
+/-- The inner transport is inverse to the backward inner transport on left classes. -/
+theorem transportSwappedInnerContributionClassToLeft_left_inv
+    (x y z w : PTree)
+    (s : LeftInnerContributionClasses x y z w) :
+    transportSwappedInnerContributionClassToLeft x y z w
+      (transportLeftInnerContributionClassToSwapped x y z w s) = s := by
+  apply Subtype.ext
+  rcases s with ⟨q, hq⟩
+  let h : LeftInnerFiberData x y z w q := Classical.choice hq
+  have hs : (⟨q, hq⟩ : LeftInnerContributionClasses x y z w) = ⟨q, ⟨h⟩⟩ := by
+    apply Subtype.ext
+    rfl
+  let k := leftInnerFiberData_forward x y z w q h
+  calc
+    (transportSwappedInnerContributionClassToLeft x y z w
+        (transportLeftInnerContributionClassToSwapped x y z w ⟨q, hq⟩)).1
+      = (transportSwappedInnerContributionClassToLeft x y z w
+          (transportLeftInnerContributionClassToSwapped x y z w ⟨q, ⟨h⟩⟩)).1 := by
+            rw [hs]
+    _ = (transportSwappedInnerContributionClassToLeft x y z w
+          ⟨k.1, ⟨k.2⟩⟩).1 := by
+            exact congrArg
+              (fun u => (transportSwappedInnerContributionClassToLeft x y z w u).1)
+              (transportLeftInnerContributionClassToSwapped_eq_of_witness x y z w h)
+    _ = (leftInnerFiberData_backward x y z w ⟨k.1, k.2⟩).1 := by
+          exact congrArg Subtype.val
+            (transportSwappedInnerContributionClassToLeft_eq_of_witness x y z w k.2)
+    _ = q := by
+          simpa [k, AllLeftInnerFiberData.toSwapped,
+            AllSwappedRightInnerFiberData.toLeft]
+            using (AllLeftInnerFiberData.toSwapped_toLeft_fst x y z w ⟨q, h⟩)
+
+/-- The backward inner transport is inverse to the forward inner transport on swapped classes. -/
+theorem transportLeftInnerContributionClassToSwapped_right_inv
+    (x y z w : PTree)
+    (t : SwappedRightInnerContributionClasses x y z w) :
+    transportLeftInnerContributionClassToSwapped x y z w
+      (transportSwappedInnerContributionClassToLeft x y z w t) = t := by
+  apply Subtype.ext
+  rcases t with ⟨q', hq'⟩
+  let h : SwappedRightInnerFiberData x y z w q' := Classical.choice hq'
+  have ht : (⟨q', hq'⟩ : SwappedRightInnerContributionClasses x y z w) = ⟨q', ⟨h⟩⟩ := by
+    apply Subtype.ext
+    rfl
+  let k := leftInnerFiberData_backward x y z w ⟨q', h⟩
+  calc
+    (transportLeftInnerContributionClassToSwapped x y z w
+        (transportSwappedInnerContributionClassToLeft x y z w ⟨q', hq'⟩)).1
+      = (transportLeftInnerContributionClassToSwapped x y z w
+          (transportSwappedInnerContributionClassToLeft x y z w ⟨q', ⟨h⟩⟩)).1 := by
+            rw [ht]
+    _ = (transportLeftInnerContributionClassToSwapped x y z w
+          ⟨k.1, ⟨k.2⟩⟩).1 := by
+            exact congrArg
+              (fun s => (transportLeftInnerContributionClassToSwapped x y z w s).1)
+              (transportSwappedInnerContributionClassToLeft_eq_of_witness x y z w h)
+    _ = (AllLeftInnerFiberData.toSwapped x y z w ⟨k.1, k.2⟩).1 := by
+          exact congrArg Subtype.val
+            (transportLeftInnerContributionClassToSwapped_eq_of_witness x y z w k.2)
+    _ = q' := by
+          simpa [k, AllLeftInnerFiberData.toSwapped,
+            AllSwappedRightInnerFiberData.toLeft]
+            using (AllSwappedRightInnerFiberData.toLeft_toSwapped_fst x y z w ⟨q', h⟩)
+
+/-- Inner-supported classes correspond across the swapped quotient. -/
+noncomputable def innerContributionCommute
+    (x y z w : PTree) :
+    LeftInnerContributionClasses x y z w ≃
+      SwappedRightInnerContributionClasses x y z w where
+  toFun := transportLeftInnerContributionClassToSwapped x y z w
+  invFun := transportSwappedInnerContributionClassToLeft x y z w
+  left_inv := transportSwappedInnerContributionClassToLeft_left_inv x y z w
+  right_inv := transportLeftInnerContributionClassToSwapped_right_inv x y z w
+
+/-- Cardinal of the left inner contribution sector. -/
+noncomputable def innerLeftContributionCard
+    (x y z w : PTree) : Cardinal :=
+  Cardinal.lift (Cardinal.mk (LeftInnerContributionClasses x y z w))
+
+/-- Cardinal of the swapped-right inner contribution sector. -/
+noncomputable def innerRightContributionCard
+    (x y z w : PTree) : Cardinal :=
+  Cardinal.lift (Cardinal.mk (SwappedRightInnerContributionClasses x y z w))
+
+/-- The inner contribution sectors have the same cardinality across the swapped transport. -/
+theorem innerLeftContributionCard_eq_innerRightContributionCard
+    (x y z w : PTree) :
+    innerLeftContributionCard x y z w = innerRightContributionCard x y z w := by
+  unfold innerLeftContributionCard innerRightContributionCard
+  exact congrArg Cardinal.lift
+    (Cardinal.mk_congr (innerContributionCommute x y z w))
+
+/--
+Counting form of the inner branch: once the outer sector is removed, the
+remaining nested contribution classes are matched by the swapped inner
+transport.
+-/
+theorem inner_branch_contributes_equally
+    (x y z w : PTree) :
+    innerLeftContributionCard x y z w = innerRightContributionCard x y z w := by
+  exact innerLeftContributionCard_eq_innerRightContributionCard x y z w
 
 /-!
-## Recovery consequences under mediator rigidity
+## Global counting decomposition
+
+At the level of total contribution classes, outer and inner support need not be
+disjoint a priori.  So the honest global counting split is: total classes
+decompose into the outer-supported sector and the residual non-outer sector.
+
+If one later establishes a no-overlap theorem saying outer and inner support
+cannot both occur at the same quotient class, then the residual sector is
+equivalent to the inner sector and the full total cardinal equality follows by
+combining the outer and inner equalities proved above.
 -/
 
-theorem canonicalRightNeighborOfLeftNeighbor_recovers_target_bundled_of_rightMediator_uniqueness
-    (x y z w : PTree)
-    (hUnique : LeftOuterRightMediatorUnique x y z w)
-    (t : RightContributionClasses x y z w)
-    (s : leftContributionNeighborClasses x y z w t) :
-    (canonicalRightNeighborOfLeftNeighbor x y z w t s).1 = t := by
-  apply canonicalRightNeighborOfLeftNeighbor_recovers_target_bundled_of_unique
-  exact rightNeighborFiberUnique_of_rightMediator_uniqueness x y z w hUnique
+/-- Total left contribution cardinal. -/
+noncomputable def totalLeftContributionCard
+    (x y z w : PTree) : Cardinal :=
+  Cardinal.lift (Cardinal.mk (LeftContributionClasses x y z w))
 
-theorem canonicalRightNeighborOfLeftNeighbor_recovers_target_of_rightMediator_uniqueness
-    (x y z w : PTree)
-    (hUnique : LeftOuterRightMediatorUnique x y z w)
-    (t : RightContributionClasses x y z w)
-    (s : leftContributionNeighborClasses x y z w t) :
-    (canonicalRightNeighborOfLeftNeighbor x y z w t s).1.1 = t.1 := by
-  simpa using congrArg Subtype.val
-    (canonicalRightNeighborOfLeftNeighbor_recovers_target_bundled_of_rightMediator_uniqueness
-      x y z w hUnique t s)
+/-- Total swapped-right contribution cardinal. -/
+noncomputable def totalRightContributionCard
+    (x y z w : PTree) : Cardinal :=
+  Cardinal.lift (Cardinal.mk (RightContributionClasses x y z w))
 
-/-
-theorem canonicalLeftNeighborOfRightNeighbor_recovers_target_bundled_of_rightMediator_uniqueness
+/-- Left total classes which are not outer-supported. -/
+def LeftResidualContributionClasses
+    (x y z w : PTree) :=
+  { s : LeftContributionClasses x y z w //
+      ¬ HasOuterSupportLeftContributionClass x y z w s }
+
+/-- Swapped-right total classes which are not outer-supported. -/
+def RightResidualContributionClasses
+    (x y z w : PTree) :=
+  { t : RightContributionClasses x y z w //
+      ¬ HasSwappedRightOuterContributionClass x y z w t.1 }
+
+/-- Cardinal of the residual non-outer left sector. -/
+noncomputable def leftResidualContributionCard
+    (x y z w : PTree) : Cardinal :=
+  Cardinal.lift (Cardinal.mk (LeftResidualContributionClasses x y z w))
+
+/-- Cardinal of the residual non-outer swapped-right sector. -/
+noncomputable def rightResidualContributionCard
+    (x y z w : PTree) : Cardinal :=
+  Cardinal.lift (Cardinal.mk (RightResidualContributionClasses x y z w))
+
+/-- A residual left contribution class is necessarily inner-supported. -/
+theorem LeftResidualContributionClasses.has_inner_support
     (x y z w : PTree)
-    (hUnique : LeftOuterRightMediatorUnique x y z w)
-    (s : LeftContributionClasses x y z w)
-    (t : rightContributionNeighborClasses x y z w s) :
-    (canonicalLeftNeighborOfRightNeighbor x y z w s t).1 = s := by
-  apply canonicalLeftNeighborOfRightNeighbor_recovers_target_bundled_of_unique
-  exact leftNeighborFiberUnique_of_rightMediator_uniqueness x y z w hUnique
+    (s : LeftResidualContributionClasses x y z w) :
+    HasLeftInnerContributionClass x y z w s.1.1 := by
+  rcases s with ⟨⟨q, hq⟩, hs⟩
+  rcases hq with houter | hinner
+  · exact False.elim (hs houter)
+  · exact hinner
+
+/-- A residual swapped-right contribution class is necessarily inner-supported. -/
+theorem RightResidualContributionClasses.has_inner_support
+    (x y z w : PTree)
+    (t : RightResidualContributionClasses x y z w) :
+    HasSwappedRightInnerContributionClass x y z w t.1.1 := by
+  rcases t with ⟨⟨q', hq'⟩, ht⟩
+  rcases hq' with houter | hinner
+  · exact False.elim (ht houter)
+  · exact hinner
+
+/-- Total left contribution classes split into outer-supported and residual sectors. -/
+noncomputable def leftContributionClasses_outerPlusResidual
+    (x y z w : PTree) :
+    LeftContributionClasses x y z w ≃
+      OuterLeftContributionClasses x y z w ⊕
+        LeftResidualContributionClasses x y z w where
+  toFun := fun s =>
+    if hs : HasOuterSupportLeftContributionClass x y z w s then
+      Sum.inl ⟨s.1, hs⟩
+    else
+      Sum.inr ⟨s, hs⟩
+  invFun := fun u =>
+    Sum.elim
+      (fun s => ⟨s.1, Or.inl s.2⟩)
+      (fun s => s.1)
+      u
+  left_inv := by
+    intro s
+    by_cases hs : HasOuterSupportLeftContributionClass x y z w s
+    · simp [hs]
+    · simp [hs]
+  right_inv := by
+    intro u
+    cases u with
+    | inl s =>
+        have hs : HasOuterSupportLeftContributionClass x y z w ⟨s.1, Or.inl s.2⟩ := s.2
+        simp [hs]
+    | inr s =>
+        simp [s.2]
+
+/-- Total swapped-right contribution classes split into outer-supported and residual sectors. -/
+noncomputable def rightContributionClasses_outerPlusResidual
+    (x y z w : PTree) :
+    RightContributionClasses x y z w ≃
+      SwappedRightOuterContributionClasses x y z w ⊕
+        RightResidualContributionClasses x y z w where
+  toFun := fun t =>
+    if ht : HasSwappedRightOuterContributionClass x y z w t.1 then
+      Sum.inl ⟨t.1, ht⟩
+    else
+      Sum.inr ⟨t, ht⟩
+  invFun := fun u =>
+    Sum.elim
+      (fun t => ⟨t.1, Or.inl t.2⟩)
+      (fun t => t.1)
+      u
+  left_inv := by
+    intro t
+    by_cases ht : HasSwappedRightOuterContributionClass x y z w t.1
+    · simp [ht]
+    · simp [ht]
+  right_inv := by
+    intro u
+    cases u with
+    | inl t =>
+        have ht : HasSwappedRightOuterContributionClass x y z w t.1 := t.2
+        simp [ht]
+    | inr t =>
+        simp [t.2]
+
+/-- Counting decomposition of total left contribution classes. -/
+theorem totalLeftContributionCard_eq_outer_plus_residual
+    (x y z w : PTree) :
+    totalLeftContributionCard x y z w =
+      Cardinal.lift (Cardinal.mk (OuterLeftContributionClasses x y z w)) +
+      leftResidualContributionCard x y z w := by
+  unfold totalLeftContributionCard leftResidualContributionCard
+  calc
+    Cardinal.lift (Cardinal.mk (LeftContributionClasses x y z w))
+      = Cardinal.lift
+          (Cardinal.mk
+            (OuterLeftContributionClasses x y z w ⊕
+              LeftResidualContributionClasses x y z w)) := by
+          exact congrArg Cardinal.lift
+            (Cardinal.mk_congr
+              (leftContributionClasses_outerPlusResidual x y z w))
+    _ = Cardinal.lift (Cardinal.mk (OuterLeftContributionClasses x y z w)) +
+          Cardinal.lift (Cardinal.mk (LeftResidualContributionClasses x y z w)) := by
+          rw [Cardinal.mk_sum, Cardinal.lift_add, Cardinal.lift_lift,
+            Cardinal.lift_lift]
+
+/-- Counting decomposition of total swapped-right contribution classes. -/
+theorem totalRightContributionCard_eq_outer_plus_residual
+    (x y z w : PTree) :
+    totalRightContributionCard x y z w =
+      Cardinal.lift (Cardinal.mk (SwappedRightOuterContributionClasses x y z w)) +
+      rightResidualContributionCard x y z w := by
+  unfold totalRightContributionCard rightResidualContributionCard
+  calc
+    Cardinal.lift (Cardinal.mk (RightContributionClasses x y z w))
+      = Cardinal.lift
+          (Cardinal.mk
+            (SwappedRightOuterContributionClasses x y z w ⊕
+              RightResidualContributionClasses x y z w)) := by
+          exact congrArg Cardinal.lift
+            (Cardinal.mk_congr
+              (rightContributionClasses_outerPlusResidual x y z w))
+    _ = Cardinal.lift (Cardinal.mk (SwappedRightOuterContributionClasses x y z w)) +
+          Cardinal.lift (Cardinal.mk (RightResidualContributionClasses x y z w)) := by
+          rw [Cardinal.mk_sum, Cardinal.lift_add, Cardinal.lift_lift,
+            Cardinal.lift_lift]
+
+/--
+Hypothesis schema asserting that no left quotient class carries both outer and
+inner support.
 -/
+def NoLeftOuterInnerOverlap
+    (x y z w : PTree) : Prop :=
+  ∀ q : TwoStepQuotient x y z w,
+    ¬ (HasLeftOuterContributionClass x y z w q ∧
+      HasLeftInnerContributionClass x y z w q)
 
-/-
-theorem canonicalLeftNeighborOfRightNeighbor_recovers_target_of_rightMediator_uniqueness
-    (x y z w : PTree)
-    (hUnique : LeftOuterRightMediatorUnique x y z w)
-    (s : LeftContributionClasses x y z w)
-    (t : rightContributionNeighborClasses x y z w s) :
-    (canonicalLeftNeighborOfRightNeighbor x y z w s t).1.1 = s.1 := by
-  simpa using congrArg Subtype.val
-    (canonicalLeftNeighborOfRightNeighbor_recovers_target_bundled_of_rightMediator_uniqueness
-      x y z w hUnique s t)
+/--
+Hypothesis schema asserting that no swapped-right quotient class carries both
+outer and inner support.
 -/
+def NoRightOuterInnerOverlap
+    (x y z w : PTree) : Prop :=
+  ∀ q' : TwoStepQuotient y x z w,
+    ¬ (HasSwappedRightOuterContributionClass x y z w q' ∧
+      HasSwappedRightInnerContributionClass x y z w q')
 
+/--
+Under a no-overlap hypothesis, the residual left sector is exactly the inner
+left sector.
+-/
+noncomputable def leftResidualContributionClasses_equiv_inner
+    (x y z w : PTree)
+    (hdisj : NoLeftOuterInnerOverlap x y z w) :
+    LeftResidualContributionClasses x y z w ≃
+      LeftInnerContributionClasses x y z w where
+  toFun := fun s =>
+    ⟨s.1.1, LeftResidualContributionClasses.has_inner_support x y z w s⟩
+  invFun := fun s =>
+    ⟨⟨s.1, Or.inr s.2⟩, by
+      intro houter
+      exact hdisj s.1 ⟨houter, s.2⟩⟩
+  left_inv := by
+    intro s
+    apply Subtype.ext
+    rfl
+  right_inv := by
+    intro s
+    apply Subtype.ext
+    rfl
 
+/--
+Under a no-overlap hypothesis, the residual swapped-right sector is exactly the
+inner swapped-right sector.
+-/
+noncomputable def rightResidualContributionClasses_equiv_inner
+    (x y z w : PTree)
+    (hdisj : NoRightOuterInnerOverlap x y z w) :
+    RightResidualContributionClasses x y z w ≃
+      SwappedRightInnerContributionClasses x y z w where
+  toFun := fun t =>
+    ⟨t.1.1, RightResidualContributionClasses.has_inner_support x y z w t⟩
+  invFun := fun t =>
+    ⟨⟨t.1, Or.inr t.2⟩, by
+      intro houter
+      exact hdisj t.1 ⟨houter, t.2⟩⟩
+  left_inv := by
+    intro t
+    apply Subtype.ext
+    rfl
+  right_inv := by
+    intro t
+    apply Subtype.ext
+    rfl
 
+/-- Under no overlap, the residual left-sector cardinal is the inner left-sector cardinal. -/
+theorem leftResidualContributionCard_eq_inner_of_no_overlap
+    (x y z w : PTree)
+    (hdisj : NoLeftOuterInnerOverlap x y z w) :
+    leftResidualContributionCard x y z w = innerLeftContributionCard x y z w := by
+  unfold leftResidualContributionCard innerLeftContributionCard
+  exact congrArg Cardinal.lift
+    (Cardinal.mk_congr
+      (leftResidualContributionClasses_equiv_inner x y z w hdisj))
 
+/-- Under no overlap, the residual swapped-right-sector cardinal is the inner swapped-right-sector cardinal. -/
+theorem rightResidualContributionCard_eq_inner_of_no_overlap
+    (x y z w : PTree)
+    (hdisj : NoRightOuterInnerOverlap x y z w) :
+    rightResidualContributionCard x y z w = innerRightContributionCard x y z w := by
+  unfold rightResidualContributionCard innerRightContributionCard
+  exact congrArg Cardinal.lift
+    (Cardinal.mk_congr
+      (rightResidualContributionClasses_equiv_inner x y z w hdisj))
 
-
-
-
-
-
+/--
+Conditional global counting equality: once outer/inner overlap is excluded on
+both sides, the total contribution cardinal is the sum of the solved outer and
+inner sectors.
+-/
+theorem totalContributionCard_eq_of_no_overlap
+    (x y z w : PTree)
+    (hleft : NoLeftOuterInnerOverlap x y z w)
+    (hright : NoRightOuterInnerOverlap x y z w) :
+    totalLeftContributionCard x y z w = totalRightContributionCard x y z w := by
+  have houter :
+      Cardinal.lift (Cardinal.mk (OuterLeftContributionClasses x y z w)) =
+        Cardinal.lift (Cardinal.mk (SwappedRightOuterContributionClasses x y z w)) := by
+    exact congrArg Cardinal.lift
+      (Cardinal.mk_congr (outerContributionCommute x y z w))
+  calc
+    totalLeftContributionCard x y z w
+      = Cardinal.lift (Cardinal.mk (OuterLeftContributionClasses x y z w)) +
+          leftResidualContributionCard x y z w := by
+            exact totalLeftContributionCard_eq_outer_plus_residual x y z w
+    _ = Cardinal.lift (Cardinal.mk (OuterLeftContributionClasses x y z w)) +
+          innerLeftContributionCard x y z w := by
+            rw [leftResidualContributionCard_eq_inner_of_no_overlap x y z w hleft]
+    _ = Cardinal.lift (Cardinal.mk (SwappedRightOuterContributionClasses x y z w)) +
+          innerRightContributionCard x y z w := by
+            rw [houter, innerLeftContributionCard_eq_innerRightContributionCard x y z w]
+    _ = Cardinal.lift (Cardinal.mk (SwappedRightOuterContributionClasses x y z w)) +
+          rightResidualContributionCard x y z w := by
+            rw [rightResidualContributionCard_eq_inner_of_no_overlap x y z w hright]
+    _ = totalRightContributionCard x y z w := by
+          symm
+          exact totalRightContributionCard_eq_outer_plus_residual x y z w
 
 /-!
-## Neighbour fibre subsingletonness from mediator uniqueness
+## Proof-theoretic no-overlap criteria
+
+The remaining question is whether a quotient class can simultaneously encode an
+independent/outer compositional event and a nested/inner one.  The cleanest
+sufficient criterion is that raw outer witness classes and raw inner witness
+classes are disjoint.
+
+An even stronger sufficient criterion is syntactic: there is no
+`TwoStepEquiv`-chain connecting an outer raw code to an inner raw code on the
+same side.  Either form is enough to discharge the overlap hypotheses used in
+the global counting theorem above.
 -/
 
-/-- Right-neighbour fibres are subsingleton under mediator uniqueness. -/
-theorem rightContributionNeighborClasses_subsingleton_of_rightMediator_uniqueness
-    (x y z w : PTree)
-    (hUnique : LeftOuterRightMediatorUnique x y z w)
-    (s : LeftContributionClasses x y z w) :
-    Subsingleton (rightContributionNeighborClasses x y z w s) := by
-  refine ⟨?_⟩
-  intro u v
-  apply rightContributionNeighborClasses_ext x y z w s u v
-  -- reduce to equality of underlying quotient classes
-  -- this should follow from your fibre-level uniqueness results
-  -- via `hUnique`
-  sorry
+/-- Raw outer-left and inner-left witness classes never coincide. -/
+def LeftOuterInnerClassDisjoint
+    (x y z w : PTree) : Prop :=
+  ∀ hOut : OuterLeftWitness x y z w,
+    ∀ hIn : LeftInnerWitnessData x y z w,
+      outerLeftWitnessClass hOut ≠ leftInnerWitnessClass x y z w hIn
 
-/-- Left-neighbour fibres are subsingleton under mediator uniqueness. -/
-theorem leftContributionNeighborClasses_subsingleton_of_rightMediator_uniqueness
+/-- Raw swapped-right outer and swapped-right inner witness classes never coincide. -/
+def SwappedRightOuterInnerClassDisjoint
+    (x y z w : PTree) : Prop :=
+  ∀ hOut : OuterRightWitness y x z w,
+    ∀ hIn : SwappedRightInnerWitnessData x y z w,
+      outerRightWitnessClass hOut ≠ swappedRightInnerWitnessClass x y z w hIn
+
+/--
+Stronger code-level criterion: no left-outer raw code is `TwoStepEquiv` to a
+left-inner raw code.
+-/
+def NoLeftOuterInnerCodeEquiv
+    (x y z w : PTree) : Prop :=
+  ∀ a b : Address, ∀ z' : PTree,
+    ∀ haz : (a, z') ∈ matchingLeafGraftWitnesses y z,
+    ∀ hbw : (b, w) ∈ matchingLeafGraftWitnesses x z',
+    ∀ a' b' : Address, ∀ y' : PTree,
+    ∀ hay : (a', y') ∈ matchingLeafGraftWitnesses y x,
+    ∀ hbw' : (b', w) ∈ matchingLeafGraftWitnesses y' z,
+      ¬ TwoStepEquiv x y z w
+          (TwoStepCode.leftOuter a b z' haz hbw)
+          (TwoStepCode.leftInner a' b' y' hay hbw')
+
+/--
+Stronger code-level criterion on the swapped-right side: no swapped-right outer
+raw code is `TwoStepEquiv` to a swapped-right inner raw code.
+-/
+def NoSwappedRightOuterInnerCodeEquiv
+    (x y z w : PTree) : Prop :=
+  ∀ a b : Address, ∀ z' : PTree,
+    ∀ haz : (a, z') ∈ matchingLeafGraftWitnesses y z,
+    ∀ hbw : (b, w) ∈ matchingLeafGraftWitnesses x z',
+    ∀ a' b' : Address, ∀ y' : PTree,
+    ∀ hay : (a', y') ∈ matchingLeafGraftWitnesses y x,
+    ∀ hbw' : (b', w) ∈ matchingLeafGraftWitnesses y' z,
+      ¬ TwoStepEquiv y x z w
+          (TwoStepCode.rightOuter a b z' haz hbw)
+          (TwoStepCode.rightInner a' b' y' hay hbw')
+
+/--
+Code-level impossibility of outer-to-inner equivalence on the left implies
+class-level disjointness of outer and inner witnesses.
+-/
+theorem leftOuterInnerClassDisjoint_of_noCodeEquiv
     (x y z w : PTree)
-    (hUnique : LeftOuterRightMediatorUnique x y z w)
-    (t : RightContributionClasses x y z w) :
-    Subsingleton (leftContributionNeighborClasses x y z w t) := by
-  refine ⟨?_⟩
-  intro s₁ s₂
-  apply leftContributionNeighborClasses_ext x y z w t s₁ s₂
-  -- same story, dualised
-  sorry
+    (hNo : NoLeftOuterInnerCodeEquiv x y z w) :
+    LeftOuterInnerClassDisjoint x y z w := by
+  intro hOut hIn hEq
+  cases hOut with
+  | mk a b z' haz hbw =>
+      cases hIn with
+      | mk hw hh =>
+          cases hw with
+          | inner a' b' y' hay hbw' =>
+              have hclass :
+                  codeClass (TwoStepCode.leftOuter a b z' haz hbw) =
+                    codeClass (TwoStepCode.leftInner a' b' y' hay hbw') := by
+                simpa [outerLeftWitnessClass, leftInnerWitnessClass,
+                  classOfLeftWitness, codeOfLeftWitness] using hEq
+              exact hNo a b z' haz hbw a' b' y' hay hbw' (Quotient.exact hclass)
+          | outer =>
+              cases hh
+
+/--
+Code-level impossibility of outer-to-inner equivalence on the swapped-right
+side implies class-level disjointness there.
+-/
+theorem swappedRightOuterInnerClassDisjoint_of_noCodeEquiv
+    (x y z w : PTree)
+    (hNo : NoSwappedRightOuterInnerCodeEquiv x y z w) :
+    SwappedRightOuterInnerClassDisjoint x y z w := by
+  intro hOut hIn hEq
+  cases hOut with
+  | mk a b z' haz hbw =>
+      cases hIn with
+      | mk hw hh =>
+          cases hw with
+          | inner a' b' y' hay hbw' =>
+              have hclass :
+                  codeClass (TwoStepCode.rightOuter a b z' haz hbw) =
+                    codeClass (TwoStepCode.rightInner a' b' y' hay hbw') := by
+                simpa [outerRightWitnessClass, swappedRightInnerWitnessClass,
+                  classOfRightWitness, codeOfRightWitness] using hEq
+              exact hNo a b z' haz hbw a' b' y' hay hbw' (Quotient.exact hclass)
+          | outer =>
+              cases hh
+
+/--
+Class-level disjointness of outer and inner left witnesses forces the left
+no-overlap hypothesis.
+-/
+theorem noLeftOuterInnerOverlap_of_classDisjoint
+    (x y z w : PTree)
+    (hDisj : LeftOuterInnerClassDisjoint x y z w) :
+    NoLeftOuterInnerOverlap x y z w := by
+  intro q hBoth
+  rcases hBoth with ⟨hOuter, hInner⟩
+  rcases hOuter with ⟨hOut, hhOut⟩
+  rcases hInner with ⟨hIn⟩
+  exact hDisj hOut hIn.1 (hhOut.trans hIn.2.symm)
+
+/--
+Class-level disjointness of swapped-right outer and inner witnesses forces the
+right no-overlap hypothesis.
+-/
+theorem noRightOuterInnerOverlap_of_classDisjoint
+    (x y z w : PTree)
+    (hDisj : SwappedRightOuterInnerClassDisjoint x y z w) :
+    NoRightOuterInnerOverlap x y z w := by
+  intro q' hBoth
+  rcases hBoth with ⟨hOuter, hInner⟩
+  rcases hOuter with ⟨hOut, hhOut⟩
+  rcases hInner with ⟨hIn⟩
+  exact hDisj hOut hIn.1 (hhOut.trans hIn.2.symm)
+
+/--
+If outer and inner witness classes are disjoint on both sides, then the global
+total counting equality follows.
+-/
+theorem totalContributionCard_eq_of_classDisjoint
+    (x y z w : PTree)
+    (hleft : LeftOuterInnerClassDisjoint x y z w)
+    (hright : SwappedRightOuterInnerClassDisjoint x y z w) :
+    totalLeftContributionCard x y z w = totalRightContributionCard x y z w := by
+  apply totalContributionCard_eq_of_no_overlap x y z w
+  · exact noLeftOuterInnerOverlap_of_classDisjoint x y z w hleft
+  · exact noRightOuterInnerOverlap_of_classDisjoint x y z w hright
+
+/--
+Code-level outer/inner separation is a sufficient proof-theoretic hypothesis
+for the full total counting equality.
+-/
+theorem totalContributionCard_eq_of_noCodeEquiv
+    (x y z w : PTree)
+    (hleft : NoLeftOuterInnerCodeEquiv x y z w)
+    (hright : NoSwappedRightOuterInnerCodeEquiv x y z w) :
+    totalLeftContributionCard x y z w = totalRightContributionCard x y z w := by
+  apply totalContributionCard_eq_of_classDisjoint x y z w
+  · exact leftOuterInnerClassDisjoint_of_noCodeEquiv x y z w hleft
+  · exact swappedRightOuterInnerClassDisjoint_of_noCodeEquiv x y z w hright
+
+/-!
+## Address-pattern layer
+
+The raw `leftOuter`/`rightOuter` constructors are not themselves the invariant
+outer fragment: they merely say the first graft happened on `z`. The true
+independent-vs-nested distinction is carried by the address relation between the
+first and second graft sites.
+
+This section packages that as a small pattern classifier on raw codes. We do
+not yet prove that `TwoStepEquiv` preserves this pattern globally; that would be
+a strong disjointness theorem. But these lemmas isolate exactly the extra fact
+still needed from the proof theory.
+-/
+
+/-- The dependency pattern of a raw two-step code. -/
+inductive TwoStepPattern where
+| independent
+| dependent
+deriving DecidableEq
+
+/--
+Classify a raw two-step code by address-pattern.
+
+- `leftInner` and `rightInner` are definitionally nested/dependent;
+- `leftOuter` and `rightOuter` are classified by address comparability.
+-/
+noncomputable def codePattern
+    {x y z w : PTree} :
+    TwoStepCode x y z w → TwoStepPattern
+  | TwoStepCode.leftOuter a b _ _ _ =>
+      if PTree.comparable a b then .dependent else .independent
+  | TwoStepCode.rightOuter a b _ _ _ =>
+      if PTree.comparable a b then .dependent else .independent
+  | TwoStepCode.leftInner _ _ _ _ _ =>
+      .dependent
+  | TwoStepCode.rightInner _ _ _ _ _ =>
+      .dependent
+
+/-- Inner-presented left codes are always dependent. -/
+@[simp] theorem codePattern_leftInner
+    (x y z w : PTree)
+    (a b : Address) (y' : PTree)
+    (hay : (a, y') ∈ matchingLeafGraftWitnesses y x)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y' z) :
+    codePattern (TwoStepCode.leftInner a b y' hay hbw) = TwoStepPattern.dependent := by
+  rfl
+
+/-- Inner-presented right codes are always dependent. -/
+@[simp] theorem codePattern_rightInner
+    (x y z w : PTree)
+    (a b : Address) (y' : PTree)
+    (hay : (a, y') ∈ matchingLeafGraftWitnesses x y)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y' z) :
+    codePattern (TwoStepCode.rightInner a b y' hay hbw) = TwoStepPattern.dependent := by
+  rfl
+
+/-- An incomparable left-outer code is classified as independent. -/
+@[simp] theorem codePattern_leftOuter_of_not_comparable
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses y z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses x z')
+    (hcmp : ¬ PTree.comparable a b) :
+    codePattern (TwoStepCode.leftOuter a b z' haz hbw) = TwoStepPattern.independent := by
+  simp [codePattern, hcmp]
+
+/-- A comparable left-outer code is classified as dependent. -/
+@[simp] theorem codePattern_leftOuter_of_comparable
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses y z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses x z')
+    (hcmp : PTree.comparable a b) :
+    codePattern (TwoStepCode.leftOuter a b z' haz hbw) = TwoStepPattern.dependent := by
+  simp [codePattern, hcmp]
+
+/-- An incomparable right-outer code is classified as independent. -/
+@[simp] theorem codePattern_rightOuter_of_not_comparable
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses x z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y z')
+    (hcmp : ¬ PTree.comparable a b) :
+    codePattern (TwoStepCode.rightOuter a b z' haz hbw) = TwoStepPattern.independent := by
+  simp [codePattern, hcmp]
+
+/-- A comparable right-outer code is classified as dependent. -/
+@[simp] theorem codePattern_rightOuter_of_comparable
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses x z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y z')
+    (hcmp : PTree.comparable a b) :
+    codePattern (TwoStepCode.rightOuter a b z' haz hbw) = TwoStepPattern.dependent := by
+  simp [codePattern, hcmp]
+
+/--
+For a successful left-outer code, being classified as dependent is equivalent
+to the second address lying under the first.
+-/
+theorem codePattern_leftOuter_eq_dependent_iff
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses y z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses x z') :
+    codePattern (TwoStepCode.leftOuter a b z' haz hbw) = TwoStepPattern.dependent
+      ↔ ∃ c, b = a ++ c := by
+  rw [mem_matchingLeafGraftWitnesses_iff] at haz hbw
+  rcases haz with ⟨_, hyz⟩
+  rcases hbw with ⟨_, hxz'⟩
+  constructor
+  · intro hpat
+    by_cases hcmp : PTree.comparable a b
+    · exact
+        (graftMatchingLeafAt_address_classification x y z a b z' w hyz hxz').resolve_right
+          (by intro hn; exact hn hcmp)
+    · simp [codePattern, hcmp] at hpat
+  · intro hdep
+    rcases hdep with ⟨c, hc⟩
+    have hcmp : PTree.comparable a b := by
+      apply PTree.comparable_of_isAncestorOf
+      exact ⟨c, hc⟩
+    simp [codePattern, hcmp]
+
+/--
+For a successful left-outer code, being classified as independent is
+equivalent to incomparability of the two graft addresses.
+-/
+theorem codePattern_leftOuter_eq_independent_iff
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses y z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses x z') :
+    codePattern (TwoStepCode.leftOuter a b z' haz hbw) = TwoStepPattern.independent
+      ↔ ¬ PTree.comparable a b := by
+  by_cases hcmp : PTree.comparable a b
+  · simp [codePattern, hcmp]
+  · simp [codePattern, hcmp]
+
+/--
+For a successful right-outer code, being classified as dependent is equivalent
+to the second address lying under the first.
+-/
+theorem codePattern_rightOuter_eq_dependent_iff
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses x z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y z') :
+    codePattern (TwoStepCode.rightOuter a b z' haz hbw) = TwoStepPattern.dependent
+      ↔ ∃ c, b = a ++ c := by
+  rw [mem_matchingLeafGraftWitnesses_iff] at haz hbw
+  rcases haz with ⟨_, hxz⟩
+  rcases hbw with ⟨_, hyz'⟩
+  constructor
+  · intro hpat
+    by_cases hcmp : PTree.comparable a b
+    · exact
+        (graftMatchingLeafAt_address_classification y x z a b z' w hxz hyz').resolve_right
+          (by intro hn; exact hn hcmp)
+    · simp [codePattern, hcmp] at hpat
+  · intro hdep
+    rcases hdep with ⟨c, hc⟩
+    have hcmp : PTree.comparable a b := by
+      apply PTree.comparable_of_isAncestorOf
+      exact ⟨c, hc⟩
+    simp [codePattern, hcmp]
+
+/--
+For a successful right-outer code, being classified as independent is
+equivalent to incomparability of the two graft addresses.
+-/
+theorem codePattern_rightOuter_eq_independent_iff
+    (x y z w : PTree)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses x z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y z') :
+    codePattern (TwoStepCode.rightOuter a b z' haz hbw) = TwoStepPattern.independent
+      ↔ ¬ PTree.comparable a b := by
+  by_cases hcmp : PTree.comparable a b
+  · simp [codePattern, hcmp]
+  · simp [codePattern, hcmp]
+
+/-- A hypothesis saying `TwoStepEquiv` preserves the address-pattern classifier. -/
+def CodePatternInvariant
+    (x y z w : PTree) : Prop :=
+  ∀ {c d : TwoStepCode x y z w},
+    TwoStepEquiv x y z w c d →
+    codePattern c = codePattern d
+
+/--
+If `TwoStepEquiv` preserves address-pattern, then an incomparable left-outer
+code cannot be equivalent to a left-inner code.
+-/
+theorem noIndependentLeftOuterToLeftInnerEquiv_of_patternInvariant
+    (x y z w : PTree)
+    (hpat : CodePatternInvariant x y z w)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses y z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses x z')
+    (hcmp : ¬ PTree.comparable a b)
+    (a' b' : Address) (y' : PTree)
+    (hay : (a', y') ∈ matchingLeafGraftWitnesses y x)
+    (hbw' : (b', w) ∈ matchingLeafGraftWitnesses y' z) :
+    ¬ TwoStepEquiv x y z w
+        (TwoStepCode.leftOuter a b z' haz hbw)
+        (TwoStepCode.leftInner a' b' y' hay hbw') := by
+  intro hEq
+  have hEqPat := hpat hEq
+  simp [codePattern, hcmp] at hEqPat
+
+/--
+If `TwoStepEquiv` preserves address-pattern, then an incomparable swapped-right
+outer code cannot be equivalent to a swapped-right inner code.
+-/
+theorem noIndependentRightOuterToRightInnerEquiv_of_patternInvariant
+    (x y z w : PTree)
+    (hpat : CodePatternInvariant y x z w)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses y z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses x z')
+    (hcmp : ¬ PTree.comparable a b)
+    (a' b' : Address) (y' : PTree)
+    (hay : (a', y') ∈ matchingLeafGraftWitnesses y x)
+    (hbw' : (b', w) ∈ matchingLeafGraftWitnesses y' z) :
+    ¬ TwoStepEquiv y x z w
+        (TwoStepCode.rightOuter a b z' haz hbw)
+        (TwoStepCode.rightInner a' b' y' hay hbw') := by
+  intro hEq
+  have hEqPat := hpat hEq
+  simp [codePattern, hcmp] at hEqPat
+
+
+
+
+
+
 
 
 
