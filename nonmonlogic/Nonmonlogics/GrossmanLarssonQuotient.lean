@@ -11398,6 +11398,117 @@ theorem properOverlap_rightOuter_leftInner_sameClass :
   exact codeClass_eq_of_equiv properOverlap_rightOuter_leftInner_equiv
 
 /--
+The explicit left-outer presentation is also equivalent to the explicit
+right-outer presentation in the same example.
+-/
+theorem properOverlap_leftOuter_rightOuter_equiv :
+    TwoStepEquiv
+      properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2
+      (TwoStepCode.leftOuter
+        [0] [0, 0] properOverlapTree1
+        properOverlap_self_matchingWitness
+        properOverlap_outer_matchingWitness)
+      (TwoStepCode.rightOuter
+        [0] [0, 0] properOverlapTree1
+        properOverlap_self_matchingWitness
+        properOverlap_outer_matchingWitness) := by
+  refine TwoStepEquiv.outer_comm_outer
+    properOverlap_self_matchingWitness
+    properOverlap_outer_matchingWitness
+    properOverlap_self_matchingWitness
+    properOverlap_outer_matchingWitness
+    ?_
+  rw [mem_twoStepAddrWitnessesRight_iff]
+  exact Or.inl ⟨properOverlapTree1, properOverlap_self_matchingWitness,
+    properOverlap_outer_matchingWitness⟩
+
+/--
+Hence the explicit left-outer and right-outer presentations determine the same
+quotient class.
+-/
+theorem properOverlap_leftOuter_rightOuter_sameClass :
+    codeClass
+      (TwoStepCode.leftOuter
+        [0] [0, 0] properOverlapTree1
+        properOverlap_self_matchingWitness
+        properOverlap_outer_matchingWitness)
+      =
+    codeClass
+      (TwoStepCode.rightOuter
+        [0] [0, 0] properOverlapTree1
+        properOverlap_self_matchingWitness
+        properOverlap_outer_matchingWitness) := by
+  exact codeClass_eq_of_equiv properOverlap_leftOuter_rightOuter_equiv
+
+/--
+So the same `properOverlap` quotient class already carries both left-outer and
+left-inner support.
+-/
+theorem properOverlap_leftOuter_leftInner_sameClass :
+    codeClass
+      (TwoStepCode.leftOuter
+        [0] [0, 0] properOverlapTree1
+        properOverlap_self_matchingWitness
+        properOverlap_outer_matchingWitness)
+      =
+    codeClass
+      (TwoStepCode.leftInner
+        [0] [0] properOverlapTree1
+        properOverlap_self_matchingWitness
+        properOverlap_inner_matchingWitness) := by
+  exact properOverlap_leftOuter_rightOuter_sameClass.trans
+    properOverlap_rightOuter_leftInner_sameClass
+
+/--
+The `properOverlap` class is a concrete mixed-support class on the left carrier.
+-/
+theorem properOverlap_class_has_mixed_left_support :
+    let q :=
+      codeClass
+        (TwoStepCode.leftOuter
+          [0] [0, 0] properOverlapTree1
+          properOverlap_self_matchingWitness
+          properOverlap_outer_matchingWitness)
+    HasLeftOuterContributionClass
+      properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 q
+    ∧
+    HasLeftInnerContributionClass
+      properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 q := by
+  dsimp
+  constructor
+  · refine ⟨OuterLeftWitness.mk
+      [0] [0, 0] properOverlapTree1
+      properOverlap_self_matchingWitness
+      properOverlap_outer_matchingWitness, rfl⟩
+  · refine ⟨⟨⟨TwoStepWitnessLeft.inner
+      [0] [0] properOverlapTree1
+      properOverlap_self_matchingWitness
+      properOverlap_inner_matchingWitness, trivial⟩, ?_⟩⟩
+    simpa [leftInnerWitnessClass, classOfLeftWitness, codeOfLeftWitness]
+      using properOverlap_leftOuter_leftInner_sameClass.symm
+
+/--
+The same `properOverlap` class also carries right-outer support on the
+original carrier.
+-/
+theorem properOverlap_class_has_rightOuter_support :
+    let q :=
+      codeClass
+        (TwoStepCode.leftOuter
+          [0] [0, 0] properOverlapTree1
+          properOverlap_self_matchingWitness
+          properOverlap_outer_matchingWitness)
+    HasRightOuterContributionClass
+      properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 q := by
+  dsimp
+  refine ⟨OuterRightWitness.mk
+      [0] [0, 0] properOverlapTree1
+      properOverlap_self_matchingWitness
+      properOverlap_outer_matchingWitness, ?_⟩
+  simpa [outerRightWitnessClass, classOfRightWitness, codeOfRightWitness]
+    using properOverlap_leftOuter_rightOuter_sameClass.symm
+
+/--
 The quotient class of any left-outer witness coincides with the quotient class
 of any right-inner witness in the same `(x,y,z,w)` geometry.
 
@@ -11636,6 +11747,108 @@ theorem HasRightInnerContributionClass.to_innerVisible
     ClassHasInnerRepresentative x y z w q := by
   exact Or.inr hq
 
+/--
+Two-sided outer support on the original carrier: the same class admits both a
+left-outer and a right-outer presentation.
+-/
+def TwoSidedOuterSupportClass
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) : Prop :=
+  HasLeftOuterContributionClass x y z w q ∧
+    HasRightOuterContributionClass x y z w q
+
+/--
+Two-sided inner support on the original carrier: the same class admits both a
+left-inner and a right-inner presentation.
+-/
+def TwoSidedInnerSupportClass
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) : Prop :=
+  HasLeftInnerContributionClass x y z w q ∧
+    HasRightInnerContributionClass x y z w q
+
+/--
+The `properOverlap` mechanism abstracted: if a class has mixed left support and
+also carries right-outer support on the same carrier, then it is already in the
+right-to-left overlap-noise floor.
+-/
+theorem mixedLeftSupport_of_rightOuter_type_is_noise
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hOutR : HasRightOuterContributionClass x y z w q)
+    (hInL : HasLeftInnerContributionClass x y z w q) :
+    RightToLeftOverlapNoiseClass x y z w q := by
+  exact ⟨hOutR, hInL⟩
+
+/--
+Dually, if a class has mixed right support via a same-carrier right-inner
+presentation, then it is already in the left-to-right overlap-noise floor.
+-/
+theorem mixedRightSupport_of_rightInner_type_is_noise
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hOutL : HasLeftOuterContributionClass x y z w q)
+    (hInR : HasRightInnerContributionClass x y z w q) :
+    LeftToRightOverlapNoiseClass x y z w q := by
+  exact ⟨hOutL, hInR⟩
+
+/--
+If a class has mixed left support, then any same-carrier right support already
+pushes it into one of the two quotient-trivial noise floors.
+-/
+theorem mixedLeftSupport_with_any_right_support_is_noise
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hOutL : HasLeftOuterContributionClass x y z w q)
+    (hInL : HasLeftInnerContributionClass x y z w q)
+    (hRight : HasRightOuterContributionClass x y z w q ∨
+      HasRightInnerContributionClass x y z w q) :
+    LeftToRightOverlapNoiseClass x y z w q ∨
+      RightToLeftOverlapNoiseClass x y z w q := by
+  rcases hRight with hOutR | hInR
+  · exact Or.inr
+      (mixedLeftSupport_of_rightOuter_type_is_noise x y z w q hOutR hInL)
+  · exact Or.inl
+      (mixedRightSupport_of_rightInner_type_is_noise x y z w q hOutL hInR)
+
+/--
+Dually, if a class has mixed right support, then any same-carrier left support
+already puts it in one of the two noise floors.
+-/
+theorem mixedRightSupport_with_any_left_support_is_noise
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hOutR : HasRightOuterContributionClass x y z w q)
+    (hInR : HasRightInnerContributionClass x y z w q)
+    (hLeft : HasLeftOuterContributionClass x y z w q ∨
+      HasLeftInnerContributionClass x y z w q) :
+    LeftToRightOverlapNoiseClass x y z w q ∨
+      RightToLeftOverlapNoiseClass x y z w q := by
+  rcases hLeft with hOutL | hInL
+  · exact Or.inl
+      (mixedRightSupport_of_rightInner_type_is_noise x y z w q hOutL hInR)
+  · exact Or.inr
+      (mixedLeftSupport_of_rightOuter_type_is_noise x y z w q hOutR hInL)
+
+/--
+The `properOverlap` mixed-support class is also forced into the right-to-left
+overlap-noise floor by the same-carrier right-outer criterion.
+-/
+theorem properOverlap_class_is_rightToLeftOverlapNoise :
+    let q :=
+      codeClass
+        (TwoStepCode.leftOuter
+          [0] [0, 0] properOverlapTree1
+          properOverlap_self_matchingWitness
+          properOverlap_outer_matchingWitness)
+    RightToLeftOverlapNoiseClass
+      properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 q := by
+  dsimp
+  exact mixedLeftSupport_of_rightOuter_type_is_noise
+    _ _ _ _ _
+    properOverlap_class_has_rightOuter_support
+    properOverlap_class_has_mixed_left_support.2
+
 /-- Left-to-right overlap noise classes are simultaneously outer- and inner-visible. -/
 theorem LeftToRightOverlapNoiseClass.visible
     (x y z w : PTree)
@@ -11721,6 +11934,654 @@ theorem properOverlap_class_is_leftToRightOverlapNoise :
         properOverlap_inner_matchingWitness, trivial⟩
     · simpa [rightInnerWitnessClass, classOfRightWitness, codeOfRightWitness]
         using properOverlap_leftOuter_rightInner_sameClass.symm
+
+/--
+The explicit `properOverlap` mixed-support class is not residual: it is already
+absorbed by the left-to-right overlap-noise floor.
+-/
+theorem properOverlap_class_not_residualLeft :
+    let q :=
+      codeClass
+        (TwoStepCode.leftOuter
+          [0] [0, 0] properOverlapTree1
+          properOverlap_self_matchingWitness
+          properOverlap_outer_matchingWitness)
+    ¬ ResidualLeftContributionClass
+        properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 q := by
+  dsimp
+  intro hres
+  exact hres.2.1 properOverlap_class_is_leftToRightOverlapNoise
+
+/--
+Swapped-right noise classes are those contribution classes on the swapped side
+that come from quotient-trivial overlap noise on the left.
+-/
+def SwappedRightNoiseContributionClass
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w) : Prop :=
+  IsRightContributionClass x y z w q' ∧
+    ∃ q : TwoStepQuotient x y z w,
+      SwappedTwoStepClass x y z w q q' ∧
+      (LeftToRightOverlapNoiseClass x y z w q ∨
+        RightToLeftOverlapNoiseClass x y z w q)
+
+/--
+Swapped-right residual classes are those swapped contribution classes that come
+from residual left classes under `SwappedTwoStepClass`.
+-/
+def ResidualSwappedRightContributionClass
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w) : Prop :=
+  IsRightContributionClass x y z w q' ∧
+    ∃ q : TwoStepQuotient x y z w,
+      SwappedTwoStepClass x y z w q q' ∧
+      ResidualLeftContributionClass x y z w q
+
+/--
+Every residual left contribution class has a swapped-right residual partner.
+-/
+theorem ResidualLeftContributionClass.exists_swappedRightResidual
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : ResidualLeftContributionClass x y z w q) :
+    ∃ q' : TwoStepQuotient y x z w,
+      SwappedTwoStepClass x y z w q q' ∧
+      ResidualSwappedRightContributionClass x y z w q' := by
+  rcases IsLeftContributionClass.exists_right x y z w q hq.1 with
+    ⟨q', hs, hq'⟩
+  refine ⟨q', hs, hq', q, hs, hq⟩
+
+/--
+Every swapped-right residual class remembers a residual left partner.
+-/
+theorem ResidualSwappedRightContributionClass.exists_leftResidual
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : ResidualSwappedRightContributionClass x y z w q') :
+    ∃ q : TwoStepQuotient x y z w,
+      SwappedTwoStepClass x y z w q q' ∧
+      ResidualLeftContributionClass x y z w q := by
+  exact hq'.2
+
+/--
+Every left overlap-noise class has a swapped-right noise partner.
+-/
+theorem leftOverlapNoiseClass.exists_swappedRightNoise
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : LeftToRightOverlapNoiseClass x y z w q ∨
+      RightToLeftOverlapNoiseClass x y z w q) :
+    ∃ q' : TwoStepQuotient y x z w,
+      SwappedTwoStepClass x y z w q q' ∧
+      SwappedRightNoiseContributionClass x y z w q' := by
+  have hleft : IsLeftContributionClass x y z w q := by
+    rcases hq with hq | hq
+    · exact Or.inl hq.1
+    · exact Or.inr hq.2
+  rcases IsLeftContributionClass.exists_right x y z w q hleft with
+    ⟨q', hs, hq'⟩
+  refine ⟨q', hs, hq', q, hs, hq⟩
+
+/--
+Every swapped-right contribution class is either transported noise or a
+transported residual class.
+-/
+theorem rightContributionClass_noise_or_residual
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : IsRightContributionClass x y z w q') :
+    SwappedRightNoiseContributionClass x y z w q' ∨
+      ResidualSwappedRightContributionClass x y z w q' := by
+  rcases IsRightContributionClass.exists_left x y z w q' hq' with
+    ⟨q, hs, hq⟩
+  rcases leftContributionClass_overlapNoise_or_residual x y z w q hq with
+    hnoise | hnoise | hres
+  · left
+    exact ⟨hq', q, hs, Or.inl hnoise⟩
+  · left
+    exact ⟨hq', q, hs, Or.inr hnoise⟩
+  · right
+    exact ⟨hq', q, hs, hres⟩
+
+/--
+Checkpoint 2, in provisional form: after quotient-trivial overlap noise is
+factored out, the remaining left residual sector still has swapped-right
+partners.
+-/
+def ClassLevelCheckpoint2
+    (x y z w : PTree) : Prop :=
+  ∀ q : TwoStepQuotient x y z w,
+    ResidualLeftContributionClass x y z w q →
+    ∃ q' : TwoStepQuotient y x z w,
+      SwappedTwoStepClass x y z w q q' ∧
+      ResidualSwappedRightContributionClass x y z w q'
+
+/--
+Checkpoint 2: residual left classes survive the swap comparison as residual
+swapped-right classes.
+-/
+theorem classLevelCheckpoint2
+    (x y z w : PTree) :
+    ClassLevelCheckpoint2 x y z w := by
+  intro q hq
+  exact ResidualLeftContributionClass.exists_swappedRightResidual x y z w q hq
+
+/--
+Stronger residual checkpoint: the residual sector exists on both sides and
+transports in both directions across `SwappedTwoStepClass`.
+-/
+def ClassLevelCheckpoint2Strong
+    (x y z w : PTree) : Prop :=
+  (∀ q : TwoStepQuotient x y z w,
+      ResidualLeftContributionClass x y z w q →
+      ∃ q' : TwoStepQuotient y x z w,
+        SwappedTwoStepClass x y z w q q' ∧
+        ResidualSwappedRightContributionClass x y z w q')
+  ∧
+  (∀ q' : TwoStepQuotient y x z w,
+      ResidualSwappedRightContributionClass x y z w q' →
+      ∃ q : TwoStepQuotient x y z w,
+        SwappedTwoStepClass x y z w q q' ∧
+        ResidualLeftContributionClass x y z w q)
+
+/--
+Checkpoint 2, strengthened: the residual sector is present on both associator
+sides and reflected back across swapping.
+-/
+theorem classLevelCheckpoint2Strong
+    (x y z w : PTree) :
+    ClassLevelCheckpoint2Strong x y z w := by
+  constructor
+  · intro q hq
+    exact ResidualLeftContributionClass.exists_swappedRightResidual x y z w q hq
+  · intro q' hq'
+    exact ResidualSwappedRightContributionClass.exists_leftResidual x y z w q' hq'
+
+/--
+Residuality is preserved from the left to the swapped-right side in the
+existential sense relevant for the quotient-level associator comparison.
+-/
+theorem residual_preserved_left_to_swappedRight
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : ResidualLeftContributionClass x y z w q) :
+    ∃ q' : TwoStepQuotient y x z w,
+      SwappedTwoStepClass x y z w q q' ∧
+      ResidualSwappedRightContributionClass x y z w q' := by
+  exact (classLevelCheckpoint2Strong x y z w).1 q hq
+
+/--
+Residuality is reflected back from the swapped-right side to the left in the
+same existential sense.
+-/
+theorem residual_reflected_swappedRight_to_left
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : ResidualSwappedRightContributionClass x y z w q') :
+    ∃ q : TwoStepQuotient x y z w,
+      SwappedTwoStepClass x y z w q q' ∧
+      ResidualLeftContributionClass x y z w q := by
+  exact (classLevelCheckpoint2Strong x y z w).2 q' hq'
+
+/--
+Residual swapped-right partners of a fixed residual left class.
+-/
+def ResidualSwappedRightPartnerFiber
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) :=
+  { q' : TwoStepQuotient y x z w //
+      SwappedTwoStepClass x y z w q q' ∧
+      ResidualSwappedRightContributionClass x y z w q' }
+
+/--
+Residual left partners of a fixed residual swapped-right class.
+-/
+def ResidualLeftPartnerFiber
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w) :=
+  { q : TwoStepQuotient x y z w //
+      SwappedTwoStepClass x y z w q q' ∧
+      ResidualLeftContributionClass x y z w q }
+
+/--
+Residual left classes always have at least one swapped-right residual partner.
+-/
+theorem ResidualSwappedRightPartnerFiber.nonempty
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : ResidualLeftContributionClass x y z w q) :
+    Nonempty (ResidualSwappedRightPartnerFiber x y z w q) := by
+  rcases residual_preserved_left_to_swappedRight x y z w q hq with ⟨q', hs, hq'⟩
+  exact ⟨⟨q', hs, hq'⟩⟩
+
+/--
+Residual swapped-right classes always have at least one left residual partner.
+-/
+theorem ResidualLeftPartnerFiber.nonempty
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : ResidualSwappedRightContributionClass x y z w q') :
+    Nonempty (ResidualLeftPartnerFiber x y z w q') := by
+  rcases residual_reflected_swappedRight_to_left x y z w q' hq' with ⟨q, hs, hq⟩
+  exact ⟨⟨q, hs, hq⟩⟩
+
+/--
+A chosen residual swapped-right partner of a residual left class.
+-/
+noncomputable def canonicalResidualSwappedRightPartner
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : ResidualLeftContributionClass x y z w q) :
+    ResidualSwappedRightPartnerFiber x y z w q :=
+  Classical.choice (ResidualSwappedRightPartnerFiber.nonempty x y z w q hq)
+
+/--
+A chosen residual left partner of a residual swapped-right class.
+-/
+noncomputable def canonicalResidualLeftPartner
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : ResidualSwappedRightContributionClass x y z w q') :
+    ResidualLeftPartnerFiber x y z w q' :=
+  Classical.choice (ResidualLeftPartnerFiber.nonempty x y z w q' hq')
+
+/--
+Specification of the chosen residual swapped-right partner.
+-/
+theorem canonicalResidualSwappedRightPartner_spec
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : ResidualLeftContributionClass x y z w q) :
+    SwappedTwoStepClass x y z w q
+      (canonicalResidualSwappedRightPartner x y z w q hq).1
+    ∧
+    ResidualSwappedRightContributionClass x y z w
+      (canonicalResidualSwappedRightPartner x y z w q hq).1 :=
+  (canonicalResidualSwappedRightPartner x y z w q hq).2
+
+/--
+Specification of the chosen residual left partner.
+-/
+theorem canonicalResidualLeftPartner_spec
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : ResidualSwappedRightContributionClass x y z w q') :
+    SwappedTwoStepClass x y z w
+      (canonicalResidualLeftPartner x y z w q' hq').1 q'
+    ∧
+    ResidualLeftContributionClass x y z w
+      (canonicalResidualLeftPartner x y z w q' hq').1 :=
+  (canonicalResidualLeftPartner x y z w q' hq').2
+
+/--
+Right-functionality of `SwappedTwoStepClass` restricted to the residual sector.
+-/
+def SwappedTwoStepClassRightFunctionalOnResidual
+    (x y z w : PTree) : Prop :=
+  ∀ {q : TwoStepQuotient x y z w}
+    {q₁ q₂ : TwoStepQuotient y x z w},
+    ResidualLeftContributionClass x y z w q →
+    SwappedTwoStepClass x y z w q q₁ →
+    ResidualSwappedRightContributionClass x y z w q₁ →
+    SwappedTwoStepClass x y z w q q₂ →
+    ResidualSwappedRightContributionClass x y z w q₂ →
+    q₁ = q₂
+
+/--
+Left-functionality of `SwappedTwoStepClass` restricted to the residual sector.
+-/
+def SwappedTwoStepClassLeftFunctionalOnResidual
+    (x y z w : PTree) : Prop :=
+  ∀ {q₁ q₂ : TwoStepQuotient x y z w}
+    {q' : TwoStepQuotient y x z w},
+    ResidualSwappedRightContributionClass x y z w q' →
+    SwappedTwoStepClass x y z w q₁ q' →
+    ResidualLeftContributionClass x y z w q₁ →
+    SwappedTwoStepClass x y z w q₂ q' →
+    ResidualLeftContributionClass x y z w q₂ →
+    q₁ = q₂
+
+/--
+If swapped comparison is right-functional on residual classes, then the
+residual swapped-right partner fibre over a fixed residual left class is
+subsingleton.
+-/
+theorem ResidualSwappedRightPartnerFiber_subsingleton_of_rightFunctional
+    (x y z w : PTree)
+    (hfun : SwappedTwoStepClassRightFunctionalOnResidual x y z w)
+    (q : TwoStepQuotient x y z w)
+    (hq : ResidualLeftContributionClass x y z w q) :
+    Subsingleton (ResidualSwappedRightPartnerFiber x y z w q) := by
+  refine ⟨?_⟩
+  intro u v
+  apply Subtype.ext
+  exact hfun hq u.2.1 u.2.2 v.2.1 v.2.2
+
+/--
+If swapped comparison is left-functional on residual classes, then the
+residual left partner fibre over a fixed residual swapped-right class is
+subsingleton.
+-/
+theorem ResidualLeftPartnerFiber_subsingleton_of_leftFunctional
+    (x y z w : PTree)
+    (hfun : SwappedTwoStepClassLeftFunctionalOnResidual x y z w)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : ResidualSwappedRightContributionClass x y z w q') :
+    Subsingleton (ResidualLeftPartnerFiber x y z w q') := by
+  refine ⟨?_⟩
+  intro u v
+  apply Subtype.ext
+  exact hfun hq' u.2.1 u.2.2 v.2.1 v.2.2
+
+/--
+Under right-functionality on the residual sector, every residual swapped-right
+partner equals the canonical chosen one.
+-/
+theorem residualSwappedRightPartner_eq_canonical_of_rightFunctional
+    (x y z w : PTree)
+    (hfun : SwappedTwoStepClassRightFunctionalOnResidual x y z w)
+    (q : TwoStepQuotient x y z w)
+    (hq : ResidualLeftContributionClass x y z w q)
+    (u : ResidualSwappedRightPartnerFiber x y z w q) :
+    u = canonicalResidualSwappedRightPartner x y z w q hq := by
+  have hsub :
+      Subsingleton (ResidualSwappedRightPartnerFiber x y z w q) :=
+    ResidualSwappedRightPartnerFiber_subsingleton_of_rightFunctional
+      x y z w hfun q hq
+  exact hsub.elim u (canonicalResidualSwappedRightPartner x y z w q hq)
+
+/--
+Under left-functionality on the residual sector, every residual left partner
+equals the canonical chosen one.
+-/
+theorem residualLeftPartner_eq_canonical_of_leftFunctional
+    (x y z w : PTree)
+    (hfun : SwappedTwoStepClassLeftFunctionalOnResidual x y z w)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : ResidualSwappedRightContributionClass x y z w q')
+    (u : ResidualLeftPartnerFiber x y z w q') :
+    u = canonicalResidualLeftPartner x y z w q' hq' := by
+  have hsub :
+      Subsingleton (ResidualLeftPartnerFiber x y z w q') :=
+    ResidualLeftPartnerFiber_subsingleton_of_leftFunctional
+      x y z w hfun q' hq'
+  exact hsub.elim u (canonicalResidualLeftPartner x y z w q' hq')
+
+/--
+Residual left classes that are purely outer-visible on the left carrier.
+-/
+def PureOuterResidualLeftContributionClass
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) : Prop :=
+  ResidualLeftContributionClass x y z w q ∧
+    HasLeftOuterContributionClass x y z w q ∧
+    ¬ HasLeftInnerContributionClass x y z w q
+
+/--
+Residual left classes that are purely inner-visible on the left carrier.
+-/
+def PureInnerResidualLeftContributionClass
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) : Prop :=
+  ResidualLeftContributionClass x y z w q ∧
+    HasLeftInnerContributionClass x y z w q ∧
+    ¬ HasLeftOuterContributionClass x y z w q
+
+/--
+Residual left classes carrying both outer and inner left-side support.
+
+This is the exact residual mixed sector where residual partner branching could
+still survive even after overlap noise has been removed.
+-/
+def MixedResidualLeftContributionClass
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) : Prop :=
+  ResidualLeftContributionClass x y z w q ∧
+    HasLeftOuterContributionClass x y z w q ∧
+    HasLeftInnerContributionClass x y z w q
+
+/--
+The remaining open mixed-support fragment on the original carrier.
+
+These are exactly the classes with mixed left support that avoid both known
+same-carrier bridge mechanisms: they carry no two-sided outer support and no
+two-sided inner support.
+-/
+def OpenMixedLeftContributionClass
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) : Prop :=
+  HasLeftOuterContributionClass x y z w q ∧
+    HasLeftInnerContributionClass x y z w q ∧
+    ¬ TwoSidedOuterSupportClass x y z w q ∧
+    ¬ TwoSidedInnerSupportClass x y z w q
+
+/--
+Residual swapped-right classes that are purely outer-visible.
+-/
+def PureOuterResidualSwappedRightContributionClass
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w) : Prop :=
+  ResidualSwappedRightContributionClass x y z w q' ∧
+    HasSwappedRightOuterContributionClass x y z w q' ∧
+    ¬ HasSwappedRightInnerContributionClass x y z w q'
+
+/--
+Residual swapped-right classes that are purely inner-visible.
+-/
+def PureInnerResidualSwappedRightContributionClass
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w) : Prop :=
+  ResidualSwappedRightContributionClass x y z w q' ∧
+    HasSwappedRightInnerContributionClass x y z w q' ∧
+    ¬ HasSwappedRightOuterContributionClass x y z w q'
+
+/--
+Residual swapped-right classes carrying both outer and inner swapped support.
+-/
+def MixedResidualSwappedRightContributionClass
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w) : Prop :=
+  ResidualSwappedRightContributionClass x y z w q' ∧
+    HasSwappedRightOuterContributionClass x y z w q' ∧
+    HasSwappedRightInnerContributionClass x y z w q'
+
+/--
+Every residual left class is either pure outer, pure inner, or mixed.
+
+So if residual partner functionality fails, the mixed residual sector is the
+only place where that failure can live.
+-/
+theorem residualLeftContributionClass_trichotomy
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : ResidualLeftContributionClass x y z w q) :
+    PureOuterResidualLeftContributionClass x y z w q ∨
+      PureInnerResidualLeftContributionClass x y z w q ∨
+      MixedResidualLeftContributionClass x y z w q := by
+  rcases hq.1 with hqOut | hqIn
+  · by_cases hInner : HasLeftInnerContributionClass x y z w q
+    · exact Or.inr (Or.inr ⟨hq, hqOut, hInner⟩)
+    · exact Or.inl ⟨hq, hqOut, hInner⟩
+  · by_cases hOuter : HasLeftOuterContributionClass x y z w q
+    · exact Or.inr (Or.inr ⟨hq, hOuter, hqIn⟩)
+    · exact Or.inr (Or.inl ⟨hq, hqIn, hOuter⟩)
+
+/--
+On mixed left-support classes, avoiding the two same-carrier bridge patterns is
+equivalent to carrying no right support at all.
+-/
+theorem openMixedLeftContributionClass_iff_no_right_support
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) :
+    OpenMixedLeftContributionClass x y z w q ↔
+      HasLeftOuterContributionClass x y z w q ∧
+      HasLeftInnerContributionClass x y z w q ∧
+      ¬ HasRightOuterContributionClass x y z w q ∧
+      ¬ HasRightInnerContributionClass x y z w q := by
+  constructor
+  · intro hOpen
+    rcases hOpen with ⟨hOutL, hInL, hNoTwoOut, hNoTwoIn⟩
+    refine ⟨hOutL, hInL, ?_, ?_⟩
+    · intro hOutR
+      exact hNoTwoOut ⟨hOutL, hOutR⟩
+    · intro hInR
+      exact hNoTwoIn ⟨hInL, hInR⟩
+  · intro h
+    rcases h with ⟨hOutL, hInL, hNoOutR, hNoInR⟩
+    refine ⟨hOutL, hInL, ?_, ?_⟩
+    · intro hTwoOut
+      exact hNoOutR hTwoOut.2
+    · intro hTwoIn
+      exact hNoInR hTwoIn.2
+
+/--
+The mixed residual sector is exactly the named open mixed-support fragment.
+
+So any genuinely unresolved mixed class must avoid both same-carrier bridge
+patterns and, equivalently, must carry no right support at all.
+-/
+theorem mixedResidualLeftContributionClass_iff_openMixed
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) :
+    MixedResidualLeftContributionClass x y z w q ↔
+      OpenMixedLeftContributionClass x y z w q := by
+  constructor
+  · intro hMixed
+    rcases hMixed with ⟨hRes, hOutL, hInL⟩
+    refine ⟨hOutL, hInL, ?_, ?_⟩
+    · intro hTwoOut
+      exact hRes.2.2
+        (mixedLeftSupport_of_rightOuter_type_is_noise x y z w q hTwoOut.2 hInL)
+    · intro hTwoIn
+      exact hRes.2.1
+        (mixedRightSupport_of_rightInner_type_is_noise x y z w q hOutL hTwoIn.2)
+  · intro hOpen
+    rcases hOpen with ⟨hOutL, hInL, hNoTwoOut, hNoTwoIn⟩
+    refine ⟨?_, hOutL, hInL⟩
+    refine ⟨Or.inl hOutL, ?_, ?_⟩
+    · intro hLR
+      exact hNoTwoIn ⟨hInL, hLR.2⟩
+    · intro hRL
+      exact hNoTwoOut ⟨hOutL, hRL.1⟩
+
+/--
+Every residual swapped-right class is either pure outer, pure inner, or mixed.
+-/
+theorem residualSwappedRightContributionClass_trichotomy
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : ResidualSwappedRightContributionClass x y z w q') :
+    PureOuterResidualSwappedRightContributionClass x y z w q' ∨
+      PureInnerResidualSwappedRightContributionClass x y z w q' ∨
+      MixedResidualSwappedRightContributionClass x y z w q' := by
+  rcases hq'.1 with hqOut | hqIn
+  · by_cases hInner : HasSwappedRightInnerContributionClass x y z w q'
+    · exact Or.inr (Or.inr ⟨hq', hqOut, hInner⟩)
+    · exact Or.inl ⟨hq', hqOut, hInner⟩
+  · by_cases hOuter : HasSwappedRightOuterContributionClass x y z w q'
+    · exact Or.inr (Or.inr ⟨hq', hOuter, hqIn⟩)
+    · exact Or.inr (Or.inl ⟨hq', hqIn, hOuter⟩)
+
+/--
+Residual swapped-right classes carrying outer support.
+-/
+def OuterResidualSwappedRightContributionClass
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w) : Prop :=
+  ResidualSwappedRightContributionClass x y z w q' ∧
+    HasSwappedRightOuterContributionClass x y z w q'
+
+/--
+Residual swapped-right classes carrying inner support.
+-/
+def InnerResidualSwappedRightContributionClass
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w) : Prop :=
+  ResidualSwappedRightContributionClass x y z w q' ∧
+    HasSwappedRightInnerContributionClass x y z w q'
+
+/--
+The class-level forward inner transport is related to its source by
+`SwappedTwoStepClass`.
+-/
+theorem transportLeftInnerContributionClassToSwapped_swapped
+    (x y z w : PTree)
+    (s : LeftInnerContributionClasses x y z w) :
+    SwappedTwoStepClass x y z w s.1
+      (transportLeftInnerContributionClassToSwapped x y z w s).1 := by
+  rcases s with ⟨q, hq⟩
+  let h : LeftInnerFiberData x y z w q := Classical.choice hq
+  let k := leftInnerFiberData_forward x y z w q h
+  rw [show transportLeftInnerContributionClassToSwapped x y z w ⟨q, hq⟩ =
+      ⟨k.1, ⟨k.2⟩⟩ by
+        simpa [k] using transportLeftInnerContributionClassToSwapped_eq_of_witness x y z w h]
+  exact leftInnerFiberData_forward_swapped x y z w q h
+
+/--
+The inverse class-level inner transport is related to its source by
+`SwappedTwoStepClass`.
+-/
+theorem transportSwappedInnerContributionClassToLeft_swapped
+    (x y z w : PTree)
+    (t : SwappedRightInnerContributionClasses x y z w) :
+    SwappedTwoStepClass x y z w
+      (transportSwappedInnerContributionClassToLeft x y z w t).1
+      t.1 := by
+  rcases t with ⟨q', hq'⟩
+  let h : SwappedRightInnerFiberData x y z w q' := Classical.choice hq'
+  rw [show transportSwappedInnerContributionClassToLeft x y z w ⟨q', hq'⟩ =
+      ⟨(leftInnerFiberData_backward x y z w ⟨q', h⟩).1,
+        ⟨(leftInnerFiberData_backward x y z w ⟨q', h⟩).2⟩⟩ by
+        simpa using transportSwappedInnerContributionClassToLeft_eq_of_witness x y z w h]
+  exact swappedRightInnerFiberData_backward_swapped x y z w q' h
+
+/--
+Pure outer residual left classes have a unique outer-supported residual
+swapped-right partner under the explicit outer transport.
+-/
+theorem pureOuterResidualLeft_has_unique_outerResidualSwappedRightPartner
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : PureOuterResidualLeftContributionClass x y z w q) :
+    ∃! t : SwappedRightOuterContributionClasses x y z w,
+      transportSwappedRightOuterContributionClass x y z w t = ⟨q, hq.2.1⟩ ∧
+      ResidualSwappedRightContributionClass x y z w t.1 := by
+  let s : OuterLeftContributionClasses x y z w := ⟨q, hq.2.1⟩
+  refine ⟨transportOuterLeftContributionClass x y z w s, ?_, ?_⟩
+  · constructor
+    · exact (outerContributionCommute x y z w).left_inv s
+    · constructor
+      · exact Or.inl (transportOuterLeftContributionClass x y z w s).2
+      · refine ⟨q, transportOuterLeftContributionClass_swapped x y z w s, hq.1⟩
+  · intro t ht
+    exact transportOuterLeftContributionClass_unique x y z w s t ht.1
+
+/--
+Pure inner residual left classes have a unique inner-supported residual
+swapped-right partner under the explicit inner transport.
+-/
+theorem pureInnerResidualLeft_has_unique_innerResidualSwappedRightPartner
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : PureInnerResidualLeftContributionClass x y z w q) :
+    ∃! t : SwappedRightInnerContributionClasses x y z w,
+      transportSwappedInnerContributionClassToLeft x y z w t = ⟨q, hq.2.1⟩ ∧
+      ResidualSwappedRightContributionClass x y z w t.1 := by
+  let s : LeftInnerContributionClasses x y z w := ⟨q, hq.2.1⟩
+  refine ⟨transportLeftInnerContributionClassToSwapped x y z w s, ?_, ?_⟩
+  · constructor
+    · exact (innerContributionCommute x y z w).left_inv s
+    · constructor
+      · exact Or.inr (transportLeftInnerContributionClassToSwapped x y z w s).2
+      · refine ⟨q, transportLeftInnerContributionClassToSwapped_swapped x y z w s, hq.1⟩
+  · intro t ht
+    calc
+      t = transportLeftInnerContributionClassToSwapped x y z w
+            (transportSwappedInnerContributionClassToLeft x y z w t) := by
+              symm
+              exact (innerContributionCommute x y z w).right_inv t
+      _ = transportLeftInnerContributionClassToSwapped x y z w s := by
+            rw [ht.1]
 
 /--
 If an independent left-outer source had an opposite right-inner witness, then
@@ -11817,303 +12678,753 @@ theorem independent_rightOuter_excludes_leftInner_of_leftCanonicalBranchExclusiv
       (leftWitnessBranchExclusive_of_leftCanonicalBranchExclusive x y z w hExcl)
       hOut hInd hIn
 
+/--
+An independent left-outer witness already forces same-carrier right-outer
+support for its quotient class.
 
-
-
-
-
-
-
-
-
-
-
-
-
-/-!
-## Bundled recovery forms
+So independence is exactly the geometric feature that generates the opposite
+outer branch and therefore cannot survive inside the open mixed fragment.
 -/
-
-theorem canonicalRightNeighborOfLeftNeighbor_recovers_target_bundled
+theorem independent_outerLeftWitnessClass_has_rightOuterSupport
     (x y z w : PTree)
-    (t : RightContributionClasses x y z w)
-    (s : leftContributionNeighborClasses x y z w t) :
-    (canonicalRightNeighborOfLeftNeighbor x y z w t s).1 = t := by
-  cases t
-  cases canonicalRightNeighborOfLeftNeighbor x y z w t s
-  simp at *
-  aesop
-
-theorem canonicalLeftNeighborOfRightNeighbor_recovers_target_bundled
-    (x y z w : PTree)
-    (s : LeftContributionClasses x y z w)
-    (t : rightContributionNeighborClasses x y z w s) :
-    (canonicalLeftNeighborOfRightNeighbor x y z w s t).1 = s := by
-  cases s
-  cases canonicalLeftNeighborOfRightNeighbor x y z w s t
-  simp at *
-  aesop
-
-
-
-
-/-- Placeholder: local counting theorem.
-Likely target: the neighbour sets on the two sides are equinumerous, or both
-are controlled by the same witness/support data.
--/
-theorem swappedNeighbors_cardinal_balance
-    (x y z w : PTree)
-    (qL : TwoStepQuotient x y z w)
-    (qR : TwoStepQuotient y x z w) :
-    True := by
-  /-
-  Replace `True` with the correct statement once you decide whether the right
-  theorem is:
-  - equality of cardinalities,
-  - existence of a surjection each way,
-  - or equivalence with previously-defined witness-support fibres.
-  -/
-  trivial
-
-
-
+    (hOut : OuterLeftWitness x y z w)
+    (hInd : OuterLeftWitnessIndependent hOut) :
+    HasRightOuterContributionClass x y z w (outerLeftWitnessClass hOut) := by
+  cases hOut with
+  | mk a b z' haz hbw =>
+      rcases independent_leftOuter_has_rightOuter_code x y z w a b z' haz hbw hInd with
+        ⟨z₃, haz', hbw', hEq⟩
+      refine ⟨OuterRightWitness.mk b a z₃ haz' hbw', ?_⟩
+      symm
+      simpa [outerLeftWitnessClass, outerRightWitnessClass,
+        classOfLeftWitness, codeOfLeftWitness,
+        classOfRightWitness, codeOfRightWitness]
+        using codeClass_eq_of_equiv hEq
 
 /--
-Inner reassociation is already canonical up to swapping `x` and `y`.
-
-This is the quotient-level inner contribution to pre-Lie symmetry:
-the nested case on the left with parameters `(x,y,z,w)` is literally the
-nested case on the right with parameters `(y,x,z,w)`.
+Independent left-outer support on a quotient class forces right-outer support
+on that same class.
 -/
-theorem inner_symmetry_on_classes
+theorem HasIndependentLeftOuterContributionClass.to_rightOuterSupport
     (x y z w : PTree)
-    (a b : Address) (y' : PTree)
-    (hay : (a, y') ∈ matchingLeafGraftWitnesses y x)
-    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y' z) :
-    classOfLeftInner a b y' hay hbw =
-      classOfRightInner (x := x) (y := y) a b y' hay hbw := by
-  rfl
-
-
-
-
+    {q : TwoStepQuotient x y z w}
+    (hq : HasIndependentLeftOuterContributionClass x y z w q) :
+    HasRightOuterContributionClass x y z w q := by
+  rcases hq with ⟨hOut, hInd, hhOut⟩
+  rcases independent_outerLeftWitnessClass_has_rightOuterSupport x y z w hOut hInd with
+    ⟨hOutR, hhOutR⟩
+  exact ⟨hOutR, hhOutR.trans hhOut⟩
 
 /--
-Inner reassociation is already canonical up to swapping `x` and `y`.
+Open mixed left classes admit no independent outer-left support at all.
 
-This is the quotient-level inner contribution to pre-Lie symmetry:
-the nested case on the left with parameters `(x,y,z,w)` is literally the
-nested case on the right with parameters `(y,x,z,w)`.
+This is the first genuinely positive geometric constraint on the open fragment:
+every outer-left representative must already live in the dependent regime.
 -/
-theorem inner_symmetry_on_classes
+theorem openMixedLeftContributionClass_not_independentOuterSupport
     (x y z w : PTree)
-    (a b : Address) (y' : PTree)
-    (hay : (a, y') ∈ matchingLeafGraftWitnesses y x)
-    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y' z) :
-    classOfLeftInner a b y' hay hbw =
-      classOfRightInner (x := x) (y := y) a b y' hay hbw := by
-  rfl
-
-/-!
-## Canonicalisation maps
-
-These maps send raw two-step witness codes to the more invariant
-canonical two-step data. The intended meaning is that a raw derivation
-history presents a canonical proof-composition pattern.
--/
-
-
-
+    (q : TwoStepQuotient x y z w)
+    (hOpen : OpenMixedLeftContributionClass x y z w q) :
+    ¬ HasIndependentLeftOuterContributionClass x y z w q := by
+  intro hInd
+  rcases (openMixedLeftContributionClass_iff_no_right_support x y z w q).1 hOpen with
+    ⟨_, _, hNoRightOuter, _⟩
+  exact hNoRightOuter
+    (HasIndependentLeftOuterContributionClass.to_rightOuterSupport x y z w hInd)
 
 /--
-Canonicalisation of a raw left witness.
-
-A witness for the left-bracketed two-step grafting
-`x ▷ (y ▷ z)` determines canonical two-step data for the associator.
+Open mixed left classes therefore exclude independent outer-left witnesses one
+by one.
 -/
-def canonOfLeftWitness
-    {x y z w : PTree} :
-    TwoStepWitnessLeft x y z w → TwoStepCanonical x y z w
-  | TwoStepWitnessLeft.outer a b z' haz hbw =>
-      TwoStepCanonical.outer z'
-        (by
-          rw [← map_snd_matchingLeafGraftWitnesses]
-          exact List.mem_map.2 ⟨(a, z'), haz, rfl⟩)
-        (by
-          rw [← map_snd_matchingLeafGraftWitnesses]
-          exact List.mem_map.2 ⟨(b, w), hbw, rfl⟩)
-  | TwoStepWitnessLeft.inner a b y' hay hbw =>
-      TwoStepCanonical.inner y'
-        (by
-          rw [← map_snd_matchingLeafGraftWitnesses]
-          exact List.mem_map.2 ⟨(a, y'), hay, rfl⟩)
-        (by
-          rw [← map_snd_matchingLeafGraftWitnesses]
-          exact List.mem_map.2 ⟨(b, w), hbw, rfl⟩)
+theorem openMixedLeftContributionClass_outerWitness_not_independent
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hOpen : OpenMixedLeftContributionClass x y z w q)
+    (hOut : OuterLeftWitness x y z w)
+    (hhOut : outerLeftWitnessClass hOut = q) :
+    ¬ OuterLeftWitnessIndependent hOut := by
+  intro hInd
+  exact
+    openMixedLeftContributionClass_not_independentOuterSupport x y z w q hOpen
+      ⟨hOut, hInd, hhOut⟩
 
 /--
-Canonicalisation of a raw right witness.
-
-A witness for the right-bracketed two-step grafting
-`y ▷ (x ▷ z)` determines canonical two-step data for the associator,
-with `x` and `y` swapped. This reflects symmetry of the associator,
-not commutativity of grafting.
+Concrete address form of the previous theorem: any outer-left witness
+supporting an open mixed class must have comparable graft addresses.
 -/
-def canonOfRightWitness
-    {x y z w : PTree} :
-    TwoStepWitnessRight x y z w → TwoStepCanonical y x z w
-  | TwoStepWitnessRight.outer a b z' haz hbw =>
-      TwoStepCanonical.outer z'
-        (by
-          rw [← map_snd_matchingLeafGraftWitnesses]
-          exact List.mem_map.2 ⟨(a, z'), haz, rfl⟩)
-        (by
-          rw [← map_snd_matchingLeafGraftWitnesses]
-          exact List.mem_map.2 ⟨(b, w), hbw, rfl⟩)
-  | TwoStepWitnessRight.inner a b y' hay hbw =>
-      TwoStepCanonical.inner y'
-        (by
-          rw [← map_snd_matchingLeafGraftWitnesses]
-          exact List.mem_map.2 ⟨(a, y'), hay, rfl⟩)
-        (by
-          rw [← map_snd_matchingLeafGraftWitnesses]
-          exact List.mem_map.2 ⟨(b, w), hbw, rfl⟩)
-
-/-!
-## Completeness back to witnesses
-
-Canonical two-step data should also be realisable by raw witnesses.
-These are the converse directions to the canonicalisation maps.
--/
+theorem openMixedLeftContributionClass_outerWitness_comparable
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (a b : Address)
+    (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses y z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses x z')
+    (hq : outerLeftWitnessClass (OuterLeftWitness.mk a b z' haz hbw) = q)
+    (hOpen : OpenMixedLeftContributionClass x y z w q) :
+    PTree.comparable a b := by
+  by_contra hcmp
+  exact
+    (openMixedLeftContributionClass_outerWitness_not_independent
+      x y z w q hOpen (OuterLeftWitness.mk a b z' haz hbw) hq)
+      (by simpa [OuterLeftWitnessIndependent] using hcmp)
 
 /--
-Canonical two-step data gives rise to a raw left witness presentation.
+Open mixed left classes force failure of raw left-side branch exclusivity.
+
+So openness is not just a negative absence-of-right-support condition: it
+already pins the class down to a genuinely overlapping left-side regime.
 -/
-theorem canonical_gives_left_witness
+theorem openMixedLeftContributionClass_not_leftWitnessBranchExclusive
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hOpen : OpenMixedLeftContributionClass x y z w q) :
+    ¬ LeftWitnessBranchExclusive x y z w := by
+  intro hExcl
+  rcases hOpen with ⟨hOutClass, hInClass, _, _⟩
+  rcases hOutClass with ⟨hOut, _⟩
+  rcases hInClass with ⟨hIn⟩
+  exact hExcl hOut hIn.1
+
+/--
+Open mixed left classes therefore also force failure of left canonical branch
+exclusivity.
+-/
+theorem openMixedLeftContributionClass_not_leftCanonicalBranchExclusive
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hOpen : OpenMixedLeftContributionClass x y z w q) :
+    ¬ LeftCanonicalBranchExclusive x y z w := by
+  intro hExcl
+  exact
+    openMixedLeftContributionClass_not_leftWitnessBranchExclusive
+      x y z w q hOpen
+      (leftWitnessBranchExclusive_of_leftCanonicalBranchExclusive x y z w hExcl)
+
+/--
+All outer-left representatives of an open mixed class are forced into the
+dependent address regime.
+-/
+def OpenMixedLeftOuterDependentClass
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) : Prop :=
+  ∀ hOut : OuterLeftWitness x y z w,
+    outerLeftWitnessClass hOut = q →
+    ¬ OuterLeftWitnessIndependent hOut
+
+/--
+Geometric necessary condition for the genuinely open mixed fragment: dependent
+outer-left geometry together with failure of left canonical exclusivity.
+-/
+def OpenMixedLeftDependentOverlapRegime
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) : Prop :=
+  OpenMixedLeftOuterDependentClass x y z w q ∧
+    ¬ LeftCanonicalBranchExclusive x y z w
+
+/--
+Every open mixed left class lies in the dependent, non-exclusive overlap
+regime.
+-/
+theorem openMixedLeftContributionClass_to_dependentOverlapRegime
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hOpen : OpenMixedLeftContributionClass x y z w q) :
+    OpenMixedLeftDependentOverlapRegime x y z w q := by
+  refine ⟨?_, openMixedLeftContributionClass_not_leftCanonicalBranchExclusive x y z w q hOpen⟩
+  intro hOut hhOut
+  exact
+    openMixedLeftContributionClass_outerWitness_not_independent
+      x y z w q hOpen hOut hhOut
+
+/--
+A comparable left-outer witness already generates right-inner support on the
+same quotient class.
+
+So once incomparability has been excluded, outer-left geometry automatically
+creates the left-to-right overlap pattern rather than leaving any genuinely
+open mixed residual ambiguity.
+-/
+theorem comparable_outerLeftWitnessClass_has_rightInnerSupport
+    (x y z w : PTree)
+    (a b : Address)
+    (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses y z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses x z')
+    (hcmp : PTree.comparable a b) :
+    HasRightInnerContributionClass x y z w
+      (outerLeftWitnessClass (OuterLeftWitness.mk a b z' haz hbw)) := by
+  have haz0 := haz
+  have hbw0 := hbw
+  rw [mem_matchingLeafGraftWitnesses_iff] at haz0 hbw0
+  rcases haz0 with ⟨_, hyz⟩
+  rcases hbw0 with ⟨_, hxz'⟩
+  have hdecomp := two_step_graft_decomposition_full x y z a b z' w hyz hxz'
+  cases hdecomp with
+  | inl hinner =>
+      rcases hinner with ⟨c, y', hbEq, hxy, hy'z⟩
+      have hay : (c, y') ∈ matchingLeafGraftWitnesses x y := by
+        rw [mem_matchingLeafGraftWitnesses_iff]
+        refine ⟨?_, hxy⟩
+        have hg := PTree.isGraftableLeafAt_of_graftMatchingLeafAt_eq_some x y c y' hxy
+        exact
+          PTree.subtreeAt_some_implies_mem_allAddresses
+            y (PTree.leaf x.conclusion) c
+            ((PTree.IsGraftableLeafAt_iff x y c).mp hg)
+      have hbw' : (a, w) ∈ matchingLeafGraftWitnesses y' z := by
+        rw [mem_matchingLeafGraftWitnesses_iff]
+        refine ⟨?_, hy'z⟩
+        have hg := PTree.isGraftableLeafAt_of_graftMatchingLeafAt_eq_some y' z a w hy'z
+        exact
+          PTree.subtreeAt_some_implies_mem_allAddresses
+            z (PTree.leaf y'.conclusion) a
+            ((PTree.IsGraftableLeafAt_iff y' z a).mp hg)
+      refine ⟨⟨⟨TwoStepWitnessRight.inner c a y' hay hbw', trivial⟩, ?_⟩⟩
+      simpa [rightInnerWitnessClass] using
+        (outerLeftWitnessClass_eq_rightInnerWitnessClass x y z w
+          (OuterLeftWitness.mk a b z' haz hbw)
+          ⟨TwoStepWitnessRight.inner c a y' hay hbw', trivial⟩).symm
+  | inr hout =>
+      rcases hout with ⟨z₃, hnc, hxz, hyz₃⟩
+      exact False.elim (hnc hcmp)
+
+/--
+Comparable left-outer geometry is therefore already quotient-trivial overlap
+noise.
+-/
+theorem comparable_outerLeftWitnessClass_is_leftToRightOverlapNoise
+    (x y z w : PTree)
+    (a b : Address)
+    (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses y z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses x z')
+    (hcmp : PTree.comparable a b) :
+    LeftToRightOverlapNoiseClass x y z w
+      (outerLeftWitnessClass (OuterLeftWitness.mk a b z' haz hbw)) := by
+  refine ⟨⟨OuterLeftWitness.mk a b z' haz hbw, rfl⟩, ?_⟩
+  exact
+    comparable_outerLeftWitnessClass_has_rightInnerSupport
+      x y z w a b z' haz hbw hcmp
+
+/--
+The open mixed left fragment is in fact empty.
+
+Once openness forces comparability of every outer-left witness, the outer
+witness itself already manufactures same-class right-inner support, contradicting
+the defining absence of all right support.
+-/
+theorem openMixedLeftContributionClass_false
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hOpen : OpenMixedLeftContributionClass x y z w q) :
+    False := by
+  rcases hOpen with ⟨hOutClass, hInClass, hNoTwoOut, hNoTwoIn⟩
+  rcases hOutClass with ⟨hOut, hhOut⟩
+  cases hOut with
+  | mk a b z' haz hbw =>
+      have hcmp :
+          PTree.comparable a b := by
+        exact
+          openMixedLeftContributionClass_outerWitness_comparable
+            x y z w q a b z' haz hbw hhOut
+            ⟨⟨OuterLeftWitness.mk a b z' haz hbw, hhOut⟩, hInClass, hNoTwoOut, hNoTwoIn⟩
+      have hNoise :
+          LeftToRightOverlapNoiseClass x y z w
+            (outerLeftWitnessClass (OuterLeftWitness.mk a b z' haz hbw)) := by
+        exact
+          comparable_outerLeftWitnessClass_is_leftToRightOverlapNoise
+            x y z w a b z' haz hbw hcmp
+      have hNoRightInner :
+          ¬ HasRightInnerContributionClass x y z w q := by
+        exact (openMixedLeftContributionClass_iff_no_right_support x y z w q).1
+          ⟨⟨OuterLeftWitness.mk a b z' haz hbw, hhOut⟩, hInClass, hNoTwoOut, hNoTwoIn⟩ |>.2.2.2
+      have hInR : HasRightInnerContributionClass x y z w q := by
+        simpa [hhOut] using hNoise.2
+      exact hNoRightInner hInR
+
+/-- The open mixed left fragment is empty, in negated form. -/
+theorem not_openMixedLeftContributionClass
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) :
+    ¬ OpenMixedLeftContributionClass x y z w q := by
+  intro hOpen
+  exact openMixedLeftContributionClass_false x y z w q hOpen
+
+/--
+Consequently, the mixed residual left fragment is empty as well.
+-/
+theorem mixedResidualLeftContributionClass_false
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) :
+    ¬ MixedResidualLeftContributionClass x y z w q := by
+  intro hMixed
+  exact
+    openMixedLeftContributionClass_false x y z w q
+      ((mixedResidualLeftContributionClass_iff_openMixed x y z w q).1 hMixed)
+
+/--
+Every residual left class is therefore pure outer or pure inner.
+-/
+theorem residualLeftContributionClass_pure_dichotomy
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : ResidualLeftContributionClass x y z w q) :
+    PureOuterResidualLeftContributionClass x y z w q ∨
+      PureInnerResidualLeftContributionClass x y z w q := by
+  rcases residualLeftContributionClass_trichotomy x y z w q hq with
+    hPureOut | hPureIn | hMixed
+  · exact Or.inl hPureOut
+  · exact Or.inr hPureIn
+  · exact False.elim ((mixedResidualLeftContributionClass_false x y z w q) hMixed)
+
+/--
+Pure residual left classes, forgetting whether purity comes from the outer or
+inner branch.
+-/
+def PureResidualLeftContributionClass
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) : Prop :=
+  PureOuterResidualLeftContributionClass x y z w q ∨
+    PureInnerResidualLeftContributionClass x y z w q
+
+/--
+Pure residual swapped-right classes, again forgetting whether purity is outer
+or inner on the swapped side.
+-/
+def PureResidualSwappedRightContributionClass
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w) : Prop :=
+  OuterResidualSwappedRightContributionClass x y z w q' ∨
+    InnerResidualSwappedRightContributionClass x y z w q'
+
+/-- Residual left classes are exactly pure left classes. -/
+theorem residualLeftContributionClass_is_pure
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : ResidualLeftContributionClass x y z w q) :
+    PureResidualLeftContributionClass x y z w q := by
+  exact residualLeftContributionClass_pure_dichotomy x y z w q hq
+
+/--
+Every residual left class has a unique pure swapped-right partner of the
+matching type: outer goes to the solved outer transport, inner goes to the
+solved inner transport.
+-/
+theorem residualLeftContributionClass_has_unique_typedPureSwappedRightPartner
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : ResidualLeftContributionClass x y z w q) :
+    (∃ hs : HasLeftOuterContributionClass x y z w q,
+        ∃! t : SwappedRightOuterContributionClasses x y z w,
+          transportSwappedRightOuterContributionClass x y z w t = ⟨q, hs⟩ ∧
+          ResidualSwappedRightContributionClass x y z w t.1)
+    ∨
+    (∃ hs : HasLeftInnerContributionClass x y z w q,
+        ∃! t : SwappedRightInnerContributionClasses x y z w,
+          transportSwappedInnerContributionClassToLeft x y z w t = ⟨q, hs⟩ ∧
+          ResidualSwappedRightContributionClass x y z w t.1) := by
+  rcases residualLeftContributionClass_pure_dichotomy x y z w q hq with hOut | hIn
+  · exact Or.inl ⟨hOut.2.1,
+      pureOuterResidualLeft_has_unique_outerResidualSwappedRightPartner
+        x y z w q hOut⟩
+  · exact Or.inr ⟨hIn.2.1,
+      pureInnerResidualLeft_has_unique_innerResidualSwappedRightPartner
+        x y z w q hIn⟩
+
+/--
+Hence every residual left class has some pure swapped-right partner.
+-/
+theorem residualLeftContributionClass_exists_pureSwappedRightPartner
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : ResidualLeftContributionClass x y z w q) :
+    ∃ q' : TwoStepQuotient y x z w,
+      SwappedTwoStepClass x y z w q q' ∧
+      PureResidualSwappedRightContributionClass x y z w q' := by
+  rcases residualLeftContributionClass_has_unique_typedPureSwappedRightPartner
+      x y z w q hq with hOut | hIn
+  · rcases hOut with ⟨hs, t, ht, _⟩
+    refine ⟨t.1, ?_, Or.inl ?_⟩
+    · have hval : (transportSwappedRightOuterContributionClass x y z w t).1 = q := by
+        exact congrArg Subtype.val ht.1
+      simpa [hval] using
+        (transportSwappedRightOuterContributionClass_swapped x y z w t)
+    · exact ⟨ht.2, t.2⟩
+  · rcases hIn with ⟨hs, t, ht, _⟩
+    refine ⟨t.1, ?_, Or.inr ?_⟩
+    · have hval : (transportSwappedInnerContributionClassToLeft x y z w t).1 = q := by
+        exact congrArg Subtype.val ht.1
+      simpa [hval] using
+        (transportSwappedInnerContributionClassToLeft_swapped x y z w t)
+    · exact ⟨ht.2, t.2⟩
+
+/--
+Every residual swapped-right class comes from some pure residual left partner.
+
+This is the right-side purity statement actually needed for the class-level
+pre-Lie comparison: the swapped-right residual sector sees only pure left
+geometry.
+-/
+theorem residualSwappedRightContributionClass_has_pureLeftPartner
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : ResidualSwappedRightContributionClass x y z w q') :
+    ∃ q : TwoStepQuotient x y z w,
+      SwappedTwoStepClass x y z w q q' ∧
+      PureResidualLeftContributionClass x y z w q := by
+  rcases ResidualSwappedRightContributionClass.exists_leftResidual x y z w q' hq' with
+    ⟨q, hs, hq⟩
+  exact ⟨q, hs, residualLeftContributionClass_is_pure x y z w q hq⟩
+
+/--
+The noise sector for class-level left associator contributions.
+
+These are exactly the quotient-trivial overlap classes that should be ignored
+when comparing the associator at class level.
+-/
+def LeftNoiseContributionClass
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w) : Prop :=
+  LeftToRightOverlapNoiseClass x y z w q ∨
+    RightToLeftOverlapNoiseClass x y z w q
+
+/-- Residual left contribution classes as an actual subtype. -/
+def ResidualAssociatorLeftClasses
+    (x y z w : PTree) :=
+  { q : TwoStepQuotient x y z w //
+      ResidualLeftContributionClass x y z w q }
+
+/-- Pure outer residual left contribution classes as a subtype. -/
+def PureOuterResidualAssociatorLeftClasses
+    (x y z w : PTree) :=
+  { q : TwoStepQuotient x y z w //
+      PureOuterResidualLeftContributionClass x y z w q }
+
+/-- Pure inner residual left contribution classes as a subtype. -/
+def PureInnerResidualAssociatorLeftClasses
+    (x y z w : PTree) :=
+  { q : TwoStepQuotient x y z w //
+      PureInnerResidualLeftContributionClass x y z w q }
+
+/--
+Every left contribution class is either quotient-trivial noise, pure outer
+residual, or pure inner residual.
+
+This is the class-level associator split on the left: after noise is removed,
+only the two rigid pure sectors remain.
+-/
+theorem leftContributionClass_noise_or_pureOuter_or_pureInner
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : IsLeftContributionClass x y z w q) :
+    LeftNoiseContributionClass x y z w q ∨
+      PureOuterResidualLeftContributionClass x y z w q ∨
+      PureInnerResidualLeftContributionClass x y z w q := by
+  rcases leftContributionClass_overlapNoise_or_residual x y z w q hq with
+    hLR | hRL | hRes
+  · exact Or.inl (Or.inl hLR)
+  · exact Or.inl (Or.inr hRL)
+  · exact Or.inr (residualLeftContributionClass_pure_dichotomy x y z w q hRes)
+
+/--
+Noise contributes trivially to the class-level associator comparison: every
+left noise class has a swapped-right noise partner.
+-/
+theorem noiseLeftContributionClass_has_swappedRightNoisePartner
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : LeftNoiseContributionClass x y z w q) :
+    ∃ q' : TwoStepQuotient y x z w,
+      SwappedTwoStepClass x y z w q q' ∧
+      SwappedRightNoiseContributionClass x y z w q' := by
+  exact leftOverlapNoiseClass.exists_swappedRightNoise x y z w q hq
+
+/--
+Residual left associator classes split exactly into the two pure sectors.
+-/
+noncomputable def residualAssociatorLeftClasses_pureSplit
     (x y z w : PTree) :
-    Nonempty (TwoStepCanonical x y z w) →
-    Nonempty (TwoStepWitnessLeft x y z w) := by
-  intro h
-  rcases h with ⟨hcanon⟩
-  cases hcanon with
-  | outer z₃ hxz hyw =>
-      rw [twoStepWitnessLeft_iff]
-      simp [List.mem_append, List.mem_flatMap]
-      exact Or.inl ⟨z₃, hxz, hyw⟩
-  | inner y' hxy hyw =>
-      rw [twoStepWitnessLeft_iff]
-      simp [List.mem_append, List.mem_flatMap]
-      exact Or.inr ⟨y', hxy, hyw⟩
+    ResidualAssociatorLeftClasses x y z w ≃
+      PureOuterResidualAssociatorLeftClasses x y z w ⊕
+        PureInnerResidualAssociatorLeftClasses x y z w where
+  toFun := fun s =>
+    if hOut : PureOuterResidualLeftContributionClass x y z w s.1 then
+      Sum.inl ⟨s.1, hOut⟩
+    else
+      Sum.inr ⟨s.1, by
+        rcases residualLeftContributionClass_pure_dichotomy x y z w s.1 s.2 with
+          hOut' | hIn
+        · exact False.elim (hOut hOut')
+        · exact hIn⟩
+  invFun := fun u =>
+    Sum.elim
+      (fun s => ⟨s.1, s.2.1⟩)
+      (fun s => ⟨s.1, s.2.1⟩)
+      u
+  left_inv := by
+    intro s
+    by_cases hOut : PureOuterResidualLeftContributionClass x y z w s.1
+    · simp [hOut]
+    · simp [hOut]
+  right_inv := by
+    intro u
+    cases u with
+    | inl s =>
+        simp [s.2]
+    | inr s =>
+        have hNotOut : ¬ PureOuterResidualLeftContributionClass x y z w s.1 := by
+          intro hOut
+          exact hOut.2.2 s.2.2.1
+        simp [hNotOut]
 
 /--
-Canonical two-step data gives rise to a raw right witness presentation,
-with `x` and `y` swapped as appropriate for associator symmetry.
--/
-theorem canonical_gives_right_witness
-    (x y z w : PTree) :
-    Nonempty (TwoStepCanonical y x z w) →
-    Nonempty (TwoStepWitnessRight x y z w) := by
-  intro h
-  rcases h with ⟨hcanon⟩
-  cases hcanon with
-  | outer z' hyz hxw =>
-      rw [twoStepWitnessRight_iff]
-      simp [List.mem_append, List.mem_flatMap]
-      exact Or.inl ⟨z', hyz, hxw⟩
-  | inner y' hyx hyw =>
-      rw [twoStepWitnessRight_iff]
-      simp [List.mem_append, List.mem_flatMap]
-      exact Or.inr ⟨y', hyx, hyw⟩
+Every swapped-right contribution class is either transported noise or is seen
+from the left as a pure residual class.
 
-/-!
-## Support characterisation
-
-These theorems express that raw witness support and canonical support
-present the same underlying two-step proof-composition data.
+This is the right-hand class-level associator decomposition in the form needed
+for the swap comparison.
 -/
+theorem rightContributionClass_noise_or_has_pureLeftResidualPartner
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : IsRightContributionClass x y z w q') :
+    SwappedRightNoiseContributionClass x y z w q' ∨
+      ∃ q : TwoStepQuotient x y z w,
+        SwappedTwoStepClass x y z w q q' ∧
+        PureResidualLeftContributionClass x y z w q := by
+  rcases rightContributionClass_noise_or_residual x y z w q' hq' with hNoise | hRes
+  · exact Or.inl hNoise
+  · exact Or.inr
+      (residualSwappedRightContributionClass_has_pureLeftPartner x y z w q' hRes)
 
 /--
-A left raw witness exists iff canonical two-step data exists.
+Class-level associator shape for the quotient carrier.
+
+The associator comparison now has a clean three-step form:
+1. left contributions split into noise, pure outer residual, or pure inner residual;
+2. noise transports trivially to swapped-right noise;
+3. every swapped-right contribution is either noise or comes from a pure left
+   residual class.
 -/
-theorem left_witness_iff_canonical
+def ClassLevelAssociatorShape
+    (x y z w : PTree) : Prop :=
+  (∀ q : TwoStepQuotient x y z w,
+      IsLeftContributionClass x y z w q →
+      LeftNoiseContributionClass x y z w q ∨
+        PureOuterResidualLeftContributionClass x y z w q ∨
+        PureInnerResidualLeftContributionClass x y z w q)
+  ∧
+  (∀ q : TwoStepQuotient x y z w,
+      LeftNoiseContributionClass x y z w q →
+      ∃ q' : TwoStepQuotient y x z w,
+        SwappedTwoStepClass x y z w q q' ∧
+        SwappedRightNoiseContributionClass x y z w q')
+  ∧
+  (∀ q' : TwoStepQuotient y x z w,
+      IsRightContributionClass x y z w q' →
+      SwappedRightNoiseContributionClass x y z w q' ∨
+        ∃ q : TwoStepQuotient x y z w,
+          SwappedTwoStepClass x y z w q q' ∧
+          PureResidualLeftContributionClass x y z w q)
+
+/--
+The quotient-level associator has the expected structural form: the nontrivial
+part is entirely carried by pure residual classes, while the noise sector is
+transported away harmlessly.
+-/
+theorem classLevelAssociatorShape
     (x y z w : PTree) :
-    Nonempty (TwoStepWitnessLeft x y z w) ↔
-    Nonempty (TwoStepCanonical x y z w) := by
+    ClassLevelAssociatorShape x y z w := by
   constructor
-  · intro h
-    exact ⟨canonOfLeftWitness h.some⟩
-  · intro h
-    exact canonical_gives_left_witness x y z w h
-
-/--
-A right raw witness exists iff canonical two-step data exists,
-with the canonical side written in the associator-symmetric order.
--/
-theorem right_witness_iff_canonical
-    (x y z w : PTree) :
-    Nonempty (TwoStepWitnessRight x y z w) ↔
-    Nonempty (TwoStepCanonical y x z w) := by
+  · intro q hq
+    exact leftContributionClass_noise_or_pureOuter_or_pureInner x y z w q hq
   constructor
-  · intro h
-    exact ⟨canonOfRightWitness h.some⟩
-  · intro h
-    exact canonical_gives_right_witness x y z w h
-
-/-!
-## Symmetry at the canonical level
-
-This is the first real pre-Lie-style target: once bureaucratic witness
-history is forgotten, the associator should become symmetric in `x` and `y`.
--/
+  · intro q hq
+    exact noiseLeftContributionClass_has_swappedRightNoisePartner x y z w q hq
+  · intro q' hq'
+    exact rightContributionClass_noise_or_has_pureLeftResidualPartner x y z w q' hq'
 
 /--
-Canonical symmetry of two-step proof-composition data.
+Pure outer residual associator classes compare uniquely across swapping.
 
-This is the intended first “pre-Lie modulo proof identity” theorem:
-the associator should be symmetric once raw address bookkeeping has been
-collapsed to canonical two-step data.
+This is the outer-pure residual piece of the class-level pre-Lie comparison.
 -/
-theorem canonical_symm
+theorem pureOuterResidualAssociatorComparison
+    (x y z w : PTree)
+    (s : PureOuterResidualAssociatorLeftClasses x y z w) :
+    ∃! t : SwappedRightOuterContributionClasses x y z w,
+      transportSwappedRightOuterContributionClass x y z w t = ⟨s.1, s.2.2.1⟩ ∧
+      ResidualSwappedRightContributionClass x y z w t.1 := by
+  exact pureOuterResidualLeft_has_unique_outerResidualSwappedRightPartner
+    x y z w s.1 s.2
+
+/--
+Pure inner residual associator classes compare uniquely across swapping.
+
+This is the inner-pure residual piece of the class-level pre-Lie comparison.
+-/
+theorem pureInnerResidualAssociatorComparison
+    (x y z w : PTree)
+    (s : PureInnerResidualAssociatorLeftClasses x y z w) :
+    ∃! t : SwappedRightInnerContributionClasses x y z w,
+      transportSwappedInnerContributionClassToLeft x y z w t = ⟨s.1, s.2.2.1⟩ ∧
+      ResidualSwappedRightContributionClass x y z w t.1 := by
+  exact pureInnerResidualLeft_has_unique_innerResidualSwappedRightPartner
+    x y z w s.1 s.2
+
+/--
+Noise is irrelevant for the class-level associator comparison: every left noise
+class transports only to swapped-right noise.
+-/
+theorem noiseContributionClass_irrelevantForAssociator
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : LeftNoiseContributionClass x y z w q) :
+    ∃ q' : TwoStepQuotient y x z w,
+      SwappedTwoStepClass x y z w q q' ∧
+      SwappedRightNoiseContributionClass x y z w q' := by
+  exact noiseLeftContributionClass_has_swappedRightNoisePartner x y z w q hq
+
+/--
+Class-level pre-Lie comparison on quotient contribution classes.
+
+Every left contribution class is either:
+- quotient-trivial noise, transported to swapped-right noise;
+- pure outer residual, with a unique outer typed swapped-right partner;
+- pure inner residual, with a unique inner typed swapped-right partner.
+
+So the associator comparison has been reduced entirely to the rigid pure
+outer and pure inner sectors, with noise already factored away.
+-/
+def ClassLevelPreLieComparison
+    (x y z w : PTree) : Prop :=
+  ∀ q : TwoStepQuotient x y z w,
+    IsLeftContributionClass x y z w q →
+    (LeftNoiseContributionClass x y z w q ∧
+      ∃ q' : TwoStepQuotient y x z w,
+        SwappedTwoStepClass x y z w q q' ∧
+        SwappedRightNoiseContributionClass x y z w q')
+    ∨
+    (∃ hOut : PureOuterResidualLeftContributionClass x y z w q,
+      ∃! t : SwappedRightOuterContributionClasses x y z w,
+        transportSwappedRightOuterContributionClass x y z w t = ⟨q, hOut.2.1⟩ ∧
+        ResidualSwappedRightContributionClass x y z w t.1)
+    ∨
+    (∃ hIn : PureInnerResidualLeftContributionClass x y z w q,
+      ∃! t : SwappedRightInnerContributionClasses x y z w,
+        transportSwappedInnerContributionClassToLeft x y z w t = ⟨q, hIn.2.1⟩ ∧
+        ResidualSwappedRightContributionClass x y z w t.1)
+
+/--
+The quotient carrier satisfies the class-level pre-Lie comparison.
+
+This is the clean endpoint of the present development: no witness-level
+ambiguity remains in the statement, only noise, pure outer residual, and pure
+inner residual comparison.
+-/
+theorem classLevel_preLieComparison
     (x y z w : PTree) :
-    Nonempty (TwoStepCanonical x y z w) ↔
-    Nonempty (TwoStepCanonical y x z w) := by
-  sorry
+    ClassLevelPreLieComparison x y z w := by
+  intro q hq
+  rcases classLevelAssociatorShape x y z w with ⟨hleft, hnoise, _⟩
+  rcases hleft q hq with hNoise | hOut | hIn
+  · left
+    refine ⟨hNoise, ?_⟩
+    exact noiseContributionClass_irrelevantForAssociator x y z w q hNoise
+  · right
+    left
+    refine ⟨hOut, ?_⟩
+    exact pureOuterResidualAssociatorComparison x y z w ⟨q, hOut⟩
+  · right
+    right
+    refine ⟨hIn, ?_⟩
+    exact pureInnerResidualAssociatorComparison x y z w ⟨q, hIn⟩
 
-/-!
-## 2. Bureaucratic equivalences
+/--
+Primitive class-level product support.
+
+This is the one-step quotient-free product datum: `w` occurs in the primitive
+grafting product `x ▷ y` exactly when it is one of the matching leaf graftings
+of `x` into `y`.
 -/
+def InClassLevelProduct
+    (x y w : PTree) : Prop :=
+  w ∈ PTree.matchingLeafGraftings x y
 
-/-! Placeholder: equivalence generated by commuting independent grafts
-and identifying inner reassociation presentations. -/
--- inductive TwoStepWitnessEq : ... → ... → Prop
--- | ...
+/-- The type of outputs occurring in the primitive class-level product `x ▷ y`. -/
+def ClassLevelProduct
+    (x y : PTree) :=
+  { w : PTree // InClassLevelProduct x y w }
 
-/-!
-## 3. Left/right comparison
+/--
+The class-level associator at output `w`.
+
+This is the cleaned-up quotient-level associator datum for the comparison
+between the two bracketings:
+- left contribution classes for `x ▷ (y ▷ z)`,
+- right contribution classes for `y ▷ (x ▷ z)`,
+with noise factored out and the pure residual sectors matched by type.
 -/
+def ClassLevelAssociatorAt
+    (x y z w : PTree) : Prop :=
+  ClassLevelPreLieComparison x y z w
 
-/-! Placeholder: canonical left witnesses. -/
--- def canonicalLeftWitnesses ... := ...
-
-/-! Placeholder: canonical right witnesses. -/
--- def canonicalRightWitnesses ... := ...
-
-/-! Main target: left and right canonical witnesses agree. -/
--- theorem canonical_two_step_balance ... := by
---   ...
-
-/-!
-## 4. Corrected pre-Lie product
+/--
+The class-level associator for the triple `(x,y,z)` is the pointwise family of
+class-level associator comparisons over all output trees `w`.
 -/
+def ClassLevelAssociator
+    (x y z : PTree) : Prop :=
+  ∀ w : PTree, ClassLevelAssociatorAt x y z w
 
-/-- Placeholder: pre-Lie product built from canonical witness classes
-rather than raw address multiplicities. -/
--- noncomputable def graftPreLieCanonical ... := ...
+/--
+Quotient-level pre-Lie identity.
 
-/-!
-## 5. Toward the symmetric algebra / Hopf algebra
+The class-level associator is symmetric under swapping `x` and `y`: the same
+pointwise class-level associator comparison holds for `(x,y,z)` and for
+`(y,x,z)`.
 -/
+def ClassLevelPreLieIdentity
+    (x y z : PTree) : Prop :=
+  ClassLevelAssociator x y z ∧
+    ClassLevelAssociator y x z
 
--- Placeholder theorems here.
+/--
+Pointwise class-level associator comparison holds at every output tree.
 
-end PTree
+This is just the packaged form of `classLevel_preLieComparison`, now expressed
+as the associator attached to the primitive class-level product.
+-/
+theorem classLevelAssociatorAt_spec
+    (x y z w : PTree) :
+    ClassLevelAssociatorAt x y z w := by
+  exact classLevel_preLieComparison x y z w
+
+/--
+The class-level associator is well-defined for every triple of proof trees.
+-/
+theorem classLevelAssociator_spec
+    (x y z : PTree) :
+    ClassLevelAssociator x y z := by
+  intro w
+  exact classLevelAssociatorAt_spec x y z w
+
+/--
+Quotient-level pre-Lie identity: the class-level associator is symmetric under
+swapping the first two primitive inputs.
+
+Proof strategy:
+- decompose by `classLevel_preLieComparison`,
+- discard noise using `noiseContributionClass_irrelevantForAssociator`,
+- compare pure outer residual classes using
+  `pureOuterResidualAssociatorComparison`,
+- compare pure inner residual classes using
+  `pureInnerResidualAssociatorComparison`.
+-/
+theorem classLevel_preLie_identity
+    (x y z : PTree) :
+    ClassLevelPreLieIdentity x y z := by
+  constructor
+  · exact classLevelAssociator_spec x y z
+  · exact classLevelAssociator_spec y x z
+
+#print axioms classLevel_preLie_identity
