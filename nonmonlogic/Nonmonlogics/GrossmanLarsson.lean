@@ -54,7 +54,28 @@ notation:55 Γ " ∣∼ " Δ => MultiSequent.mk Γ Δ
 
 /-! ## Base relation and derivations -/
 
-abbrev BaseRel := Multiset MyProp → Multiset MyProp → Prop
+/-- The prelogical fragment consists only of atoms and the incompatibility marker. -/
+def IsBaseFormula : MyProp → Prop
+| MyProp.atom _   => True
+| MyProp.falsum   => True
+| _               => False
+
+/-- A multiset lies in the prelogical fragment when all of its formulas do. -/
+def IsBaseMultiset (Γ : Multiset MyProp) : Prop :=
+  ∀ p, p ∈ Γ → IsBaseFormula p
+
+/--
+Primitive consequence may only hold on the prelogical fragment, but we package it
+as a callable relation on multisets of `MyProp` so the downstream derivation and
+tree machinery can remain unchanged.
+-/
+structure BaseRel where
+  rel : Multiset MyProp → Multiset MyProp → Prop
+  lhs_base : ∀ {Γ Θ}, rel Γ Θ → IsBaseMultiset Γ
+  rhs_base : ∀ {Γ Θ}, rel Γ Θ → IsBaseMultiset Θ
+
+instance : CoeFun BaseRel (fun _ => Multiset MyProp → Multiset MyProp → Prop) where
+  coe b := b.rel
 
 inductive NMMS (base : BaseRel) : MultiSequent → Type u
 | baseAx
@@ -128,6 +149,8 @@ noncomputable instance : DecidableEq PTree := Classical.decEq _
 
 abbrev Forest := List PTree
 abbrev Address := List Nat
+/-- Addresses serve as root-to-node paths in a proof tree. -/
+abbrev Path := Address
 
 namespace PTree
 
@@ -159,6 +182,64 @@ def rootRule? : PTree → Option RuleTag
 def rootChildren : PTree → Forest
 | leaf _      => []
 | node _ _ cs => cs
+
+/-- Leaves are the endpoints of proof trees. -/
+def IsLeaf : PTree → Prop
+| leaf _      => True
+| node _ _ _  => False
+
+/-- Smullyan-style synonym for a leaf/end node. -/
+abbrev IsEndPoint : PTree → Prop := IsLeaf
+
+/-- A simple point has exactly one immediate child. -/
+def IsSimplePoint : PTree → Prop
+| leaf _      => False
+| node _ _ cs => cs.length = 1
+
+/-- A junction point has at least two immediate children. -/
+def IsJunctionPoint : PTree → Prop
+| leaf _      => False
+| node _ _ cs => 2 ≤ cs.length
+
+/-- The left child of a node, when present. -/
+def leftChild? : PTree → Option PTree
+| leaf _         => none
+| node _ _ []    => none
+| node _ _ (c::_) => some c
+
+/-- The right child of a node, when present. -/
+def rightChild? : PTree → Option PTree
+| leaf _            => none
+| node _ _ (_::c::_) => some c
+| node _ _ _        => none
+
+/--
+Dyadic proof trees: every node has at most two children, and every child
+subtree is itself dyadic.
+-/
+def IsDyadic : PTree → Prop
+| leaf _      => True
+| node _ _ cs => cs.length ≤ 2 ∧ ∀ c, c ∈ cs → IsDyadic c
+
+@[simp] theorem isLeaf_leaf (s : MultiSequent) :
+    IsLeaf (leaf s) := by
+  trivial
+
+@[simp] theorem not_isLeaf_node (r : RuleTag) (s : MultiSequent) (cs : List PTree) :
+    ¬ IsLeaf (node r s cs) := by
+  simp [IsLeaf]
+
+@[simp] theorem leftChild?_leaf (s : MultiSequent) :
+    leftChild? (leaf s) = none := by
+  rfl
+
+@[simp] theorem rightChild?_leaf (s : MultiSequent) :
+    rightChild? (leaf s) = none := by
+  rfl
+
+@[simp] theorem isDyadic_leaf (s : MultiSequent) :
+    IsDyadic (leaf s) := by
+  simp [IsDyadic]
 
 end PTree
 
@@ -193,6 +274,12 @@ theorem toTree_conclusion {base : BaseRel} {s : MultiSequent}
     (d : NMMS base s) :
     (NMMS.toTree d).conclusion = s := by
   induction d <;> rfl
+
+/-- Proof trees coming from `NMMS` derivations are dyadic. -/
+theorem toTree_isDyadic {base : BaseRel} {s : MultiSequent}
+    (d : NMMS base s) :
+    PTree.IsDyadic (NMMS.toTree d) := by
+  induction d <;> simp [NMMS.toTree, PTree.IsDyadic, *]
 
 def IsImmediateSubtree (t u : PTree) : Prop :=
   u ∈ t.children
@@ -261,6 +348,28 @@ def isAncestorOf (a b : Address) : Prop :=
 def comparable (a b : Address) : Prop :=
   isAncestorOf a b ∨ isAncestorOf b a
 
+/-- Address-level domination relation on nodes of a proof tree. -/
+abbrev Dominates (a b : Address) : Prop := isAncestorOf a b
+
+/-- Alias for `Dominates`, matching standard rooted-tree terminology. -/
+abbrev AncestorOf (a b : Address) : Prop := Dominates a b
+
+/-- Strict domination means domination by a proper extension of addresses. -/
+def StrictDominates (a b : Address) : Prop :=
+  ∃ c : Address, c ≠ [] ∧ b = a ++ c
+
+/-- Address-level incomparability. -/
+def Incomparable (a b : Address) : Prop :=
+  ¬ comparable a b
+
+/--
+`z` separates the incomparable addresses `a` and `b` if they split
+immediately below `z` into two different child directions.
+-/
+def IsSeparator (z a b : Address) : Prop :=
+  ∃ i j : Nat, ∃ ra rb : Address,
+    i ≠ j ∧ a = z ++ i :: ra ∧ b = z ++ j :: rb
+
 theorem subtreeAt_root (t : PTree) :
     subtreeAt t [] = some t := by
   rfl
@@ -309,6 +418,136 @@ theorem comparable_of_isAncestorOf {a b : Address}
     (h : isAncestorOf a b) :
     comparable a b := by
   exact Or.inl h
+
+theorem dominates_refl (a : Address) :
+    Dominates a a := by
+  exact isAncestorOf_refl a
+
+theorem comparable_of_dominates {a b : Address}
+    (h : Dominates a b) :
+    comparable a b := by
+  exact comparable_of_isAncestorOf h
+
+theorem comparable_symm {a b : Address}
+    (h : comparable a b) :
+    comparable b a := by
+  cases h with
+  | inl hab => exact Or.inr hab
+  | inr hba => exact Or.inl hba
+
+theorem incomparable_symm {a b : Address}
+    (h : Incomparable a b) :
+    Incomparable b a := by
+  intro h'
+  exact h (comparable_symm h')
+
+theorem address_append_left_cancel
+    {s t u : Address}
+    (h : s ++ t = s ++ u) :
+    t = u := by
+  rw [List.append_cancel_left_eq] at h
+  exact h
+
+theorem IsSeparator.strictDominates_left
+    {z a b : Address}
+    (h : IsSeparator z a b) :
+    StrictDominates z a := by
+  rcases h with ⟨i, j, ra, rb, _, ha, _⟩
+  refine ⟨i :: ra, by simp, ?_⟩
+  simpa [ha, List.append_assoc]
+
+theorem IsSeparator.strictDominates_right
+    {z a b : Address}
+    (h : IsSeparator z a b) :
+    StrictDominates z b := by
+  rcases h with ⟨i, j, ra, rb, _, _, hb⟩
+  refine ⟨j :: rb, by simp, ?_⟩
+  simpa [hb, List.append_assoc]
+
+theorem IsSeparator.incomparable
+    {z a b : Address}
+    (h : IsSeparator z a b) :
+    Incomparable a b := by
+  intro hcomp
+  rcases h with ⟨i, j, ra, rb, hij, ha, hb⟩
+  cases hcomp with
+  | inl hab =>
+      rcases hab with ⟨c, hbc⟩
+      rw [ha, hb] at hbc
+      have hbc' : z ++ (j :: rb) = z ++ ((i :: ra) ++ c) := by
+        simpa [List.append_assoc] using hbc
+      rw [List.append_cancel_left_eq] at hbc'
+      have hcancel : j :: rb = (i :: ra) ++ c := by
+        exact hbc'
+      cases c with
+      | nil =>
+          simp at hcancel
+          exact hij hcancel.1.symm
+      | cons k cs =>
+          simp at hcancel
+          exact hij hcancel.1.symm
+  | inr hba =>
+      rcases hba with ⟨c, hac⟩
+      rw [ha, hb] at hac
+      have hac' : z ++ (i :: ra) = z ++ ((j :: rb) ++ c) := by
+        simpa [List.append_assoc] using hac
+      rw [List.append_cancel_left_eq] at hac'
+      have hcancel : i :: ra = (j :: rb) ++ c := by
+        exact hac'
+      cases c with
+      | nil =>
+          simp at hcancel
+          exact hij hcancel.1
+      | cons k cs =>
+          simp at hcancel
+          exact hij hcancel.1
+
+theorem exists_separator_of_incomparable :
+    ∀ a b : Address, Incomparable a b → ∃ z, IsSeparator z a b := by
+  intro a
+  induction a with
+  | nil =>
+      intro b h
+      exact False.elim <| h (Or.inl ⟨b, by simp⟩)
+  | cons i as ih =>
+      intro b h
+      cases b with
+      | nil =>
+          exact False.elim <| h (Or.inr ⟨i :: as, by simp⟩)
+      | cons j bs =>
+          by_cases hij : i = j
+          · subst hij
+            have htail : Incomparable as bs := by
+              intro hcomp
+              exact h <|
+                match hcomp with
+                | Or.inl hab =>
+                    Or.inl <| by
+                      rcases hab with ⟨c, hc⟩
+                      exact ⟨c, by simpa [isAncestorOf, hc]⟩
+                | Or.inr hba =>
+                    Or.inr <| by
+                      rcases hba with ⟨c, hc⟩
+                      exact ⟨c, by simpa [isAncestorOf, hc]⟩
+            rcases ih bs htail with ⟨z, hz⟩
+            rcases hz with ⟨i', j', ra, rb, hneq, ha, hb⟩
+            refine ⟨i :: z, ⟨i', j', ra, rb, hneq, ?_, ?_⟩⟩
+            · simpa [ha, List.cons_append, List.append_assoc]
+            · simpa [hb, List.cons_append, List.append_assoc]
+          · refine ⟨[], ⟨i, j, as, bs, hij, ?_, ?_⟩⟩
+            · simp
+            · simp
+
+theorem incomparable_has_separator_data
+    (a b : Address)
+    (h : Incomparable a b) :
+    ∃ z i j ra rb,
+      i ≠ j ∧
+      a = z ++ i :: ra ∧
+      b = z ++ j :: rb := by
+  rcases exists_separator_of_incomparable a b h with ⟨z, hz⟩
+  rcases hz with ⟨i, j, ra, rb, hij, ha, hb⟩
+  exact ⟨z, i, j, ra, rb, hij, ha, hb⟩
 
 def isPrefixOf : Address → Address → Bool
   | [], _ => true
@@ -2230,6 +2469,117 @@ theorem graftPreLie_on_generators
   | cons x xs ih =>
       cases i <;> simp [PTree.replaceNth, ih]
 
+theorem mem_replaceNth
+    (xs : List α) (i : Nat) (y z : α)
+    (hz : z ∈ PTree.replaceNth xs i y) :
+    z = y ∨ z ∈ xs := by
+  induction xs generalizing i z with
+  | nil =>
+      cases i <;> simp [PTree.replaceNth] at hz
+  | cons x xs ih =>
+      cases i with
+      | zero =>
+          simp [PTree.replaceNth] at hz
+          rcases hz with rfl | hz
+          · exact Or.inl rfl
+          · exact Or.inr (by simp [hz])
+      | succ i =>
+          simp [PTree.replaceNth] at hz
+          rcases hz with rfl | hz
+          · exact Or.inr (by simp)
+          · rcases ih i z hz with rfl | hmem
+            · exact Or.inl rfl
+            · exact Or.inr (by simp [hmem])
+
+theorem isDyadic_of_mem_replaceNth
+    {cs : List PTree} {i : Nat} {new c : PTree}
+    (hcs : ∀ t, t ∈ cs → PTree.IsDyadic t)
+    (hnew : PTree.IsDyadic new)
+    (hc : c ∈ PTree.replaceNth cs i new) :
+    PTree.IsDyadic c := by
+  rcases mem_replaceNth cs i new c hc with rfl | hmem
+  · exact hnew
+  · exact hcs c hmem
+
+theorem modifyAt_preserves_IsDyadic
+    (t : PTree) (a : Address) (f : PTree → PTree)
+    (hdy : PTree.IsDyadic t)
+    (hf : ∀ s, PTree.IsDyadic s → PTree.IsDyadic (f s))
+    (t' : PTree)
+    (hmod : PTree.modifyAt t a f = some t') :
+    PTree.IsDyadic t' := by
+  induction a generalizing t t' with
+  | nil =>
+      simp [PTree.modifyAt] at hmod
+      cases hmod
+      exact hf t hdy
+  | cons i rest ih =>
+      cases t with
+      | leaf s =>
+          simp [PTree.modifyAt] at hmod
+      | node r s cs =>
+          simp [PTree.IsDyadic] at hdy
+          rcases hdy with ⟨hlen, hchildren⟩
+          by_cases hi : i < cs.length
+          · cases hrec : PTree.modifyAt (cs[i]) rest f with
+            | none =>
+                simp [PTree.modifyAt, hi, hrec] at hmod
+            | some child' =>
+                simp [PTree.modifyAt, hi, hrec] at hmod
+                cases hmod
+                have hchildDy : PTree.IsDyadic (cs[i]) := by
+                  exact hchildren (cs[i]) (by simpa using List.getElem_mem (l := cs) hi)
+                have hchild'Dy : PTree.IsDyadic child' := by
+                  exact ih (t := cs[i]) (t' := child') hchildDy hrec
+                have hlen' : (PTree.replaceNth cs i child').length ≤ 2 := by
+                  simpa [replaceNth_length] using hlen
+                have hchildren' : ∀ c, c ∈ PTree.replaceNth cs i child' → PTree.IsDyadic c := by
+                  intro c hc
+                  exact isDyadic_of_mem_replaceNth hchildren hchild'Dy hc
+                simpa [PTree.IsDyadic] using And.intro hlen' hchildren'
+          · simp [PTree.modifyAt, hi] at hmod
+
+theorem graftMatchingLeafAt_preserves_IsDyadic
+    (u t t' : PTree) (a : Address)
+    (hu : PTree.IsDyadic u)
+    (ht : PTree.IsDyadic t)
+    (h : PTree.graftMatchingLeafAt u t a = some t') :
+    PTree.IsDyadic t' := by
+  unfold PTree.graftMatchingLeafAt at h
+  cases hsub : PTree.subtreeAt t a with
+  | none =>
+      simp [hsub] at h
+  | some sub =>
+      cases sub with
+      | node r s cs =>
+          simp [hsub] at h
+      | leaf s =>
+          by_cases hmatch : u.conclusion = s
+          · simp [hsub, hmatch] at h
+            exact modifyAt_preserves_IsDyadic t a (fun _ => u) ht (fun _ _ => hu) t' h
+          · simp [hsub, hmatch] at h
+
+theorem matchingLeafGraftings_preserve_IsDyadic
+    (u t t' : PTree)
+    (hu : PTree.IsDyadic u)
+    (ht : PTree.IsDyadic t)
+    (hmem : t' ∈ PTree.matchingLeafGraftings u t) :
+    PTree.IsDyadic t' := by
+  unfold PTree.matchingLeafGraftings at hmem
+  rcases List.mem_filterMap.1 hmem with ⟨a, _, hgraft⟩
+  exact graftMatchingLeafAt_preserves_IsDyadic u t t' a hu ht hgraft
+
+theorem matchingLeafGraftings_toTree_preserve_IsDyadic
+    {base : BaseRel} {s_outer s_inner : MultiSequent}
+    (d_outer : NMMS base s_outer)
+    (d_inner : NMMS base s_inner)
+    {t' : PTree}
+    (hmem : t' ∈ PTree.matchingLeafGraftings (NMMS.toTree d_inner) (NMMS.toTree d_outer)) :
+    PTree.IsDyadic t' := by
+  exact matchingLeafGraftings_preserve_IsDyadic
+    (NMMS.toTree d_inner) (NMMS.toTree d_outer) t'
+    (toTree_isDyadic d_inner) (toTree_isDyadic d_outer) hmem
+
 @[simp] theorem getElem_replaceNth_self
     (xs : List α) (i : Nat) (y : α) (h : i < (PTree.replaceNth xs i y).length) :
     (PTree.replaceNth xs i y)[i] = y := by
@@ -3037,6 +3387,35 @@ theorem graftMatchingLeafAt_address_classification
             rw [hnone] at haY
             simp at haY
   · exact Or.inr hcomp
+
+/--
+Conceptual restatement of the previous theorem in rooted-tree language:
+after grafting at `a`, any successful second graft address `b` either lies on
+or below the inserted branch, or else is genuinely incomparable with it.
+-/
+theorem graftMatchingLeafAt_address_regime
+    (x y z : PTree) (a b : Address)
+    (z' w : PTree)
+    (hyz : PTree.graftMatchingLeafAt y z a = some z')
+    (hxz' : PTree.graftMatchingLeafAt x z' b = some w) :
+    PTree.Dominates a b ∨ PTree.Incomparable a b := by
+  rcases graftMatchingLeafAt_address_classification x y z a b z' w hyz hxz' with h | h
+  · rcases h with ⟨c, hc⟩
+    exact Or.inl ⟨c, hc⟩
+  · exact Or.inr h
+
+/--
+If the second successful graft address is not on or below the first graft
+address, then the two addresses are separated by a branching node.
+-/
+theorem graftMatchingLeafAt_address_has_separator_of_incomparable
+    (x y z : PTree) (a b : Address)
+    (z' w : PTree)
+    (hyz : PTree.graftMatchingLeafAt y z a = some z')
+    (hxz' : PTree.graftMatchingLeafAt x z' b = some w)
+    (hinc : PTree.Incomparable a b) :
+    ∃ s : Address, PTree.IsSeparator s a b := by
+  exact PTree.exists_separator_of_incomparable a b hinc
 
 /-- Tree-level pre-Lie identity.
 
