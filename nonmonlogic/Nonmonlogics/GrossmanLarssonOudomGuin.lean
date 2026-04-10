@@ -1,5 +1,7 @@
 import Mathlib.Algebra.NonAssoc.PreLie.Basic
 import Mathlib.Algebra.NonAssoc.LieAdmissible.Defs
+import Mathlib.Algebra.Lie.UniversalEnveloping
+import Mathlib.LinearAlgebra.TensorProduct.Basic
 import Mathlib.LinearAlgebra.Quotient.Bilinear
 import Mathlib.LinearAlgebra.Quotient.Defs
 import Nonmonlogics.GrossmanLarssonQuotient
@@ -2565,6 +2567,28 @@ def mkPreLieDifferenceStableQuotient :
   Submodule.mkQ preLieDifferenceStableSubmodule
 
 /--
+The degree-`n` homogeneous piece of the stable quotient, obtained by pushing
+forward the existing weight-`n` submodule of the raw linear proof-tree carrier.
+-/
+def preLieDifferenceStableWeightSubmodule
+    (n : Nat) : Submodule ℤ PreLieDifferenceStableQuotient :=
+  (weightSubmodule n).map mkPreLieDifferenceStableQuotient
+
+@[simp] theorem mkPreLieDifferenceStableQuotient_mem_preLieDifferenceStableWeightSubmodule
+    {n : Nat} {a : linearProofTreeCarrier}
+    (ha : a ∈ weightSubmodule n) :
+    mkPreLieDifferenceStableQuotient a ∈
+      preLieDifferenceStableWeightSubmodule n := by
+  exact Submodule.mem_map_of_mem ha
+
+theorem mkPreLieDifferenceStableQuotient_treeGen_mem_preLieDifferenceStableWeightSubmodule
+    (x : PTree) :
+    mkPreLieDifferenceStableQuotient (treeGen x) ∈
+      preLieDifferenceStableWeightSubmodule (PTree.graftWeight x) := by
+  exact mkPreLieDifferenceStableQuotient_mem_preLieDifferenceStableWeightSubmodule
+    (treeGen_mem_weightSubmodule x)
+
+/--
 The raw grafting product, viewed in the smallest stable quotient.
 -/
 noncomputable def graftPreLieModPreLieDifferenceStableQuotient :
@@ -2641,6 +2665,24 @@ noncomputable def preLieDifferenceStableQuotientMul :
       (Submodule.Quotient.mk a) (Submodule.Quotient.mk b) =
       mkPreLieDifferenceStableQuotient (graftPreLie a b) := by
   rfl
+
+/--
+The unconditional descended product on the stable quotient respects the
+graft-weight grading inherited from the raw linear proof-tree carrier.
+-/
+theorem preLieDifferenceStableQuotientMul_respects_weight
+    {m n : Nat}
+    {a b : PreLieDifferenceStableQuotient}
+    (ha : a ∈ preLieDifferenceStableWeightSubmodule m)
+    (hb : b ∈ preLieDifferenceStableWeightSubmodule n) :
+    preLieDifferenceStableQuotientMul a b ∈
+      preLieDifferenceStableWeightSubmodule (m + n) := by
+  rcases Submodule.mem_map.mp ha with ⟨a0, ha0, rfl⟩
+  rcases Submodule.mem_map.mp hb with ⟨b0, hb0, rfl⟩
+  simpa [preLieDifferenceStableQuotientMul_mk]
+    using
+      (mkPreLieDifferenceStableQuotient_mem_preLieDifferenceStableWeightSubmodule
+        (graftPreLie_respects_weight_everywhere ha0 hb0))
 
 /--
 Every generator-level pre-Lie defect already vanishes in the smallest stable
@@ -3119,6 +3161,224 @@ theorem preLieDifferenceQuotientAssociator_swap_left
   exact preLieDifferenceQuotientAssociator_maps_swap_left hL hR a b c
 
 /--
+The opposite multiplication on the unconditional stable quotient.
+
+This is the version compatible with Mathlib's `RightPreLieRing` convention:
+our proved associator symmetry is swap-left, so reversing the multiplication
+turns it into the usual swap-right pre-Lie law.
+-/
+noncomputable def preLieDifferenceStableQuotientOppMul
+    (a b : PreLieDifferenceStableQuotient) :
+    PreLieDifferenceStableQuotient :=
+  preLieDifferenceStableQuotientMul b a
+
+@[simp] theorem preLieDifferenceStableQuotientOppMul_def
+    (a b : PreLieDifferenceStableQuotient) :
+    preLieDifferenceStableQuotientOppMul a b =
+      preLieDifferenceStableQuotientMul b a := rfl
+
+@[simp] theorem preLieDifferenceStableQuotientOppMul_zero_left
+    (a : PreLieDifferenceStableQuotient) :
+    preLieDifferenceStableQuotientOppMul 0 a = 0 := by
+  change preLieDifferenceStableQuotientMul a 0 = 0
+  simpa using LinearMap.map_zero (preLieDifferenceStableQuotientMul a)
+
+@[simp] theorem preLieDifferenceStableQuotientOppMul_zero_right
+    (a : PreLieDifferenceStableQuotient) :
+    preLieDifferenceStableQuotientOppMul a 0 = 0 := by
+  change preLieDifferenceStableQuotientMul 0 a = 0
+  exact LinearMap.congr_fun
+    (LinearMap.map_zero preLieDifferenceStableQuotientMul) a
+
+theorem preLieDifferenceStableQuotientOppMul_left_distrib
+    (a b c : PreLieDifferenceStableQuotient) :
+    preLieDifferenceStableQuotientOppMul a (b + c) =
+      preLieDifferenceStableQuotientOppMul a b +
+        preLieDifferenceStableQuotientOppMul a c := by
+  change preLieDifferenceStableQuotientMul (b + c) a =
+    preLieDifferenceStableQuotientMul b a +
+      preLieDifferenceStableQuotientMul c a
+  simpa using LinearMap.congr_fun
+    (LinearMap.map_add preLieDifferenceStableQuotientMul b c) a
+
+theorem preLieDifferenceStableQuotientOppMul_right_distrib
+    (a b c : PreLieDifferenceStableQuotient) :
+    preLieDifferenceStableQuotientOppMul (a + b) c =
+      preLieDifferenceStableQuotientOppMul a c +
+        preLieDifferenceStableQuotientOppMul b c := by
+  change preLieDifferenceStableQuotientMul c (a + b) =
+    preLieDifferenceStableQuotientMul c a +
+      preLieDifferenceStableQuotientMul c b
+  simpa using LinearMap.map_add (preLieDifferenceStableQuotientMul c) a b
+
+/--
+The opposite multiplication on the stable quotient satisfies Mathlib's
+right pre-Lie identity.
+-/
+theorem preLieDifferenceStableQuotientOppMul_assoc_symm
+    (a b c : PreLieDifferenceStableQuotient) :
+    preLieDifferenceStableQuotientOppMul
+        (preLieDifferenceStableQuotientOppMul a b) c
+      -
+      preLieDifferenceStableQuotientOppMul a
+        (preLieDifferenceStableQuotientOppMul b c)
+    =
+    preLieDifferenceStableQuotientOppMul
+        (preLieDifferenceStableQuotientOppMul a c) b
+      -
+      preLieDifferenceStableQuotientOppMul a
+        (preLieDifferenceStableQuotientOppMul c b) := by
+  have h := preLieDifferenceStableQuotientMul_associator_swap_left c b a
+  unfold preLieDifferenceStableQuotientAssociator at h
+  have hneg := congrArg Neg.neg h
+  simpa [preLieDifferenceStableQuotientOppMul, sub_eq_add_neg,
+    add_assoc, add_left_comm, add_comm] using hneg
+
+/--
+Hence the unconditional stable quotient already carries an official Mathlib
+`RightPreLieRing` structure, using the opposite multiplication.
+-/
+theorem preLieDifferenceStableQuotient_admitsMathlibRightPreLieRing :
+    ∃ _inst : RightPreLieRing PreLieDifferenceStableQuotient, True := by
+  letI : Mul PreLieDifferenceStableQuotient :=
+    ⟨preLieDifferenceStableQuotientOppMul⟩
+  letI : NonUnitalNonAssocRing PreLieDifferenceStableQuotient := {
+    mul := preLieDifferenceStableQuotientOppMul
+    left_distrib := preLieDifferenceStableQuotientOppMul_left_distrib
+    right_distrib := preLieDifferenceStableQuotientOppMul_right_distrib
+    zero_mul := preLieDifferenceStableQuotientOppMul_zero_left
+    mul_zero := preLieDifferenceStableQuotientOppMul_zero_right
+  }
+  letI : RightPreLieRing PreLieDifferenceStableQuotient := {
+    assoc_symm' := preLieDifferenceStableQuotientOppMul_assoc_symm
+  }
+  exact ⟨inferInstance, trivial⟩
+
+/--
+Consequently the unconditional stable quotient also admits the induced Mathlib
+`LieRing` structure.
+-/
+theorem preLieDifferenceStableQuotient_admitsMathlibLieRing :
+    ∃ _inst : LieRing PreLieDifferenceStableQuotient, True := by
+  rcases preLieDifferenceStableQuotient_admitsMathlibRightPreLieRing with
+    ⟨hpre, -⟩
+  letI : RightPreLieRing PreLieDifferenceStableQuotient := hpre
+  exact ⟨inferInstance, trivial⟩
+
+/--
+The opposite multiplication on the original concrete defect quotient, assuming
+the raw grafting product descends there.
+-/
+noncomputable def preLieDifferenceQuotientOppMul
+    (hL : GraftPreLiePreservesPreLieDifferenceLeftOnTreeGenerators)
+    (hR : GraftPreLiePreservesPreLieDifferenceRightOnTreeGenerators)
+    (a b : PreLieDifferenceQuotient) :
+    PreLieDifferenceQuotient :=
+  preLieDifferenceQuotientMul hL hR b a
+
+@[simp] theorem preLieDifferenceQuotientOppMul_zero_left
+    (hL : GraftPreLiePreservesPreLieDifferenceLeftOnTreeGenerators)
+    (hR : GraftPreLiePreservesPreLieDifferenceRightOnTreeGenerators)
+    (a : PreLieDifferenceQuotient) :
+    preLieDifferenceQuotientOppMul hL hR 0 a = 0 := by
+  change preLieDifferenceQuotientMul hL hR a 0 = 0
+  simpa using LinearMap.map_zero (preLieDifferenceQuotientMul hL hR a)
+
+@[simp] theorem preLieDifferenceQuotientOppMul_zero_right
+    (hL : GraftPreLiePreservesPreLieDifferenceLeftOnTreeGenerators)
+    (hR : GraftPreLiePreservesPreLieDifferenceRightOnTreeGenerators)
+    (a : PreLieDifferenceQuotient) :
+    preLieDifferenceQuotientOppMul hL hR a 0 = 0 := by
+  change preLieDifferenceQuotientMul hL hR 0 a = 0
+  exact LinearMap.congr_fun
+    (LinearMap.map_zero (preLieDifferenceQuotientMul hL hR)) a
+
+theorem preLieDifferenceQuotientOppMul_left_distrib
+    (hL : GraftPreLiePreservesPreLieDifferenceLeftOnTreeGenerators)
+    (hR : GraftPreLiePreservesPreLieDifferenceRightOnTreeGenerators)
+    (a b c : PreLieDifferenceQuotient) :
+    preLieDifferenceQuotientOppMul hL hR a (b + c) =
+      preLieDifferenceQuotientOppMul hL hR a b +
+        preLieDifferenceQuotientOppMul hL hR a c := by
+  change preLieDifferenceQuotientMul hL hR (b + c) a =
+    preLieDifferenceQuotientMul hL hR b a +
+      preLieDifferenceQuotientMul hL hR c a
+  simpa using LinearMap.congr_fun
+    (LinearMap.map_add (preLieDifferenceQuotientMul hL hR) b c) a
+
+theorem preLieDifferenceQuotientOppMul_right_distrib
+    (hL : GraftPreLiePreservesPreLieDifferenceLeftOnTreeGenerators)
+    (hR : GraftPreLiePreservesPreLieDifferenceRightOnTreeGenerators)
+    (a b c : PreLieDifferenceQuotient) :
+    preLieDifferenceQuotientOppMul hL hR (a + b) c =
+      preLieDifferenceQuotientOppMul hL hR a c +
+        preLieDifferenceQuotientOppMul hL hR b c := by
+  change preLieDifferenceQuotientMul hL hR c (a + b) =
+    preLieDifferenceQuotientMul hL hR c a +
+      preLieDifferenceQuotientMul hL hR c b
+  simpa using LinearMap.map_add (preLieDifferenceQuotientMul hL hR c) a b
+
+/--
+Under the preservation hypotheses, the opposite multiplication on the original
+defect quotient satisfies Mathlib's right pre-Lie identity.
+-/
+theorem preLieDifferenceQuotientOppMul_assoc_symm
+    (hL : GraftPreLiePreservesPreLieDifferenceLeftOnTreeGenerators)
+    (hR : GraftPreLiePreservesPreLieDifferenceRightOnTreeGenerators)
+    (a b c : PreLieDifferenceQuotient) :
+    preLieDifferenceQuotientOppMul hL hR
+        (preLieDifferenceQuotientOppMul hL hR a b) c
+      -
+      preLieDifferenceQuotientOppMul hL hR a
+        (preLieDifferenceQuotientOppMul hL hR b c)
+    =
+    preLieDifferenceQuotientOppMul hL hR
+        (preLieDifferenceQuotientOppMul hL hR a c) b
+      -
+      preLieDifferenceQuotientOppMul hL hR a
+        (preLieDifferenceQuotientOppMul hL hR c b) := by
+  have h := preLieDifferenceQuotientAssociator_swap_left hL hR c b a
+  have hneg := congrArg Neg.neg h
+  simpa [preLieDifferenceQuotientOppMul, preLieDifferenceQuotientAssociator,
+    sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using hneg
+
+/--
+If the original defect quotient really does admit the descended grafting
+product, then it carries an official Mathlib `RightPreLieRing` structure via
+the opposite multiplication.
+-/
+theorem preLieDifferenceQuotient_admitsMathlibRightPreLieRing
+    (hL : GraftPreLiePreservesPreLieDifferenceLeftOnTreeGenerators)
+    (hR : GraftPreLiePreservesPreLieDifferenceRightOnTreeGenerators) :
+    ∃ _inst : RightPreLieRing PreLieDifferenceQuotient, True := by
+  letI : Mul PreLieDifferenceQuotient :=
+    ⟨preLieDifferenceQuotientOppMul hL hR⟩
+  letI : NonUnitalNonAssocRing PreLieDifferenceQuotient := {
+    mul := preLieDifferenceQuotientOppMul hL hR
+    left_distrib := preLieDifferenceQuotientOppMul_left_distrib hL hR
+    right_distrib := preLieDifferenceQuotientOppMul_right_distrib hL hR
+    zero_mul := preLieDifferenceQuotientOppMul_zero_left hL hR
+    mul_zero := preLieDifferenceQuotientOppMul_zero_right hL hR
+  }
+  letI : RightPreLieRing PreLieDifferenceQuotient := {
+    assoc_symm' := preLieDifferenceQuotientOppMul_assoc_symm hL hR
+  }
+  exact ⟨inferInstance, trivial⟩
+
+/--
+Under the preservation hypotheses, the original defect quotient also admits the
+induced Mathlib `LieRing` structure.
+-/
+theorem preLieDifferenceQuotient_admitsMathlibLieRing
+    (hL : GraftPreLiePreservesPreLieDifferenceLeftOnTreeGenerators)
+    (hR : GraftPreLiePreservesPreLieDifferenceRightOnTreeGenerators) :
+    ∃ _inst : LieRing PreLieDifferenceQuotient, True := by
+  rcases preLieDifferenceQuotient_admitsMathlibRightPreLieRing hL hR with
+    ⟨hpre, -⟩
+  letI : RightPreLieRing PreLieDifferenceQuotient := hpre
+  exact ⟨inferInstance, trivial⟩
+
+/--
 The full algebraic consequence package extracted from a future quotient
 product, once its generator laws have been proved.
 
@@ -3266,6 +3526,61 @@ theorem admitsMathlibLieRing
   letI : RightPreLieRing p.Carrier := hpre
   exact ⟨inferInstance, trivial⟩
 
+/-!
+### Universal enveloping algebra from a bundled weighted pre-Lie product
+
+This packages the standard UEA interface once a specific Mathlib Lie ring
+instance has been chosen from the existence theorem above.
+-/
+
+noncomputable def lieRing (p : WeightedPreLieLinearProduct) :
+    LieRing p.Carrier :=
+  Classical.choose (admitsMathlibLieRing p)
+
+noncomputable local instance (p : WeightedPreLieLinearProduct) : LieRing p.Carrier :=
+  p.lieRing
+
+/-- The universal enveloping algebra attached to a bundled weighted pre-Lie product. -/
+noncomputable abbrev UEA (p : WeightedPreLieLinearProduct) :=
+  UniversalEnvelopingAlgebra ℤ p.Carrier
+
+/-- The canonical Lie algebra morphism into the UEA. -/
+noncomputable abbrev UEA_ι (p : WeightedPreLieLinearProduct) :
+    p.Carrier →ₗ⁅ℤ⁆ p.UEA :=
+  UniversalEnvelopingAlgebra.ι ℤ (L := p.Carrier)
+
+/-- The underlying map from the carrier into its UEA. -/
+noncomputable def toUEA (p : WeightedPreLieLinearProduct) (a : p.Carrier) :
+    p.UEA :=
+  p.UEA_ι a
+
+@[simp] theorem toUEA_eq_ι
+    (p : WeightedPreLieLinearProduct) (a : p.Carrier) :
+    p.toUEA a = p.UEA_ι a := rfl
+
+section
+
+variable {A : Type*} [Ring A] [Algebra ℤ A]
+local instance (priority := 1000) : LieAlgebra ℤ A :=
+  LieAlgebra.ofAssociativeAlgebra
+
+/-- The universal enveloping algebra lift for any bundled weighted pre-Lie product. -/
+noncomputable def UEA_lift
+    (p : WeightedPreLieLinearProduct) (f : p.Carrier →ₗ⁅ℤ⁆ A) :
+    p.UEA →ₐ[ℤ] A :=
+  UniversalEnvelopingAlgebra.lift ℤ f
+
+@[simp] theorem UEA_ι_comp_lift
+    (p : WeightedPreLieLinearProduct) (f : p.Carrier →ₗ⁅ℤ⁆ A) :
+    p.UEA_lift f ∘ p.UEA_ι = f := by
+  ext x
+  change
+      (UniversalEnvelopingAlgebra.lift ℤ f)
+        (UniversalEnvelopingAlgebra.ι ℤ x) = f x
+  exact UniversalEnvelopingAlgebra.lift_ι_apply (R := ℤ) (f := f) (x := x)
+
+end
+
 end WeightedPreLieLinearProduct
 
 /--
@@ -3300,6 +3615,66 @@ theorem GeneratorCompatibleWeightedTreeProduct.admitsMathlibLieRing
   exact WeightedPreLieLinearProduct.admitsMathlibLieRing
     (p.toWeightedPreLieLinearProduct)
 
+/-!
+### Universal enveloping algebra for generator-compatible products
+
+This records the UEA interface once we pick the canonical Lie ring instance
+coming from the bundled weighted pre-Lie product.
+-/
+
+namespace GeneratorCompatibleWeightedTreeProduct
+
+-- Use the bundled carrier to avoid requiring a global `LieRing` instance on
+-- `linearProofTreeCarrier` in the wrapper signatures.
+abbrev Carrier (p : GeneratorCompatibleWeightedTreeProduct) :=
+  (p.toWeightedPreLieLinearProduct).Carrier
+
+noncomputable instance instLieRing
+    (p : GeneratorCompatibleWeightedTreeProduct) :
+    LieRing p.Carrier :=
+  (p.toWeightedPreLieLinearProduct).lieRing
+
+/-- The universal enveloping algebra attached to a generator-compatible product. -/
+noncomputable abbrev UEA (p : GeneratorCompatibleWeightedTreeProduct) :=
+  (p.toWeightedPreLieLinearProduct).UEA
+
+/-- The canonical Lie algebra morphism into the UEA. -/
+noncomputable def UEA_ι (p : GeneratorCompatibleWeightedTreeProduct) :
+    p.Carrier →ₗ⁅ℤ⁆ p.UEA :=
+  (p.toWeightedPreLieLinearProduct).UEA_ι
+
+/-- The underlying map from the carrier into its UEA. -/
+noncomputable def toUEA (p : GeneratorCompatibleWeightedTreeProduct)
+    (a : p.Carrier) : p.UEA :=
+  (p.toWeightedPreLieLinearProduct).toUEA a
+
+@[simp] theorem toUEA_eq_ι
+    (p : GeneratorCompatibleWeightedTreeProduct) (a : p.Carrier) :
+    p.toUEA a = p.UEA_ι a := rfl
+
+section
+
+variable {A : Type*} [Ring A] [Algebra ℤ A]
+local instance (priority := 1000) : LieAlgebra ℤ A :=
+  LieAlgebra.ofAssociativeAlgebra
+
+/-- The universal enveloping algebra lift for a generator-compatible product. -/
+noncomputable def UEA_lift
+    (p : GeneratorCompatibleWeightedTreeProduct)
+    (f : p.Carrier →ₗ⁅ℤ⁆ A) :
+    p.UEA →ₐ[ℤ] A :=
+  (p.toWeightedPreLieLinearProduct).UEA_lift f
+
+@[simp] theorem UEA_ι_comp_lift
+    (p : GeneratorCompatibleWeightedTreeProduct)
+    (f : p.Carrier →ₗ⁅ℤ⁆ A) :
+    p.UEA_lift f ∘ p.UEA_ι = f := by
+  exact (p.toWeightedPreLieLinearProduct).UEA_ι_comp_lift f
+
+end
+
+end GeneratorCompatibleWeightedTreeProduct
+
 /--
 For any future generator-compatible weighted product, the multiplication of two
 tree generators canonically lands in the homogeneous piece of additive degree.
@@ -3332,5 +3707,313 @@ def GeneratorCompatibleWeightedTreeProduct.weightPieceMul
     (a : weightSubmodule m) (b : weightSubmodule n) :
     ((p.weightPieceMul m n a b : weightSubmodule (m + n)) :
       linearProofTreeCarrier) = p.mul a.1 b.1 := rfl
+
+/-!
+### Universal enveloping algebra for the stable quotient
+
+This is the first place where we can safely hook into Mathlib's standard
+universal enveloping algebra, because the smallest stable quotient already
+carries a verified Lie ring structure.
+-/
+
+noncomputable section UniversalEnvelopingStable
+
+noncomputable def preLieDifferenceStableQuotientLieRing :
+    LieRing PreLieDifferenceStableQuotient :=
+  Classical.choose preLieDifferenceStableQuotient_admitsMathlibLieRing
+
+local instance : LieRing PreLieDifferenceStableQuotient :=
+  preLieDifferenceStableQuotientLieRing
+
+/-- The universal enveloping algebra of the stable quotient Lie ring. -/
+noncomputable abbrev preLieDifferenceStableQuotientUEA :=
+  UniversalEnvelopingAlgebra ℤ PreLieDifferenceStableQuotient
+
+/-- The canonical Lie algebra morphism into the stable universal enveloping algebra. -/
+noncomputable abbrev preLieDifferenceStableQuotientUEA_ι :
+    PreLieDifferenceStableQuotient →ₗ⁅ℤ⁆ preLieDifferenceStableQuotientUEA :=
+  UniversalEnvelopingAlgebra.ι ℤ (L := PreLieDifferenceStableQuotient)
+
+/-- The composite map from the raw linear carrier to the stable UEA. -/
+noncomputable def preLieDifferenceStableQuotientToUEA
+    (a : linearProofTreeCarrier) :
+    preLieDifferenceStableQuotientUEA :=
+  preLieDifferenceStableQuotientUEA_ι (mkPreLieDifferenceStableQuotient a)
+
+-- Note: the linear map packaging is postponed because the module structure
+-- induced by the `LieRing` instance is not definitionally equal to the
+-- quotient module used by `mkPreLieDifferenceStableQuotient`.
+
+@[simp] theorem preLieDifferenceStableQuotientToUEA_preLieDifferenceGenerators_eq_zero
+    (x y z : PTree) :
+    preLieDifferenceStableQuotientToUEA
+        (preLieDifferenceGenerators x y z) =
+      preLieDifferenceStableQuotientUEA_ι 0 := by
+  have hzero :
+      mkPreLieDifferenceStableQuotient
+        (preLieDifferenceGenerators x y z) = 0 := by
+    simpa using
+      mkPreLieDifferenceStableQuotient_preLieDifferenceGenerators_eq_zero x y z
+  simpa [preLieDifferenceStableQuotientToUEA, hzero]
+
+section
+
+variable {A : Type*} [Ring A] [Algebra ℤ A]
+local instance (priority := 1000) : LieAlgebra ℤ A :=
+  LieAlgebra.ofAssociativeAlgebra
+
+/-- The universal enveloping algebra lift for the stable quotient. -/
+noncomputable def preLieDifferenceStableQuotientUEA_lift
+    (f : PreLieDifferenceStableQuotient →ₗ⁅ℤ⁆ A) :
+    preLieDifferenceStableQuotientUEA →ₐ[ℤ] A :=
+  (UniversalEnvelopingAlgebra.lift ℤ f)
+
+@[simp] theorem preLieDifferenceStableQuotientUEA_ι_comp_lift
+    (f : PreLieDifferenceStableQuotient →ₗ⁅ℤ⁆ A) :
+    preLieDifferenceStableQuotientUEA_lift f ∘
+        preLieDifferenceStableQuotientUEA_ι = f := by
+  ext x
+  change
+      (UniversalEnvelopingAlgebra.lift ℤ f)
+        (UniversalEnvelopingAlgebra.ι ℤ x) = f x
+  exact UniversalEnvelopingAlgebra.lift_ι_apply (R := ℤ) (f := f) (x := x)
+
+end
+
+end UniversalEnvelopingStable
+
+/-!
+### Universal enveloping algebra for the original defect quotient (conditional)
+
+This section records the same Mathlib interface for the original defect
+quotient, provided the generator-level preservation hypotheses hold.
+-/
+
+noncomputable section UniversalEnvelopingDefect
+
+variable (hL : GraftPreLiePreservesPreLieDifferenceLeftOnTreeGenerators)
+variable (hR : GraftPreLiePreservesPreLieDifferenceRightOnTreeGenerators)
+
+noncomputable def preLieDifferenceQuotientLieRing :
+    LieRing PreLieDifferenceQuotient :=
+  Classical.choose (preLieDifferenceQuotient_admitsMathlibLieRing hL hR)
+
+-- Note: the conditional defect quotient UEA interface is postponed for now.
+-- The stable UEA is available unconditionally and supports the downstream
+-- constructions we need.
+
+end UniversalEnvelopingDefect
+
+/-!
+### Comparing the defect quotient with the stable UEA target
+
+The stable UEA is available unconditionally, so we can always post-compose the
+canonical defect-to-stable quotient map to land in the stable UEA.
+-/
+
+section DefectToStableUEA
+
+variable (hL : GraftPreLiePreservesPreLieDifferenceLeftOnTreeGenerators)
+variable (hR : GraftPreLiePreservesPreLieDifferenceRightOnTreeGenerators)
+
+noncomputable local instance : LieRing PreLieDifferenceStableQuotient :=
+  preLieDifferenceStableQuotientLieRing
+
+/-- The defect quotient map followed by the stable UEA insertion. -/
+noncomputable def preLieDifferenceQuotientToStableUEA
+    (x : PreLieDifferenceQuotient) : preLieDifferenceStableQuotientUEA :=
+  preLieDifferenceStableQuotientUEA_ι (preLieDifferenceQuotientToStableQuotient x)
+
+@[simp] theorem preLieDifferenceQuotientToStableUEA_mk
+    (a : linearProofTreeCarrier) :
+    preLieDifferenceQuotientToStableUEA (mkPreLieDifferenceQuotient a) =
+      preLieDifferenceStableQuotientToUEA a := by
+  simp [preLieDifferenceQuotientToStableUEA,
+    preLieDifferenceStableQuotientToUEA,
+    preLieDifferenceQuotientToStableQuotient_mk]
+
+@[simp] theorem preLieDifferenceQuotientToStableUEA_preLieDifferenceGenerators_eq_zero
+    (x y z : PTree) :
+    preLieDifferenceQuotientToStableUEA
+        (mkPreLieDifferenceQuotient (preLieDifferenceGenerators x y z)) =
+      preLieDifferenceStableQuotientUEA_ι 0 := by
+  simpa [preLieDifferenceQuotientToStableUEA_mk] using
+    (preLieDifferenceStableQuotientToUEA_preLieDifferenceGenerators_eq_zero x y z)
+
+end DefectToStableUEA
+
+/-!
+### Stable UEA images of tree generators
+
+These are lightweight conveniences for later OG-style constructions.
+-/
+
+section StableUEATreeGenerators
+
+/-- The stable UEA image of a tree generator. -/
+noncomputable def stableUEA_treeGen (x : PTree) :
+    preLieDifferenceStableQuotientUEA :=
+  preLieDifferenceStableQuotientToUEA (treeGen x)
+
+@[simp] theorem stableUEA_treeGen_eq_ι (x : PTree) :
+    stableUEA_treeGen x =
+      preLieDifferenceStableQuotientUEA_ι
+        (mkPreLieDifferenceStableQuotient (treeGen x)) := rfl
+
+@[simp] theorem preLieDifferenceQuotientToStableUEA_treeGen (x : PTree) :
+    preLieDifferenceQuotientToStableUEA
+        (mkPreLieDifferenceQuotient (treeGen x)) =
+      stableUEA_treeGen x := by
+  simp [stableUEA_treeGen, preLieDifferenceQuotientToStableUEA_mk]
+
+end StableUEATreeGenerators
+
+-- Note: the UEA-lift-on-generators lemma is postponed to avoid instance
+-- resolution noise in goals; it is a convenience rather than a blocker.
+
+/-!
+### The stable UEA span of tree generators
+
+This is a minimal linear submodule capturing the images of all tree generators
+inside the stable universal enveloping algebra.
+-/
+
+section StableUEASpan
+
+/-- The set of stable UEA images of tree generators. -/
+def stableUEA_treeGenSet : Set preLieDifferenceStableQuotientUEA :=
+  { w | ∃ x : PTree, w = stableUEA_treeGen x }
+
+/-- The ℤ-submodule spanned by the stable UEA tree-generator images. -/
+def stableUEA_treeGenSpan : Submodule ℤ preLieDifferenceStableQuotientUEA :=
+  Submodule.span ℤ stableUEA_treeGenSet
+
+@[simp] theorem stableUEA_treeGen_mem_span (x : PTree) :
+    stableUEA_treeGen x ∈ stableUEA_treeGenSpan := by
+  exact Submodule.subset_span ⟨x, rfl⟩
+
+end StableUEASpan
+
+/-!
+### Oudom–Guin coproduct interface (stable UEA)
+
+We record the coproduct data for the stable UEA as a linear map into the tensor
+product, leaving axioms (coassociativity, etc.) to later stages.
+-/
+
+section StableUEAComultiplication
+
+abbrev stableUEATensor :=
+  TensorProduct ℤ preLieDifferenceStableQuotientUEA preLieDifferenceStableQuotientUEA
+
+structure StableUEAComultiplication where
+  comul : preLieDifferenceStableQuotientUEA →ₗ[ℤ] stableUEATensor
+  counit : preLieDifferenceStableQuotientUEA →ₗ[ℤ] ℤ
+
+def StableUEAComulOnGenerators (Δ : StableUEAComultiplication) : Prop :=
+  ∀ x : PTree,
+    Δ.comul (stableUEA_treeGen x) =
+      TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen x)
+
+def StableUEACounitOnGenerators (Δ : StableUEAComultiplication) : Prop :=
+  ∀ x : PTree, Δ.counit (stableUEA_treeGen x) = 0
+
+def StableUEAComulOne (Δ : StableUEAComultiplication) : Prop :=
+  Δ.comul 1 =
+    TensorProduct.tmul ℤ (1 : preLieDifferenceStableQuotientUEA)
+      (1 : preLieDifferenceStableQuotientUEA)
+
+def StableUEACounitOne (Δ : StableUEAComultiplication) : Prop :=
+  Δ.counit 1 = 1
+
+structure StableUEAComultiplicationAxioms (Δ : StableUEAComultiplication) : Prop where
+  comul_on_generators : StableUEAComulOnGenerators Δ
+  counit_on_generators : StableUEACounitOnGenerators Δ
+  comul_one : StableUEAComulOne Δ
+  counit_one : StableUEACounitOne Δ
+
+structure StableUEAComultiplicationData where
+  Δ : StableUEAComultiplication
+  axioms : StableUEAComultiplicationAxioms Δ
+
+def StableUEAComultiplicationData.comul (D : StableUEAComultiplicationData) :=
+  D.Δ.comul
+
+def StableUEAComultiplicationData.counit (D : StableUEAComultiplicationData) :=
+  D.Δ.counit
+
+@[simp] theorem StableUEAComultiplicationData.comul_on_generators
+    (D : StableUEAComultiplicationData) :
+    StableUEAComulOnGenerators D.Δ :=
+  D.axioms.comul_on_generators
+
+@[simp] theorem StableUEAComultiplicationData.counit_on_generators
+    (D : StableUEAComultiplicationData) :
+    StableUEACounitOnGenerators D.Δ :=
+  D.axioms.counit_on_generators
+
+end StableUEAComultiplication
+
+/-!
+### Cut-based coproduct support (raw trees)
+
+We keep the coproduct data computed on `PTree` as a finitary support set of
+forest–tree pairs. This stays close to the concrete combinatorics while we
+decide how much of the Hopf structure to descend to quotients.
+-/
+
+section CoproductSupport
+
+/-- Total graft weight of a forest. -/
+def forestWeight : Forest → Nat
+  | [] => 0
+  | t :: ts => PTree.graftWeight t + forestWeight ts
+
+@[simp] theorem forestWeight_nil : forestWeight ([] : Forest) = 0 := rfl
+
+@[simp] theorem forestWeight_cons (t : PTree) (ts : Forest) :
+    forestWeight (t :: ts) = PTree.graftWeight t + forestWeight ts := rfl
+
+/-- The raw coproduct support set of forest–tree pairs. -/
+def coproductSupport (t : PTree) : Set (Forest × PTree) :=
+  { p | p ∈ PTree.coproductData t }
+
+@[simp] theorem mem_coproductSupport (t : PTree) (p : Forest × PTree) :
+    p ∈ coproductSupport t ↔ p ∈ PTree.coproductData t := by
+  rfl
+
+theorem coproductSupport_finite (t : PTree) :
+    Set.Finite (coproductSupport t) := by
+  classical
+  refine (List.toFinset (PTree.coproductData t)).finite_toSet.subset ?_
+  intro p hp
+  exact List.mem_toFinset.mpr hp
+
+theorem coproductSupport_contains_trivial (t : PTree) :
+    ([], t) ∈ coproductSupport t := by
+  classical
+  unfold coproductSupport PTree.coproductData
+  refine List.mem_map.2 ?_
+  refine ⟨[], PTree.empty_cut_mem_allAdmissibleCuts t, ?_⟩
+  simpa [PTree.coproductTerm_nil]
+
+def coproductForests (t : PTree) : Set Forest :=
+  { f | ∃ r : PTree, (f, r) ∈ coproductSupport t }
+
+def coproductRemainders (t : PTree) : Set PTree :=
+  { r | ∃ f : Forest, (f, r) ∈ coproductSupport t }
+
+@[simp] theorem coproductForests_contains_nil (t : PTree) :
+    [] ∈ coproductForests t := by
+  refine ⟨t, ?_⟩
+  simpa using coproductSupport_contains_trivial t
+
+@[simp] theorem coproductRemainders_contains_root (t : PTree) :
+    t ∈ coproductRemainders t := by
+  refine ⟨[], ?_⟩
+  simpa using coproductSupport_contains_trivial t
+
+end CoproductSupport
 
 end QuotientConnected

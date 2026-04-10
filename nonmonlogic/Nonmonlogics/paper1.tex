@@ -52,7 +52,7 @@
 
 \begin{abstract}
 We construct a pre-Lie algebra on proof trees for a multisuccedent sequent calculus equipped to a
-primitive base consequence relation which is assumed to be nonmonotonic. The sequent calculus naturally gives rise to decorated and labelled rooted trees, while the inadmissibility of the Weakening rule requires us to define a grafting operation whose constraints encode constrained proof composition. We define a proof-theoretically meaningful equivalence relation which identifies proof-trees differing
+primitive base consequence relation which is assumed to be nonmonotonic. The sequent calculus naturally gives rise to decorated and labelled rooted trees, while the inadmissibility of the Weakening rule gives rise to a constrained grafting operation on trees. We define a proof-theoretically meaningful equivalence relation which identifies proof-trees differing
 only in inessential or bureaucratic scheduling or reassociation choices. Passing to the induced quotient we show that there is a clean separation between cancelling and genuinely asymmetric
 contributions to the associator, yielding a pre-Lie
 identity for proof-tree composition. This extends to a Hopf algebra by the Oudom-Guin construction. This suggests that Hopf-algebraic methods on proof trees are a potential tool for structural proof theory, in the sense that the presence or absence of
@@ -61,9 +61,8 @@ structural rules controls the existence and form of the algebraic structure.
 
 \section{Introduction}
 
-The aim of this paper is to define a proof-theoretically meaningful algebraic structure from proof composition
-in a setting where monotonicity and familiar structural rules are not built in
-from the outset. We work in a setting where non-monotonicity is reflected proof-theoretically by the \emph{failure} of weakening. Structural rules such as weakening and contraction have of course been studied extensively in linear and other substructural logics, where their management gives rise to resource-sensitive or relevance-sensitive proof systems. Our aim here is different: rather than studying the algebraic consequences of controlling structural rules within an otherwise monotone proof system, we seek an algebraic account of proof composition for a consequence relation that is nonmonotonic in the meta-sense --- one where provability itself may be defeated by enlarging the premiss set. In this sense, the primitive consequence relation is meant to reflect patterns of defeasible inference whose validity is not necessarily preserved under addition of new information.
+The aim of this paper is to define a proof-theoretically meaningful algebraic structure in a setting where monotonicity and familiar structural rules are not built in
+from the outset. We work in a setting where non-monotonicity is reflected proof-theoretically by the \emph{failure} of Weakening. Structural rules such as weakening and contraction have of course been studied extensively in linear and other substructural logics, where their management gives rise to resource-sensitive or relevance-sensitive proof systems. Our aim here is different: rather than studying the algebraic consequences of controlling structural rules within an otherwise monotone proof system, we seek an algebraic account of proof composition for a consequence relation that is nonmonotonic in the meta-sense --- one where provability itself may be defeated by enlarging the premiss set. In this sense, the primitive consequence relation is meant to reflect patterns of defeasible inference whose validity is not necessarily preserved under addition of new information.
 
 
 We begin with a primitive consequence relation on a
