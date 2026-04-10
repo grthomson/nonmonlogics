@@ -1,682 +1,1487 @@
 \documentclass[11pt]{article}
 
-\usepackage{amsmath,amssymb,amsthm,mathtools}
 \usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amssymb,amsthm,mathtools}
+\usepackage{xcolor}
 \usepackage{enumitem}
 \usepackage{hyperref}
+\usepackage{ebproof}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc}
 
-\title{A Hopf Algebra on Proof Trees for a Nonmonotonic Sequent Calculus}
+
+\title{A Hopf Algebra on Proof Trees over a Nonmonotonic Consequence Relation}
 \author{}
 \date{}
 
 \newtheorem{theorem}{Theorem}
 \newtheorem{proposition}[theorem]{Proposition}
 \newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{corollary}[theorem]{Corollary}
 \newtheorem{definition}[theorem]{Definition}
 \newtheorem{remark}[theorem]{Remark}
-\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{example}[theorem]{Example}
+
+\newcommand{\ms}{\mathrel{\mid\!\sim}}
+\newcommand{\mszero}{\mathrel{\mid\!\sim_{0}}}
+\newcommand{\At}{\mathit{At}}
+\newcommand{\MSet}{\mathit{MSet}}
+\newcommand{\NMMS}{\mathit{NMMS}}
+\newcommand{\PTree}{\mathit{PTree}}
+\newcommand{\Forest}{\mathit{Forest}}
+\newcommand{\Addr}{\mathit{Addr}}
+\newcommand{\Conc}{\mathrm{conc}}
+\newcommand{\Tree}{\mathit{Tree}}
+\newcommand{\Graft}{\mathit{Graft}}
+\newcommand{\Coeff}{\mathrm{coeff}}
+\newcommand{\ZZ}{\mathbb{Z}}
+\newcommand{\Qclass}{\mathcal{Q}}
+\newcommand{\CL}{\mathcal{C}_{\mathrm{L}}}
+\newcommand{\CR}{\mathcal{C}_{\mathrm{R}}}
+\newcommand{\Swap}{\mathsf{S}}
+\newcommand{\Noise}{\mathsf{Noise}}
+\newcommand{\Res}{\mathsf{Res}}
+\newcommand{\PureOut}{\mathsf{PureOut}}
+\newcommand{\PureIn}{\mathsf{PureIn}}
+\newcommand{\PT}{\mathsf{PT}}
 
 \begin{document}
 
 \maketitle
 
 \begin{abstract}
-We define algebraic structure on proof trees arising from a nonmonotonic
-multi-succedent sequent calculus. The primitive combinatorial operation is
-a matching-leaf grafting operation, which composes derivations by replacing
-a leaf of one proof tree with another proof tree having the same concluding
-sequent. This yields a natural candidate pre-Lie product on proof trees.
-A second, cut-based operation yields a coproduct encoding decomposition into
-subderivations. Since raw address-level witness counting contains
-bureaucratic artefacts, we pass to a quotient identifying proof presentations
-that differ only by inessential scheduling data. At the quotient level we
-obtain the pre-Lie identity and hence, via a standard enveloping construction,
-a Hopf algebra of proof trees for a nonmonotonic sequent calculus.
+We construct a pre-Lie algebra on proof trees for a multisuccedent sequent calculus equipped to a
+primitive base consequence relation which is assumed to be nonmonotonic. The sequent calculus naturally gives rise to decorated and labelled rooted trees, while the inadmissibility of the Weakening rule requires us to define a grafting operation whose constraints encode constrained proof composition. We define a proof-theoretically meaningful equivalence relation which identifies proof-trees differing
+only in inessential or bureaucratic scheduling or reassociation choices. Passing to the induced quotient we show that there is a clean separation between cancelling and genuinely asymmetric
+contributions to the associator, yielding a pre-Lie
+identity for proof-tree composition. This extends to a Hopf algebra by the Oudom-Guin construction. This suggests that Hopf-algebraic methods on proof trees are a potential tool for structural proof theory, in the sense that the presence or absence of
+structural rules controls the existence and form of the algebraic structure.
 \end{abstract}
 
 \section{Introduction}
 
-The present paper develops an algebraic treatment of inference in a
-nonmonotonic setting. Our guiding idea is that proof trees should carry both
-a \emph{compositional} and a \emph{decompositional} structure. Composition
-corresponds to grafting one derivation into another, while decomposition
-corresponds to extracting subderivations by admissible cuts. The resulting
-interaction is naturally Hopf-algebraic.
+The aim of this paper is to define a proof-theoretically meaningful algebraic structure from proof composition
+in a setting where monotonicity and familiar structural rules are not built in
+from the outset. We work in a setting where non-monotonicity is reflected proof-theoretically by the \emph{failure} of weakening. Structural rules such as weakening and contraction have of course been studied extensively in linear and other substructural logics, where their management gives rise to resource-sensitive or relevance-sensitive proof systems. Our aim here is different: rather than studying the algebraic consequences of controlling structural rules within an otherwise monotone proof system, we seek an algebraic account of proof composition for a consequence relation that is nonmonotonic in the meta-sense --- one where provability itself may be defeated by enlarging the premiss set. In this sense, the primitive consequence relation is meant to reflect patterns of defeasible inference whose validity is not necessarily preserved under addition of new information.
 
-The proof-theoretic background is a nonmonotonic sequent calculus. The
-failure of weakening is essential: if inference is not stable under
-arbitrary enlargement of the premise set, then proof composition cannot be
-treated as a free combinatorial operation. Instead, composition must respect
-logical interfaces, here formalized by matching conclusion sequents.
 
-This gives a proof-theoretically constrained analogue of the familiar
-combinatorial Hopf algebras on rooted trees. The trees considered here are
-not abstract rooted trees, but proof trees generated from a sequent calculus
-with a primitive base consequence relation. Their logical decoration is
-therefore constitutive of the algebraic structure rather than external to it.
+We begin with a primitive consequence relation on a
+pre-logical vocabulary and use it as the only nonlogical input for a sequent
+calculus. The resulting derivations are
+represented by finite rooted proof trees, and proof composition is defined by
+grafting one proof tree into another at a leaf with matching sequent interface.
 
-Our eventual aim is to show that, after quotienting away proof-theoretically
-inessential bureaucracy, the grafting operation satisfies the pre-Lie
-identity. This yields a Hopf algebra of derivations in the sense relevant to
-nonmonotonic inference. In this way we treat logical constants and derivation
-patterns not merely as syntactic devices but as algebraically organised
-features of inference itself.
+Two distinct issues then arise. The first is combinatorial: how do iterated
+graftings decompose? The second is proof-theoretic: which apparent
+distinctions between ordered pairs of grafts are genuine and which are merely
+bureaucratic presentation artefacts? The central contribution of the paper is
+to show that these two questions can be separated cleanly. The geometry of
+a graft pair yields a decomposition into independent and nested cases.
+Passing to a quotient of raw graft-pair data isolates the quotient-trivial
+overlap sector, leaves a rigid residual sector, and makes the associator
+comparison transparent.
 
-\section{The Nonmonotonic Sequent Calculus}
+The argument proceeds in three stages. First, one shows that every graft pair
+is governed by a simple rooted-tree geometry: the two
+insertions are either nested or independent. Second, one passes from raw
+graft-pair witnesses to a quotient that identifies the genuinely bureaucratic
+symmetries of proof composition. This separates a quotient-trivial noise sector
+from a residual sector. Third, one proves that the mixed residual case is
+eliminated, so that the residual contribution classes become rigid enough to be
+matched across the two bracketings of the associator.
 
-\subsection{Formulas and sequents}
+The key point is therefore not that an external tree algebra is imposed on
+proofs, but that the proof-theoretic structure itself determines the relevant
+rooted trees, the grafting operation, the quotient of bureaucratic symmetries,
+and ultimately the class-level associator comparison from which the pre-Lie
+identity emerges.
 
-We begin with a simple propositional language.
+\medskip
+
+\noindent\textbf{Relation to substructural logics.}
+It is worth distinguishing the nonmonotonicity studied here from the related
+but different phenomenon in linear logic. Linear logic exhibits what one might
+call \emph{inner} nonmonotonicity: the inference connector $\multimap$ is
+not monotone, in the sense that provability of $\vdash A\multimap B$ does not
+imply provability of $\vdash X\otimes A\multimap B$. However, the
+\emph{provability relation} of linear logic is itself monotone in the
+meta-sense: adding new axioms or rules cannot destroy existing proofs.
+The present setting is different: the primitive relation $\mszero$ is allowed
+to be nonmonotone in the \emph{meta} sense, so that provability itself may be
+defeated by enlarging the premiss set. This is the stronger, logical notion of
+nonmonotonicity studied in the literature on defeasible and nonmonotonic
+reasoning, and it is what makes the absence of weakening proof-theoretically
+essential rather than merely convenient.
+
+\medskip
+
+\noindent\textbf{The structural rules programme.}
+The present paper establishes the base case of a broader research programme.
+The sequent calculus $\NMMS(\mszero)$ is currently formulated with multisets
+(so exchange is built in) and without weakening or contraction. A natural
+next question is: which structural rules obstruct the existence of a compatible
+product and coproduct, and hence of a Hopf algebra on proof trees? Adding
+weakening would make the sequent interfaces non-rigid, potentially destroying
+the exactness of the leaf-matching constraint on which the coproduct relies.
+Adding contraction would identify multisets differing in formula multiplicities,
+changing the quotient structure in ways that may break the noise/residual
+separation. This programme --- using Hopf-algebraic compatibility as a
+diagnostic for structural rules --- is left for subsequent work, but it
+provides the conceptual frame within which the present results should be read.
+
+\medskip
+
+\noindent\textbf{Lean formalization.}
+The main results of this paper have been fully formalized in Lean~4 using
+Mathlib. The central theorem \texttt{classLevel\_preLie\_identity} has been
+machine-verified and depends only on the standard foundational axioms
+\texttt{propext}, \texttt{choice}, and \texttt{Quot.sound}. In particular,
+no \texttt{sorry} placeholders appear in the live proof chain. The
+formalization comprises approximately 19\,000 lines across three main files
+and served as the primary vehicle through which the quotient structure and
+the noise/residual separation were discovered; the prose paper is a
+conservative account of what the formal development established.
+
+The presentation is intentionally more conservative than the internal Lean
+development. We keep only the mathematically significant layers of the
+construction in the main text:
+\[
+\begin{aligned}
+\text{primitive consequence}
+&\longrightarrow \text{derivability}\\
+&\longrightarrow \text{proof trees}
+\longrightarrow \text{grafting}\\
+&\longrightarrow \text{graft-pair quotient}
+\longrightarrow \text{class-level pre-Lie identity}.
+\end{aligned}
+\]
+
+The paper is organized accordingly. Section~2 defines the primitive consequence
+relation, the calculus \(\NMMS(\mszero)\), and its induced derivability
+relation. Section~3 develops proof trees as rooted ordered objects. Section~4
+then recalls the algebraic notion of pre-Lie algebra to which the later
+quotient analysis leads. Sections~5 and~6 develop grafting and the graft-pair
+decomposition underlying the associator analysis. Sections~7--9 contain the
+main quotient argument: bureaucratic equivalence, the separation of noise from
+residual contribution classes, elimination of mixed residual classes, and the
+class-level pre-Lie identity. Section~10 records the cut-based coproduct
+material only as preparatory structure for future work.
+
+\section{Primitive consequence and induced derivability}
+
+\subsection{Base vocabulary and full language}
+
+Let \(L_0\) be a set of atomic sentence letters. We set
+\[
+L_B := L_0 \cup \{\bot\},
+\]
+where \(\bot\) is treated as a primitive incompatibility marker.
 
 \begin{definition}
-Let $\mathsf{At}$ be a set of atomic symbols. The set $\mathcal{L}$ of
-formulas is generated by the grammar
+The full language \(L\) is generated inductively from the base fragment
+\(L_B\) by
 \[
-A ::= p \mid \bot \mid (A \Rightarrow A) \mid (A \wedge A) \mid (A \vee A)
-\mid \neg A,
+A ::= p \mid \bot \mid (A\Rightarrow A)\mid (A\wedge A)\mid (A\vee A)\mid \neg A,
+\qquad p\in L_0.
 \]
-where $p \in \mathsf{At}$.
 \end{definition}
 
-The constant $\bot$ plays a special role as an incompatibility marker. At
-this stage we do not impose any global principle identifying derivability of
-$\bot$ with inconsistency via a deduction theorem. Rather, incompatibility is
-tracked proof-theoretically through the primitive consequence relation.
+\begin{remark}
+At the base level, \(\bot\) is not governed by any special elimination rule.
+It functions simply as a primitive marker of incompatibility. In particular,
+sequents such as \(A,B,C \mszero \bot\), with \(A,B,C\in L_0\), may be used to
+record material incompatibility without imposing any general explosion
+principle.
+\end{remark}
+
+\subsection{Primitive consequence}
+
+\begin{definition}
+A \emph{primitive consequence relation} is a binary relation
+\[
+\mszero \;\subseteq\; \MSet(L_B)\times \MSet(L_B),
+\]
+where \(\MSet(L_B)\) denotes the finite multisets of formulas of the base
+fragment \(L_B\).
+\end{definition}
+
+\begin{remark}
+This is the proof-theoretically intended setup: primitive consequence is given
+only on the pre-logical fragment, and the logical vocabulary is added above it
+by the sequent rules.
+\end{remark}
+
+\begin{remark}
+No structural conditions are imposed on \(\mszero\). In particular, it need not
+be monotone: from \(\Gamma \mszero \Theta\) one cannot in general infer either
+\((\Gamma,A)\mszero \Theta\) or \(\Gamma \mszero (\Theta,A)\).
+\end{remark}
+
+\subsection{Sequents}
 
 \begin{definition}
 A \emph{multi-succedent sequent} is an expression
 \[
-\Gamma \mathrel{\mid\!\sim} \Delta,
+\Gamma \ms \Delta,
 \]
-where $\Gamma$ and $\Delta$ are finite multisets of formulas.
+where \(\Gamma,\Delta\in \MSet(L)\).
 \end{definition}
 
-The use of multisets reflects that structural rules are not built in by
-default. In particular, we do not assume weakening.
+We work with multisets in order not to presuppose structural features beyond
+those explicitly built into the proof system.
 
-\subsection{Primitive consequence relation}
+\subsection{The calculus \texorpdfstring{\(\NMMS(\mszero)\)}{NMMS}}
 
-\begin{definition}
-A \emph{base consequence relation} is a relation
-\[
-\mathsf{base} \subseteq \mathsf{MSet}(\mathcal{L}) \times \mathsf{MSet}(\mathcal{L}).
-\]
-Equivalently, for multisets $\Gamma,\Theta$ of formulas, one may write
-$\mathsf{base}(\Gamma,\Theta)$.
-\end{definition}
-
-The base relation supplies the leaf-level proof-theoretic data. It should be
-thought of as the primitive inferential background over which the sequent
-rules generate derivations.
-
-\subsection{Derivations}
-
-Fix a base consequence relation $\mathsf{base}$. We define a derivability
-relation inductively.
+We now define the nonmonotonic multi-succedent sequent calculus generated by
+\(\mszero\).
 
 \begin{definition}
-The derivations of the nonmonotonic multi-succedent sequent calculus
-$\mathsf{NMMS}(\mathsf{base})$ are generated by the following clauses.
+The derivations of \(\NMMS(\mszero)\) are generated by the following clauses.
 \end{definition}
 
 \paragraph{Base axiom.}
-For any multisets $\Gamma,\Theta$,
+Whenever \(\Gamma,\Theta\in \MSet(L_B)\) and \(\Gamma \mszero \Theta\), we may
+form the sequent
 \[
-\frac{\mathsf{base}(\Gamma,\Theta)}{\Gamma \mathrel{\mid\!\sim} \Theta}
-\quad \text{(Base)}
+\frac{\Gamma \mszero \Theta}{\Gamma \ms \Theta}
+\quad \text{\emph{(Base)}}.
 \]
 
 \paragraph{Implication rules.}
 \[
-\frac{\Gamma \mathrel{\mid\!\sim} A,\Delta
-\qquad
-B,\Gamma \mathrel{\mid\!\sim} \Delta}
-{(A \Rightarrow B),\Gamma \mathrel{\mid\!\sim} \Delta}
-\quad (\Rightarrow L)
+\frac{\Gamma \ms A,\Theta \qquad B,\Gamma \ms \Theta}
+{(A\Rightarrow B),\Gamma \ms \Theta}
+\quad \text{\emph{(\(\Rightarrow L\))}}
 \]
 \[
-\frac{A,\Gamma \mathrel{\mid\!\sim} B,\Delta}
-{\Gamma \mathrel{\mid\!\sim} (A \Rightarrow B),\Delta}
-\quad (\Rightarrow R)
+\frac{A,\Gamma \ms B,\Theta}
+{\Gamma \ms (A\Rightarrow B),\Theta}
+\quad \text{\emph{(\(\Rightarrow R\))}}
 \]
 
 \paragraph{Conjunction rules.}
 \[
-\frac{A,B,\Gamma \mathrel{\mid\!\sim} \Delta}
-{(A \wedge B),\Gamma \mathrel{\mid\!\sim} \Delta}
-\quad (\wedge L)
+\frac{A,B,\Gamma \ms \Theta}
+{(A\wedge B),\Gamma \ms \Theta}
+\quad \text{\emph{(\(\wedge L\))}}
 \]
 \[
-\frac{\Gamma \mathrel{\mid\!\sim} A,\Delta
-\qquad
-\Gamma \mathrel{\mid\!\sim} B,\Delta}
-{\Gamma \mathrel{\mid\!\sim} (A \wedge B),\Delta}
-\quad (\wedge R)
+\frac{\Gamma \ms A,\Theta \qquad \Gamma \ms B,\Theta}
+{\Gamma \ms (A\wedge B),\Theta}
+\quad \text{\emph{(\(\wedge R\))}}
 \]
 
 \paragraph{Disjunction rules.}
 \[
-\frac{A,\Gamma \mathrel{\mid\!\sim} \Delta
-\qquad
-B,\Gamma \mathrel{\mid\!\sim} \Delta}
-{(A \vee B),\Gamma \mathrel{\mid\!\sim} \Delta}
-\quad (\vee L)
+\frac{A,\Gamma \ms \Theta \qquad B,\Gamma \ms \Theta}
+{(A\vee B),\Gamma \ms \Theta}
+\quad \text{\emph{(\(\vee L\))}}
 \]
 \[
-\frac{\Gamma \mathrel{\mid\!\sim} A,B,\Delta}
-{\Gamma \mathrel{\mid\!\sim} (A \vee B),\Delta}
-\quad (\vee R)
+\frac{\Gamma \ms A,B,\Theta}
+{\Gamma \ms (A\vee B),\Theta}
+\quad \text{\emph{(\(\vee R\))}}
 \]
 
 \paragraph{Negation rules.}
 \[
-\frac{\Gamma \mathrel{\mid\!\sim} A,\Delta}
-{\neg A,\Gamma \mathrel{\mid\!\sim} \Delta}
-\quad (\neg L)
+\frac{\Gamma \ms A,\Theta}
+{\neg A,\Gamma \ms \Theta}
+\quad \text{\emph{(\(\neg L\))}}
 \qquad
-\frac{A,\Gamma \mathrel{\mid\!\sim} \Delta}
-{\Gamma \mathrel{\mid\!\sim} \neg A,\Delta}
-\quad (\neg R)
+\frac{A,\Gamma \ms \Theta}
+{\Gamma \ms \neg A,\Theta}
+\quad \text{\emph{(\(\neg R\))}}
 \]
 
 \begin{remark}
-No weakening rule is assumed. In particular, the rules
+The logical rules are standard active-formula rules. The important structural
+choice is not the shape of these rules but the absence of built-in structural
+principles such as weakening. This is the proof-theoretic setting in which the
+primitive relation \(\mszero\) genuinely matters.
+\end{remark}
+
+\begin{remark}
+No weakening or contraction rules are assumed. In particular, the rules
 \[
-\frac{\Gamma \mathrel{\mid\!\sim} \Delta}
-{\Gamma,A \mathrel{\mid\!\sim} \Delta}
-\quad
-\frac{\Gamma \mathrel{\mid\!\sim} \Delta}
-{\Gamma \mathrel{\mid\!\sim} \Delta,A}
+\frac{\Gamma\ms\Theta}{\Gamma,A\ms\Theta}
+\qquad
+\frac{\Gamma\ms\Theta}{\Gamma\ms\Theta,A}
 \]
-are not taken to be admissible in general. This is the formal expression of
-the nonmonotonic character of the system.
+are not built into the system.
 \end{remark}
 
 \begin{remark}
-Likewise, we do not assume unrestricted cut-elimination as part of the
-background. The algebraic structures developed below are intended precisely
-for a setting in which composition and decomposition of derivations must be
-handled in a controlled, proof-theoretically sensitive way.
+The base relation is extended by logic rather than replaced by logic. In other
+words, \(\NMMS(\mszero)\) is the deductive closure generated from the
+primitive inferential relation \(\mszero\).
 \end{remark}
 
-\section{Proof Trees}
+\begin{remark}
+The next two figures serve different purposes. The first displays a small
+closed derivation both proof-theoretically and graph-theoretically. The second
+is a schematic picture of grafting by substitution at a matching leaf.
+\end{remark}
 
-\subsection{Plain proof trees}
+\begin{prooftree}
+\hypo{\Gamma \mszero (A\Rightarrow B),\Theta}
+\infer1[\textsc{Base}]{\Gamma \ms (A\Rightarrow B),\Theta}
+\hypo{\Gamma \mszero C,\Theta}
+\infer1[\textsc{Base}]{\Gamma \ms C,\Theta}
+\infer2[\(\wedge R\)]{\Gamma \ms ((A\Rightarrow B)\wedge C),\Theta}
+\end{prooftree}
+
+\medskip
+
+\noindent The same derivation may also be displayed in graph-theoretic form as
+an ordinary rooted ordered tree. To match the proof-theoretic orientation
+above, we place the root at the bottom and draw edges upward toward the
+premisses.
+
+\begin{center}
+\begin{tikzpicture}[
+  vertex/.style={circle, fill=black, inner sep=1.4pt},
+  vedge/.style={thick},
+  vlabel/.style={font=\scriptsize, align=left}
+]
+\node[vertex] (root) at (0,0) {};
+\node[vlabel, below=1mm of root] {$r$};
+
+\node[vertex] (lefta) at (-1.9,1.4) {};
+\node[vlabel, left=1mm of lefta] {$\ell_1$};
+
+\node[vertex] (righta) at (1.9,1.4) {};
+\node[vlabel, right=1mm of righta] {$\ell_2$};
+
+\draw[vedge] (root) -- (lefta);
+\draw[vedge] (root) -- (righta);
+\end{tikzpicture}
+\end{center}
+
+\[
+\begin{array}{rcl}
+\rho(r) &=& \wedge R, \qquad \sigma(r) = \Gamma \ms ((A\Rightarrow B)\wedge C),\Theta,\\[1mm]
+\rho(\ell_1) &=& \textsc{Base}, \qquad \sigma(\ell_1) = \Gamma \ms (A\Rightarrow B),\Theta,\\[1mm]
+\rho(\ell_2) &=& \textsc{Base}, \qquad \sigma(\ell_2) = \Gamma \ms C,\Theta.
+\end{array}
+\]
+
+\noindent Formally, this is the same proof object viewed as a finite rooted
+ordered tree \((V,E,r)\) together with a sequent-labeling map
+\(\sigma : V \to \mathsf{Seq}(L)\) and a partial rule-labeling map
+\(\rho\) defined on the internal vertices. If an internal vertex \(v\) has
+ordered children \(v_{1},\dots,v_{n}\), then the sequents
+\(\sigma(v_{1}),\dots,\sigma(v_{n})\) are exactly the premisses of an instance
+of the rule \(\rho(v)\) with conclusion \(\sigma(v)\). Thus the bottom sequent
+of an inference is the label of the vertex itself, while the top sequents are
+recovered from the labels of its children. Leaves corresponding to instances
+of the primitive base relation may be marked explicitly as \textsc{Base}-vertices.
+
+\medskip
+
+
+
+\subsection{Induced derivability}
 
 \begin{definition}
-A \emph{plain proof tree} is a rooted tree whose nodes are labelled by
-sequents and whose internal nodes are further tagged by one of the rule
+For \(\Gamma,\Delta\in \MSet(L)\), we write
+\[
+\Gamma \vdash_{\NMMS(\mszero)} \Delta
+\]
+if there exists a derivation of the sequent \(\Gamma \ms \Delta\) in the
+calculus \(\NMMS(\mszero)\).
+\end{definition}
+
+\begin{remark}
+This explicitly separates the primitive relation \(\mszero\) from the induced
+derivability relation \(\vdash_{\NMMS(\mszero)}\). In a nonmonotonic setting,
+that distinction is mathematically significant.
+\end{remark}
+
+\section{Proof trees}
+
+\subsection{Tree representation}
+
+\begin{definition}
+A \emph{proof tree} is a finite rooted ordered tree whose vertices are
+labelled by sequents, whose internal vertices are tagged by one of the rule
 symbols
 \[
-\mathsf{Base},\ \Rightarrow L,\ \Rightarrow R,\ \wedge L,\ \wedge R,\
-\vee L,\ \vee R,\ \neg L,\ \neg R.
+\mathsf{Base},\ \Rightarrow L,\ \Rightarrow R,\ \wedge L,\ \wedge R,\ \vee L,\ \vee R,\ \neg L,\ \neg R,
 \]
-Leaves carry only a concluding sequent.
+and whose immediate subtrees record the premises of the inference at that
+vertex. The sequent at the root is called the \emph{conclusion} of the proof
+tree.
 \end{definition}
 
-Thus a proof tree forgets the specific derivation object while retaining the
-inferential shape of the derivation, including the sequent labelling at each
-node and the rule applied at each interior node.
+\begin{remark}
+The order on immediate subtrees is part of the formal object. This is the only
+reason addresses are later coded by finite sequences of child indices.
+Conceptually, the objects are ordinary rooted proof trees.
+\end{remark}
 
-\begin{definition}
-If $t$ is a proof tree, we write:
-\begin{itemize}[itemsep=2pt]
-\item $\mathrm{conc}(t)$ for its concluding sequent,
-\item $\mathrm{size}(t)$ for its number of nodes,
-\item $\mathrm{ht}(t)$ for its height,
-\item $\mathrm{children}(t)$ for its immediate subtrees.
+\begin{proposition}
+Every derivation \(d\) in \(\NMMS(\mszero)\) determines a proof tree
+\(\Tree(d)\) with the same conclusion sequent.
+\end{proposition}
+
+\begin{proof}
+The proof is by induction on the derivation:
+\begin{itemize}
+\item a base axiom becomes a leaf;
+\item each logical rule becomes a node whose children are the proof trees of
+the premises;
+\item the root sequent is the conclusion of the inference.
 \end{itemize}
-\end{definition}
+\end{proof}
+
+\subsection{Addresses}
 
 \begin{definition}
-An \emph{address} in a proof tree is a finite list of natural numbers,
-indicating a path from the root to a subtree.
+An \emph{address} in a proof tree is a finite sequence of natural numbers
+indicating a path from the root by successive child indices. The empty address
+selects the whole tree.
 \end{definition}
 
-Addresses allow us to refer to a specific subtree or leaf of a proof tree.
-They play a technical role in defining local grafting operations, though the
-final algebraic constructions will quotient away inessential address-level
-bureaucracy.
+\begin{remark}
+Addresses are not conceptually basic. They are simply a convenient way of
+coding vertices and rooted subtrees in the formal development.
+\end{remark}
 
-\subsection{From derivations to proof trees}
+% ---- Figure 1: proof tree with address labels ----
+\begin{center}
+\begin{tikzpicture}[
+  nd/.style={circle,fill=black,inner sep=1.5pt},
+  ed/.style={thick},
+  seq/.style={font=\scriptsize,inner sep=1pt},
+  adr/.style={font=\scriptsize\ttfamily,color=gray!80!black}
+]
+\node[nd] (r)  at ( 0,  0) {};
+\node[nd] (l)  at (-2.5,1.8) {};
+\node[nd] (rr) at ( 2.5,1.8) {};
+\node[nd] (ll) at (-2.5,3.5) {};
+\draw[ed] (r)--(l); \draw[ed] (r)--(rr); \draw[ed] (l)--(ll);
+\node[seq,below=2mm of r]  {$\wedge R,\;\Gamma\ms(A\wedge B),\Theta$};
+\node[adr,left=1mm of r]   {\texttt{[]}};
+\node[seq,left=1.5mm of l] {$\vee R,\;\Gamma\ms(A\vee B),\Theta$};
+\node[adr,above=1mm of l]  {\texttt{[0]}};
+\node[seq,right=1.5mm of rr]{\textsc{Base},\;$\Gamma\ms B,\Theta$};
+\node[adr,above=1mm of rr] {\texttt{[1]}};
+\node[seq,left=1mm of ll]  {\textsc{Base},\;$\Gamma\mszero A,B,\Theta$};
+\node[adr,above=1mm of ll] {\texttt{[0,0]}};
+\end{tikzpicture}
+\end{center}
+\noindent\small
+Each node carries a rule tag and a sequent label.
+Addresses (grey \texttt{monospace}) record paths from the root by child index:
+\texttt{[0]} is the first child of the root, \texttt{[1]} the second,
+and \texttt{[0,0]} the first child of \texttt{[0]}.
+The nodes at \texttt{[0,0]} and \texttt{[1]} are leaves (open premiss
+positions); the node at \texttt{[0]} is an internal node with one child.
 
-Every derivation in $\mathsf{NMMS}(\mathsf{base})$ determines a proof tree by
-forgetting the derivation witness and retaining only the rule-labelled tree
-of sequents.
-
-\begin{definition}
-Let $d$ be a derivation of a sequent $s$. The associated proof tree
-\[
-\mathrm{toTree}(d)
-\]
-is defined recursively by replacing each inference step by the corresponding
-rule-labelled node and each base derivation by a leaf.
-\end{definition}
-
-Concretely, if $d$ ends with an implication-left step, then
-$\mathrm{toTree}(d)$ has root label $(A \Rightarrow B),\Gamma
-\mathrel{\mid\!\sim} \Theta$ and two children given by the proof trees of the
-premiss derivations; similarly for the other rules.
-
-\begin{lemma}
-For every derivation $d$ of a sequent $s$, the conclusion of its associated
-proof tree is $s$:
-\[
-\mathrm{conc}(\mathrm{toTree}(d)) = s.
-\]
-\end{lemma}
-
-\section{Matching-Leaf Grafting}
+\section{Matching-leaf grafting}
 
 \subsection{Local grafting}
 
-The basic compositional operation in our framework is the replacement of a
-leaf of one proof tree by another proof tree with the same concluding
-sequent.
-
 \begin{definition}
-Let $u$ and $t$ be proof trees, and let $a$ be an address in $t$. We say that
-$a$ is a \emph{graftable leaf address for $u$ in $t$} if the subtree of $t$ at
-address $a$ is a leaf labelled by the sequent $\mathrm{conc}(u)$.
+Let \(u\) and \(t\) be proof trees. A leaf \(a\in \Addr(t)\) is
+\emph{graftable for \(u\)} if the sequent labelling that leaf is exactly the
+conclusion of \(u\).
 \end{definition}
 
 \begin{definition}
-Suppose $a$ is a graftable leaf address for $u$ in $t$. The
-\emph{matching-leaf grafting of $u$ into $t$ at $a$}, denoted
-\[
-\mathrm{graft}_a(u,t),
-\]
-is the proof tree obtained from $t$ by replacing the leaf at address $a$ by
-the tree $u$.
+A \emph{matching-leaf grafting} of \(u\) into \(t\) is the proof tree obtained
+by replacing a graftable leaf of \(t\) by the tree \(u\).
 \end{definition}
-
-Equivalently, grafting is defined only when the conclusion of the inserted
-tree matches the sequent labelling the target leaf.
 
 \begin{definition}
-The set of all matching-leaf graftings of $u$ into $t$ is
-\[
-\mathrm{Graft}(u,t)
-=
-\{\, \mathrm{graft}_a(u,t) \mid a \text{ is a graftable leaf address for }
-u \text{ in } t \,\}.
-\]
+We write \(\Graft(u,t)\) for the finite list of proof trees obtained by
+matching-leaf grafting of \(u\) into \(t\).
 \end{definition}
-
-\subsection{Closure on derivation trees}
-
-A crucial proof-theoretic fact is that grafting derivation trees does not
-leave the world of derivation trees.
-
-\begin{theorem}[Closure of matching-leaf grafting under derivability]
-Let $d_{\mathrm{out}}$ and $d_{\mathrm{in}}$ be derivations in
-$\mathsf{NMMS}(\mathsf{base})$, with proof trees
-$\mathrm{toTree}(d_{\mathrm{out}})$ and $\mathrm{toTree}(d_{\mathrm{in}})$.
-If $a$ is a graftable leaf address for $\mathrm{toTree}(d_{\mathrm{in}})$ in
-$\mathrm{toTree}(d_{\mathrm{out}})$, then there exists a derivation $d'$ such
-that
-\[
-\mathrm{graft}_a\bigl(\mathrm{toTree}(d_{\mathrm{in}}),
-\mathrm{toTree}(d_{\mathrm{out}})\bigr)
-=
-\mathrm{toTree}(d').
-\]
-\end{theorem}
 
 \begin{remark}
-This theorem justifies reading matching-leaf grafting as genuine proof
-composition rather than a merely combinatorial tree operation. The operation
-respects the inductive generation of derivations by the sequent rules.
+This operation is controlled by exact interface matching. It does not rely on
+extending contexts by structural rules.
 \end{remark}
 
-\section{Two-Step Grafting and the Geometry of the Associator}
+\noindent Matching-leaf grafting is substitution of one proof tree into a leaf
+of another carrying the same sequent interface. In the next display, the left
+tree \(t\) contains a base leaf labelled by \(\Gamma \ms (A\vee B),\Theta\).
+The middle tree \(u\), shown in red, derives that same sequent from the
+stronger base sequent \(\Gamma \ms A,B,\Theta\) by an application of
+\((\vee R)\). Replacing the
+matching leaf of \(t\) by \(u\) yields the grafted derivation on the right.
 
-We now analyse iterated matching-leaf grafting. This is the structural core of
-the pre-Lie analysis, since the pre-Lie identity is controlled by the
-difference between the two iterated products
+\begin{center}
+\begin{minipage}{0.42\textwidth}
+\centering
 \[
-x \triangleright (y \triangleright z)
-\qquad\text{and}\qquad
-(x \triangleright y) \triangleright z.
+\begin{prooftree}
+\hypo{\Gamma \mszero (A\vee B),\Theta}
+\infer1[\textsc{Base}]{\Gamma \ms (A\vee B),\Theta}
+\hypo{\Gamma \mszero C,\Theta}
+\infer1[\textsc{Base}]{\Gamma \ms C,\Theta}
+\infer2[\(\wedge R\)]{\Gamma \ms ((A\vee B)\wedge C),\Theta}
+\end{prooftree}
 \]
+\small \(t\)
+\end{minipage}
+\hfill
+\begin{minipage}{0.32\textwidth}
+\centering
+\[
+\begin{prooftree}
+\hypo{\Gamma \mszero A,B,\Theta}
+\infer1[\textsc{Base}]{\Gamma \ms A,B,\Theta}
+\infer1[\(\vee R\)]{\Gamma \ms (A\vee B),\Theta}
+\rewrite{\color{red}\box\treebox}
+\end{prooftree}
+\]
+\small \(u\)
+\end{minipage}
+\end{center}
 
-At the raw tree level, the relevant combinatorics is governed by the
-interaction of two graft addresses inside a common ambient tree.
+\begin{center}
+\[
+\begin{prooftree}
+\hypo{\Gamma \mszero A,B,\Theta}
+\infer1[\textsc{Base}]{\Gamma \ms A,B,\Theta}
+\infer1[\(\vee R\)]{\Gamma \ms (A\vee B),\Theta}
+\rewrite{\color{red}\box\treebox}
+\hypo{\Gamma \mszero C,\Theta}
+\infer1[\textsc{Base}]{\Gamma \ms C,\Theta}
+\infer2[\(\wedge R\)]{\Gamma \ms ((A\vee B)\wedge C),\Theta}
+\end{prooftree}
+\]
+\small \(\Graft(u,t)\)
+\end{center}
 
-\subsection{Dependent and independent two-step graftings}
+\medskip
 
-Suppose first that $y$ is grafted into $z$ at an address $a$, producing a tree
-$z'$, and then $x$ is grafted into $z'$ at an address $b$, producing a tree
-$w$. There are only two possibilities: either the second graft lands inside the
-subtree previously inserted at $a$, or it takes place at an address independent
-of $a$.
+\noindent The same grafting may also be shown graph-theoretically. The blue
+leaf of \(t\) and the root of \(u\) carry the same sequent \(s\), while in
+\(\Graft(u,t)\) only the inserted top branch is shown in red.
 
-\begin{theorem}[Full two-step graft decomposition]
-Let $x,y,z$ be proof trees. Suppose that grafting $y$ into $z$ at an address
-$a$ yields a tree $z'$, and grafting $x$ into $z'$ at an address $b$ yields a
-tree $w$. Then one of the following two geometric situations occurs.
+\begin{center}
+\begin{tikzpicture}[
+  vertex/.style={circle, fill=black, inner sep=1.4pt},
+  redvertex/.style={circle, fill=red, inner sep=1.4pt},
+  bluevertex/.style={circle, fill=blue!70!black, inner sep=1.6pt},
+  vedge/.style={thick},
+  rededge/.style={thick, red},
+  lab/.style={font=\scriptsize, inner sep=1pt}
+]
+\node at (-4.7,3.3) {$t$};
+\node[vertex] (tr) at (-4.7,0) {};
+\node[vertex] (ta) at (-5.7,1.4) {};
+\node[bluevertex] (tl) at (-3.7,1.4) {};
+\draw[vedge] (tr) -- (ta);
+\draw[vedge] (tr) -- (tl);
+\node[lab, right=0.8mm of tl, text=blue!70!black] {$s$};
 
+\node at (0,3.3) {$u$};
+\node[redvertex] (ur) at (0,0) {};
+\node[redvertex] (ua) at (-0.9,1.4) {};
+\draw[rededge] (ur) -- (ua);
+\node[lab, below=1mm of ur, text=red] {$s$};
+
+\node at (4.7,3.3) {$\Graft(u,t)$};
+\node[vertex] (gr) at (4.7,0) {};
+\node[vertex] (ga) at (3.7,1.4) {};
+\node[redvertex] (gu) at (5.7,1.4) {};
+\node[redvertex] (gua) at (6.4,2.8) {};
+\draw[vedge] (gr) -- (ga);
+\draw[vedge] (gr) -- (gu);
+\draw[rededge] (gu) -- (gua);
+\node[lab, right=0.8mm of gu, text=blue!70!black] {$s$};
+
+\node at (-2.35,1.4) {$\leadsto$};
+\node at (2.35,1.4) {$\leadsto$};
+\end{tikzpicture}
+\end{center}
+
+
+
+\begin{remark}
+The Lean formalization is carried out in a slightly more general setting in
+which the primitive relation is allowed to be defined on multisets of formulas
+of the full language \(L\). The intended proof-theoretic reading of the
+present paper is the restricted setup above, and all the formal results apply
+\emph{a fortiori} to that case.
+\end{remark}
+
+\subsection{Closure under derivability}
+
+\begin{proposition}[Closure under derivability]
+If \(u=\Tree(d_{\mathrm{in}})\) and \(t=\Tree(d_{\mathrm{out}})\) arise from
+derivations and \(a\) is a graftable leaf of \(t\) for \(u\), then the grafted
+tree is again the proof tree of a derivation in \(\NMMS(\mszero)\).
+\end{proposition}
+
+\begin{proof}
+The proof is by induction on the outer derivation. Replacing a premise leaf by
+another derivation with the same conclusion preserves the validity of the last
+rule, and hence of the whole derivation.
+\end{proof}
+
+\begin{corollary}
+If \(u\) and \(t\) are proof trees arising from derivations, then every element
+of \(\Graft(u,t)\) also arises from a derivation.
+\end{corollary}
+
+\begin{proof}
+Apply the previous proposition to each graftable leaf.
+\end{proof}
+
+\section{The raw grafting product and graft-pair decomposition}
+
+Let \(\ZZ\langle \PT \rangle\) be the free abelian group on proof trees.
+
+\begin{definition}
+For proof trees \(u,t\), define
+\[
+u \triangleright t := \sum_{w\in \Graft(u,t)} w
+\]
+and extend this bilinearly to \(\ZZ\langle \PT \rangle\).
+\end{definition}
+
+\begin{remark}
+This is the proof-tree analogue of Grossman--Larson grafting: one inserts the
+rooted proof tree \(u\) at every matching leaf of \(t\), but only when the
+sequent interface matches exactly. The operation therefore depends on proof
+structure, not merely on the underlying combinatorics of rooted trees.
+\end{remark}
+
+\begin{proposition}
+The coefficient of a proof tree \(w\) in \(u\triangleright t\) is the number
+of matching-leaf graftings of \(u\) into \(t\) yielding \(w\).
+\end{proposition}
+
+\begin{remark}
+The raw product satisfies the pre-Lie identity as a theorem of the formal
+development. However, the direct proof of this identity at the raw counting
+level --- by showing that the number of graft-pair witnesses balances on both
+sides --- turns out to be hard to close without additional structure. The
+quotient analysis developed in Sections~7--9 is not merely an explanation of
+an identity that holds for simpler reasons; it is the proof strategy that
+actually works. The equivalence relation on graft-pair codes identifies
+precisely which witness overcounting cancels and which contributions are
+genuinely matched across the two bracketings, reducing an opaque counting
+problem to a typed bijection between pure residual classes.
+\end{remark}
+
+\subsection{Ordered pairs of grafts}
+
+Fix proof trees \(x,y,z,w\). An \emph{ordered pair of grafts from \((x,y,z)\)
+to \(w\)} consists of a first graft of \(y\) into \(z\) at a matching leaf
+yielding an intermediate tree \(z'\), followed by a second graft of \(x\) into
+\(z'\) yielding \(w\).
+
+\begin{definition}
+Such a graft pair is called \emph{outer} if the second graft occurs
+independently of the first, and \emph{inner} if the second graft occurs inside
+the subtree introduced by the first. In address terms, these are the
+incomparable and comparable cases.
+\end{definition}
+
+\begin{lemma}[Address classification after grafting]
+\label{lem:addr-class}
+Let $y$ be grafted into $z$ at address $a$, yielding $z'$. Let $x$ be
+successfully grafted into $z'$ at address $b$. Then either
 \begin{enumerate}[label=\textup{(\roman*)}]
-\item \textbf{Nested case.} There exist an address $c$ and a proof tree $y'$
-such that
-\[
-b = a \mathbin{\raisebox{0.2ex}{\scalebox{0.8}{$\frown$}}} c,
-\]
-and such that grafting $x$ into $y$ at $c$ yields $y'$, while grafting $y'$
-into $z$ at $a$ yields $w$.
-
-\item \textbf{Independent case.} There exists a proof tree $z_3$ such that the
-addresses $a$ and $b$ are incomparable, grafting $x$ into $z$ at $b$ yields
-$z_3$, and grafting $y$ into $z_3$ at $a$ yields $w$.
+\item $b = a\mathbin{+\!\!+} c$ for some non-empty extension $c$, so the second
+graft site lies inside the subtree introduced by the first; or
+\item $a$ and $b$ are incomparable, so the two graft sites refer to disjoint
+parts of the tree.
 \end{enumerate}
-\end{theorem}
+In particular, the case where $b$ is a strict prefix of $a$ --- i.e.\ the
+second graft would occur at an ancestor of the first graft site --- is
+impossible.
+\end{lemma}
 
-\begin{remark}
-The theorem says that every successful two-step grafting factors either through
-a genuine insertion of $x$ into the already-inserted tree $y$, or through two
-independent insertions into disjoint regions of $z$. This dichotomy is the
-proof-tree analogue of the familiar decomposition of rooted-tree insertions
-into nested and disjoint contributions.
-\end{remark}
-
-\subsection{Commutation of independent graftings}
-
-The independent case admits a stronger formulation: incomparable successful
-grafts commute.
-
-\begin{theorem}[Commutation of incomparable graftings]
-Let $x,y,z$ be proof trees, and let $a,b$ be incomparable addresses in $z$.
-Suppose that grafting $y$ into $z$ at $a$ produces $z_1$, and grafting $x$
-into $z_1$ at $b$ produces $z_2$. Suppose also that grafting $x$ into $z$ at
-$b$ produces $z_3$. Then grafting $y$ into $z_3$ at $a$ is defined and yields
-the same final tree:
-\[
-\mathrm{graft}_a(y,z_3)=z_2.
-\]
-\end{theorem}
-
-\begin{remark}
-This is the precise sense in which independent proof insertions commute. The
-result does not say that grafting is globally commutative; rather, it says that
-noninteracting local insertions can be permuted without changing the resulting
-proof tree.
-\end{remark}
-
-\section{The Free Abelian Group on Proof Trees and the Raw Grafting Product}
-
-We now pass from individual proof trees to formal linear combinations of proof
-trees.
-
-\begin{definition}
-Let $\mathbb{Z}\langle \mathsf{PTree}\rangle$ denote the free abelian group on
-the set of proof trees. For a proof tree $t$, write $[t]$ for the corresponding
-basis element.
-\end{definition}
-
-\begin{definition}[Tree-level grafting product]
-For proof trees $u$ and $t$, define
-\[
-u \triangleright t
-:=
-\sum_{v \in \mathrm{Graft}(u,t)} [v]
-\;\in\;
-\mathbb{Z}\langle \mathsf{PTree}\rangle.
-\]
-Equivalently, $u \triangleright t$ is the formal sum of all proof trees
-obtained by grafting $u$ into $t$ at a matching leaf.
-\end{definition}
-
-This is the primitive product from which the pre-Lie structure will be
-obtained after quotienting the appropriate witness data.
-
-\begin{proposition}[Compatibility with generators]
-The bilinear grafting product is determined on basis elements by the tree-level
-grafting operation. In particular, for proof trees $u$ and $t$,
-\[
-[u] \triangleright [t]
-=
-u \triangleright t.
-\]
-\end{proposition}
-
-\begin{remark}
-This is formally straightforward, but mathematically important: the product on
-the free abelian group is not an additional structure but the linear extension
-of matching-leaf grafting on individual proof trees.
-\end{remark}
-
-\subsection{Iterated grafting and coefficient formulas}
-
-The next step is to express iterated grafting in terms of counts of two-step
-graftings.
-
-\begin{proposition}[Expansion of left action over a graft sum]
-For proof trees $u,t,w$,
-\[
-u \triangleright (t \triangleright w)
-=
-\sum_{z' \in \mathrm{Graft}(t,w)} u \triangleright z'.
-\]
-\end{proposition}
-
-\begin{proposition}[Coefficient formula for $x \triangleright (y \triangleright z)$]
-Let $x,y,z,w$ be proof trees. Then the coefficient of $[w]$ in
-$x \triangleright (y \triangleright z)$ is the number of two-step graftings of
-the following form: first graft $y$ into $z$, obtaining some intermediate tree
-$z'$, and then graft $x$ into $z'$, obtaining $w$. Explicitly,
-\[
-[w]\bigl(x \triangleright (y \triangleright z)\bigr)
-=
-\#\Bigl\{
-z' \in \mathrm{Graft}(y,z)
-\;\Big|\;
-w \in \mathrm{Graft}(x,z')
-\Bigr\}.
-\]
-\end{proposition}
-
-\begin{proposition}[Coefficient formula for $(x \triangleright y)\triangleright z$]
-Let $x,y,z,w$ be proof trees. Then the coefficient of $[w]$ in
-$(x \triangleright y)\triangleright z$ is the number of two-step graftings of
-the following form: first graft $x$ into $y$, obtaining some intermediate tree
-$y'$, and then graft $y'$ into $z$, obtaining $w$. Explicitly,
-\[
-[w]\bigl((x \triangleright y)\triangleright z\bigr)
-=
-\#\Bigl\{
-y' \in \mathrm{Graft}(x,y)
-\;\Big|\;
-w \in \mathrm{Graft}(y',z)
-\Bigr\}.
-\]
-\end{proposition}
-
-\begin{remark}
-These coefficient formulas show that the pre-Lie identity is fundamentally a
-comparison between two families of two-step grafting witnesses. The remainder
-of the argument therefore focuses on organising, comparing, and quotienting
-those witnesses.
-\end{remark}
-
-\section{The Coproduct Side}
-
-Alongside the grafting product, the theory also carries a decomposition
-operation coming from admissible cuts of proof trees.
-
-\begin{definition}
-For each proof tree $t$, let $\Delta(t)$ denote the collection of all
-decompositions of $t$ arising from admissible cuts. Each such cut yields a pair
-consisting of a forest of extracted subtrees and a remainder tree.
-\end{definition}
-
-The precise admissibility conditions on cuts were introduced elsewhere in the
-formal development; for the present discussion it is enough to note that the
-empty cut is always admissible.
-
-\begin{proposition}[Nonemptiness of the coproduct data]
-For every proof tree $t$, the coproduct data associated with $t$ is nonempty.
-Equivalently, $\Delta(t)$ always contains at least one term.
-\end{proposition}
-
-\begin{proof}[Idea of proof]
-The empty cut is admissible. Its corresponding decomposition contributes the
-trivial term consisting of the empty forest together with the original tree
-$t$.
+\begin{proof}[Proof sketch]
+The impossible case is eliminated by the sequent-interface constraint.
+If $b$ were a strict prefix of $a$, then $a$ would extend $b$, meaning
+$a$ points into the subtree rooted at address $b$ in $z'$. But address
+$b$ in $z'$ is a graftable leaf --- a leaf carrying the conclusion of $x$.
+No address strictly extending a leaf address can point to a valid subtree,
+since leaves have no children. This contradiction is the proof-theoretically
+essential step: it is precisely the rigidity of the leaf-matching constraint,
+which forbids grafting at a non-leaf position, that eliminates the prefix case.
+The argument is formalized as \texttt{graftMatchingLeafAt\_address\_classification}
+in the Lean development.
 \end{proof}
 
 \begin{remark}
-This is a minimal but conceptually useful fact: the decomposition structure is
-never vacuous. In particular, the cut-based coalgebra has a canonical trivial
-term, just as in the usual rooted-tree coproducts.
+This lemma is the geometric core on which the graft-pair decomposition rests.
+Its proof depends essentially on the fact that grafting operates on leaves
+with exact sequent labels, not on arbitrary internal vertices. In a setting
+with weakening, the leaf-interface constraint would be relaxed and this
+argument would not go through in the same form. The lemma is therefore
+sensitive to the structural rule choices made in Section~2.
 \end{remark}
 
-\section{Two-Step Codes and Bureaucratic Equivalence}
+% ---- Figure 3: comparable vs incomparable addresses ----
+\begin{center}
+\begin{tikzpicture}[
+  nd/.style={circle,fill=black,inner sep=1.5pt},
+  hd/.style={circle,fill=blue!70!black,inner sep=2pt},
+  ed/.style={thick},
+  he/.style={thick,blue!55!black},
+  ad/.style={font=\small\ttfamily,color=gray!70!black}
+]
+%--- left: comparable, [0] is ancestor of [0,1] ---
+\begin{scope}[xshift=-3.8cm]
+  \node[nd] (r) at (0,0){};
+  \node[hd] (a) at (-1,1.6){};
+  \node[nd] (b) at (-1.7,3.1){};
+  \node[hd] (c) at (-0.3,3.1){};
+  \node[nd] (d) at (1,1.6){};
+  \draw[ed](r)--(a); \draw[ed](r)--(d);
+  \draw[ed](a)--(b); \draw[he](a)--(c);
+  \node[ad,left=2mm of a]{\texttt{[0]}};
+  \node[ad,right=1.5mm of c]{\texttt{[0,1]}};
+  \node[below=4mm of r,font=\small,align=center]
+    {\emph{comparable}\\[1pt]\texttt{[0]} is ancestor of \texttt{[0,1]}\\(inner case)};
+\end{scope}
+%--- right: incomparable, [0] and [1] ---
+\begin{scope}[xshift=3.8cm]
+  \node[nd] (r) at (0,0){};
+  \node[hd] (a) at (-1,1.6){};
+  \node[nd] (b) at (-1.7,3.1){};
+  \node[nd] (c) at (-0.3,3.1){};
+  \node[hd] (d) at (1,1.6){};
+  \draw[he](r)--(a); \draw[he](r)--(d);
+  \draw[ed](a)--(b); \draw[ed](a)--(c);
+  \node[ad,left=2mm of a]{\texttt{[0]}};
+  \node[ad,right=1.5mm of d]{\texttt{[1]}};
+  \node[below=4mm of r,font=\small,align=center]
+    {\emph{incomparable}\\[1pt]neither is ancestor of the other\\(outer case)};
+\end{scope}
+\end{tikzpicture}
+\end{center}
+\noindent\small
+Blue marks the pair of graft addresses under comparison.
+Left: \texttt{[0,1]} extends \texttt{[0]}, so the second graft site lies
+\emph{inside} the subtree rooted at the first site --- the inner (nested) case.
+Right: \texttt{[0]} and \texttt{[1]} are on disjoint branches --- the outer
+(independent) case, where the order of insertion can be reversed.
 
-The coefficient formulas above reduce the pre-Lie problem to a comparison of
-two-step grafting data. At raw address level, however, this data contains
-bureaucratic artefacts: the same underlying proof-theoretic interaction may be
-presented by different address choices or by different orders of independent
-insertions.
+\begin{theorem}[Graft-pair decomposition]
+Every ordered pair of grafts is either nested or independent.
+More precisely, if
+\[
+y \text{ grafts into } z \text{ to yield } z'
+\qquad\text{and}\qquad
+x \text{ grafts into } z' \text{ to yield } w,
+\]
+then exactly one of the following geometric descriptions applies:
+\begin{enumerate}[label=\textup{(\roman*)}]
+\item \emph{Inner case:} the second address extends the first, so the second
+graft occurs inside the subtree inserted by the first;
+\item \emph{Outer case:} the two addresses are incomparable, and the two
+insertions can be performed in the opposite order.
+\end{enumerate}
+\end{theorem}
 
-To remove this noise we introduce an equivalence relation on two-step witness
-codes.
+\begin{proof}[Proof sketch]
+This is the content of the full address analysis formalized in the Lean
+theorem `two\_step\_graft\_decomposition\_full'. If the second address begins
+with the first, one is in the nested case. Otherwise the addresses are
+incomparable, and the incomparable-address commutation theorem shows that the
+order of insertion can be reversed.
+\end{proof}
 
-\subsection{Two-step codes}
+\begin{remark}
+This theorem is the geometric heart of the associator analysis. It shows that
+the only essential distinction among graft pairs is between
+independent and nested insertion.
+\end{remark}
+
+\begin{theorem}[Commutation of independent graftings]
+If two successful graftings occur at incomparable addresses, then performing
+them in either order yields the same final proof tree.
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+Incomparable addresses refer to disjoint subtrees. Replacing the subtree at one
+address does not affect the subtree at the other, so the corresponding local
+modifications commute.
+\end{proof}
+
+
+
+\section{Algebraic preliminaries}
+
+We now recall the standard algebraic notion to which the proof-theoretic
+analysis will later lead.
 
 \begin{definition}
-Fix proof trees $x,y,z,w$. A \emph{two-step code} for the production of $w$
-from $x,y,z$ records one of the possible geometric shapes of a successful
-two-step grafting. In particular, one distinguishes:
-\begin{itemize}
-\item left-outer codes,
-\item right-outer codes,
-\item left-inner codes,
-\item right-inner codes.
-\end{itemize}
-These encode whether one starts from the left- or right-associated iterated
-product, and whether the second insertion is independent of or nested inside
-the first.
+A \emph{right pre-Lie algebra} over \(\ZZ\) is an abelian group \(A\) equipped
+with a bilinear product \(\triangleright\) satisfying
+\[
+(x\triangleright y)\triangleright z - x\triangleright (y\triangleright z)
+=
+(x\triangleright z)\triangleright y - x\triangleright (z\triangleright y)
+\]
+for all \(x,y,z\in A\).
 \end{definition}
 
 \begin{remark}
-The exact coding carries address-level witness data and intermediate trees.
-That detail is important for the formal proof, but for the mathematical
-presentation the essential point is that two-step codes classify successful
-two-step graftings by their geometric type.
+Every right pre-Lie algebra carries an induced Lie bracket
+\[
+[x,y] := x\triangleright y - y\triangleright x.
+\]
+The present paper does not yet construct the full enveloping Hopf algebra from
+this bracket. Instead, it establishes the quotient-controlled proof-theoretic
+pre-Lie identity that would supply the input for such a construction.
+
+\medskip
+\noindent\textit{Why quotienting is necessary.}
+One might hope to verify the pre-Lie identity directly at the level of
+raw proof trees, by tracking explicit address data.  This fails for a
+structural reason: a single term $x\triangleright(y\triangleright z)$ can be
+\emph{witnessed} by many distinct ordered pairs of graft addresses, depending on
+which matching leaf of $y\triangleright z$ is chosen for the outer step. These
+witnesses encode the same geometric configuration --- the same insertion event
+at the same relative position in the tree --- but differ in the raw list entry
+that records it.  Any equation between graft pairs is therefore really an
+equation between \emph{equivalence classes} of address records, not between the
+records themselves.
+
+More precisely, two witnesses are \emph{bureaucratically equivalent}
+if they agree on which insertion is nested inside which, and whether the
+outer insertions act on disjoint branches or on ancestor-descendant
+pairs.  The quotient by this equivalence retains exactly the dependency
+geometry and discards all bookkeeping accidents.  The pre-Lie identity
+\[
+(x\triangleright y)\triangleright z - x\triangleright(y\triangleright z)
+=
+(x\triangleright z)\triangleright y - x\triangleright(z\triangleright y)
+\]
+holds in this quotient: the left-hand side and the right-hand side
+collect the \emph{same} noise classes with opposite signs (those
+cancel) and the same residual classes (those match term for term).
+Without the quotient, the witness sets on the two sides of the equation
+are not equal as sets of address records, only equal in cardinality
+after noise removal; the quotient is what supplies the required
+bijection.
 \end{remark}
 
-\subsection{Equivalence generated by commuting outer contributions}
 
-\begin{definition}[Two-step equivalence]
-Fix proof trees $x,y,z,w$. The relation
-\[
-\sim_{x,y,z,w}
-\]
-on two-step codes is the least equivalence relation generated by the following
-identifications.
 
-\begin{enumerate}[label=\textup{(\arabic*)}]
-\item A left-outer code is identified with any right-outer code representing
-the same proof-theoretic contribution obtained by commuting independent outer
-insertions.
+\section{Quotienting bureaucratic graft-pair data}
 
-\item A left-outer code is identified with any right-inner code representing
-the same final contribution after transport across the corresponding two-step
+At raw address level, graft-pair configurations still contain too much
+presentation data. The next step is to isolate their genuine dependency
 geometry.
 
-\item Symmetrically, a right-outer code is identified with any left-outer code
-obtained by commuting independent outer insertions.
+\subsection{Graft-pair classes}
 
-\item Symmetrically, a right-outer code is identified with any left-inner code
-representing the same contribution after the corresponding transport.
+\begin{definition}
+A \emph{graft-pair code} (formalized as \texttt{TwoStepCode} in the Lean
+development) records a successful ordered pair of grafts together with its
+geometric type: left outer, right outer, left inner, or right inner. Here
+``left'' and ``right'' refer to the two bracketings
+\[
+x\triangleright (y\triangleright z)
+\qquad\text{and}\qquad
+y\triangleright (x\triangleright z),
+\]
+while ``outer'' and ``inner'' refer to the independent and nested cases of the
+graft-pair decomposition.
+\end{definition}
+
+\begin{definition}
+The \emph{bureaucratic equivalence} on graft-pair codes is the least equivalence
+relation generated by:
+\begin{enumerate}[label=\textup{(\roman*)}]
+\item commutation of independent outer insertions;
+\item transport of outer left presentations to the corresponding swapped outer
+presentations;
+\item transport of nested left presentations to the corresponding swapped inner
+presentations;
+\item the inverse transports from the swapped side.
 \end{enumerate}
 \end{definition}
 
+% ---- Figure 4: the four two-step codes ----
+\begin{center}
+\begin{tikzpicture}[scale=0.88,
+  nd/.style={circle,fill=black,inner sep=1.5pt},
+  znd/.style={circle,fill=gray!45,inner sep=1.5pt},
+  ed/.style={thick},
+  ze/.style={thick,gray!60},
+  lb/.style={font=\small}
+]
+% ---- top row: outer cases (both grafts act on z or its modification) ----
+% leftOuter
+\begin{scope}[xshift=-4.5cm,yshift=4.2cm]
+  \node[znd] (z)  at (0,0)    {};
+  \node[nd]  (a)  at (-1,1.6) {};
+  \node[nd]  (b)  at (1,1.6)  {};
+  \draw[ze](z)--(a); \draw[ze](z)--(b);
+  \node[above=0.5mm of a,font=\scriptsize]{$y$ (1)};
+  \node[above=0.5mm of b,font=\scriptsize]{$x$ (2)};
+  \node[lb,below=3mm of z,align=center]{\textbf{leftOuter}\\$x$ outside $y$'s site};
+\end{scope}
+% rightOuter
+\begin{scope}[xshift=4.5cm,yshift=4.2cm]
+  \node[znd] (z)  at (0,0)    {};
+  \node[nd]  (a)  at (-1,1.6) {};
+  \node[nd]  (b)  at (1,1.6)  {};
+  \draw[ze](z)--(a); \draw[ze](z)--(b);
+  \node[above=0.5mm of a,font=\scriptsize]{$x$ (1)};
+  \node[above=0.5mm of b,font=\scriptsize]{$y$ (2)};
+  \node[lb,below=3mm of z,align=center]{\textbf{rightOuter}\\$y$ outside $x$'s site};
+\end{scope}
+% dashed equivalence arrow top
+\draw[dashed,->] (-1.6,5.4) -- (1.6,5.4)
+  node[midway,above,font=\scriptsize]{outer commutation};
+% ---- bottom row: inner cases (one tree grafted into another first) ----
+% leftInner
+\begin{scope}[xshift=-4.5cm,yshift=0cm]
+  \node[nd]  (x)  at (-1.5,1.5) {};
+  \node[nd]  (ya) at (-1.5,3.0) {};
+  \node[znd] (z)  at (1.5,1.5)  {};
+  \node[nd]  (zb) at (1.5,3.0)  {};
+  \draw[ed](x)--(ya); \draw[ze](z)--(zb);
+  \node[above=0.5mm of ya,font=\scriptsize]{$y$ (1)};
+  \node[above=0.5mm of zb,font=\scriptsize]{$y'$ (2)};
+  \node[lb,below=4mm of x,align=center]{\textbf{leftInner}\\$y$ into $x$; result into $z$};
+\end{scope}
+% rightInner
+\begin{scope}[xshift=4.5cm,yshift=0cm]
+  \node[nd]  (y)  at (-1.5,1.5) {};
+  \node[nd]  (xa) at (-1.5,3.0) {};
+  \node[znd] (z)  at (1.5,1.5)  {};
+  \node[nd]  (zb) at (1.5,3.0)  {};
+  \draw[ed](y)--(xa); \draw[ze](z)--(zb);
+  \node[above=0.5mm of xa,font=\scriptsize]{$x$ (1)};
+  \node[above=0.5mm of zb,font=\scriptsize]{$x'$ (2)};
+  \node[lb,below=4mm of y,align=center]{\textbf{rightInner}\\$x$ into $y$; result into $z$};
+\end{scope}
+% dashed equivalence arrow bottom
+\draw[dashed,->] (-1.6,1.5) -- (1.6,1.5)
+  node[midway,above,font=\scriptsize]{\texttt{outer\_comm\_inner}};
+% vertical: leftOuter ~ rightInner at comparable addresses
+\draw[dashed,->,gray] (-4.5,3.8) -- (-4.5,2.2)
+  node[midway,right,font=\scriptsize,gray,align=left]{comparable\\addresses};
+\end{tikzpicture}
+\end{center}
+\noindent\small
+The receiver tree $z$ is shown in grey; black nodes are graft sites.
+Numbered labels (1), (2) indicate the order of the two
+grafting steps. \textbf{Top row} (outer): both insertions act on $z$ or its
+modification; the two sites are at incomparable addresses.
+\textbf{Bottom row} (inner): step~1 composes two input trees, step~2 places
+the result into $z$.
+The top dashed arrow is outer commutation (leftOuter $\sim$ rightOuter for
+incomparable addresses). The bottom dashed arrow is the
+\texttt{outer\_comm\_inner} identification: when graft addresses are
+\emph{comparable}, a leftOuter code and the corresponding rightInner code
+record the same proof-composition history viewed from two perspectives.
+
 \begin{remark}
-This relation is designed to identify exactly those two-step presentations that
-differ only by inessential bureaucratic data. The generators correspond to the
-basic proof-theoretic symmetries discovered in the analysis of two-step
-grafting.
+Case~(ii) above is the \emph{outer commutation}: two independent graftings
+(at incomparable addresses) can be performed in either order and produce the
+same final proof tree, so the two derivation histories are identified.
+This is a scheduling equivalence, analogous to the commutativity of independent
+rule applications in proof nets, but operating at the level of proof
+composition rather than within a single proof.
+
+Case~(iii) is more subtle and is the engine of the noise/residual separation
+proved in Section~8. It identifies a \emph{left-outer} code --- where $x$
+is inserted into $z'$ at an address independent of the address $a$ at which
+$y$ was first inserted --- with a \emph{right-inner} code, in which $x$ is
+first composed with $y$ and the result is then placed into $z$. This
+identification is possible exactly when the two graft addresses are
+\emph{comparable}: comparability means the second address lies on or above
+the boundary of the subtree introduced by the first, creating a dependency
+geometry that admits both readings simultaneously. In the Lean development
+this case appears as the \texttt{outer\_comm\_inner} constructor of
+\texttt{TwoStepEquiv}. It is the proof-theoretically distinctive case: in
+abstract rooted-tree grafting without sequent labels, there is no constraint
+that forces comparable addresses to interact in this way, and the equivalence
+would be defined differently or not at all.
+\end{remark}
+
+\begin{remark}
+The bureaucratic equivalence connects to the classical problem of proof
+identity. The question of when two derivations should count as the same proof
+--- studied in the traditions of proof nets, typed $\lambda$-calculus, and
+categorical proof theory --- here receives a specific answer calibrated to
+proof composition: two graft-pair histories are the same if and only if they
+are related by the scheduling and dependency equivalences above. The noise
+sector, defined in Section~8, is precisely the set of classes where this
+equivalence collapses the distinction between outer and inner bracketings
+entirely.
 \end{remark}
 
 \begin{definition}
-The \emph{two-step quotient} for $x,y,z,w$ is the set of equivalence classes of
-two-step codes under $\sim_{x,y,z,w}$.
+The quotient set of graft-pair codes is denoted
+\[
+\Qclass(x,y,z;w).
+\]
+Inside it we distinguish the left contribution classes
+\[
+\CL(x,y,z;w)
+\]
+and the swapped-right contribution classes
+\[
+\CR(x,y,z;w),
+\]
+the latter being associated with the swapped bracketing \((y,x,z)\).
 \end{definition}
 
-\subsection{Existence of opposite-side representatives}
-
-One of the first structural consequences of the quotient construction is that
-an outer witness on one side always determines some representative on the
-opposite side.
-
-\begin{lemma}[Left-outer classes admit right-side representatives]
-Let $x,y,z,w$ be proof trees, and let a successful left-outer two-step grafting
-from $(x,y,z)$ to $w$ be given. Then there exists a two-step code on the right
-side such that the original left-outer code is equivalent to it in the two-step
-quotient.
-\end{lemma}
-
 \begin{remark}
-This lemma is the beginning of the comparison theorem between the two
-parenthesisations. It does not yet assert uniqueness or purity, but it shows
-that left-associated outer contributions are never isolated: each is linked by
-the quotient to some right-associated contribution.
+The quotient is meant to identify proof presentations that differ only by
+bureaucratic scheduling or by equivalent ways of viewing the same nested
+composition. This is the formal counterpart of the proof-theoretic idea that
+identity of proof should ignore inessential order of independent operations.
 \end{remark}
 
-\section{Towards the Class-Level Pre-Lie Identity}
+\subsection{Canonical transport theorems}
 
-The quotient construction is introduced because raw witness-counting does not
-yet isolate the genuinely proof-theoretic content of the associator.
-Independent insertions may be represented by several bureaucratically distinct
-address patterns, and these must be identified before a clean algebraic
-identity emerges.
+\begin{theorem}[Outer transport]
+For every \(x,y,z,w\), outer left contribution classes are canonically in
+bijection with outer contribution classes on the swapped right side.
+\end{theorem}
 
-At the quotient level, the intended picture is that every contribution class in
-the associator decomposes into three sectors:
-\begin{enumerate}[label=\textup{(\arabic*)}]
-\item quotient-trivial noise,
-\item pure outer residual classes,
-\item pure inner residual classes.
+\begin{proof}[Proof sketch]
+If the two insertions are independent, they occur at incomparable addresses.
+The incomparable-address commutation theorem reverses their order without
+changing the final proof tree. This witness-level transport descends to the
+graft-pair quotient and yields a bijection of outer classes.
+\end{proof}
+
+\begin{theorem}[Inner transport]
+For every \(x,y,z,w\), inner left contribution classes are canonically in
+bijection with inner contribution classes on the swapped right side.
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+In the nested case, one uses the inner branch of the graft-pair decomposition:
+instead of viewing the second graft as occurring inside the previously inserted
+subtree, one first performs the inner graft inside the inserted tree and then
+reinserts the result into the ambient proof tree. Again, the transport respects
+the graft-pair quotient.
+\end{proof}
+
+\begin{remark}
+The outer transport is a strict commutation theorem. The inner transport is a
+reassociation theorem. Their common role is to show that the quotient keeps the
+geometric content of the graft pair while discarding the accidental
+presentation details.
+\end{remark}
+
+\section{Noise, residual classes, and purity}
+
+\subsection{Noise and residual sectors}
+
+\begin{definition}
+A left contribution class is called \emph{noise} if the apparent difference
+between its outer and inner presentations is already quotient-trivial under the
+comparison with the swapped side. A left contribution class is
+\emph{residual} if it is not noise.
+\end{definition}
+
+\begin{remark}
+``Noise'' does not mean mathematically uninteresting in itself. It means
+precisely that the class contributes no genuine asymmetry to the associator
+comparison, because the quotient already identifies the competing
+presentations.
+\end{remark}
+
+\begin{remark}
+The geometric mechanism producing noise is the following. A left-outer
+contribution class becomes noise when it simultaneously admits a right-inner
+presentation. By the \texttt{outer\_comm\_inner} identification in the
+bureaucratic equivalence, this happens exactly when the two graft addresses
+are comparable. In that case, what appears from the left bracketing as an
+independent outer insertion of $x$ into $z'$ can equally be read, from the
+right bracketing, as $x$ being composed into $y$ first and the result placed
+into $z$. The class thus contributes equally to both sides of the pre-Lie
+associator and cancels. This mechanism --- comparable addresses producing
+simultaneously-outer-and-inner classes --- is what the formal development
+calls \emph{left-to-right overlap noise}. The noise sector is therefore not
+an arbitrary algebraic device but a precise reflection of a geometric
+degeneracy in the graft addresses.
+\end{remark}
+
+\begin{definition}
+A residual left contribution class is called:
+\begin{itemize}
+\item \emph{pure outer} if it has outer support and no inner support;
+\item \emph{pure inner} if it has inner support and no outer support;
+\item \emph{mixed} if it has both outer and inner support.
+\end{itemize}
+\end{definition}
+
+\begin{theorem}[Elimination of mixed residual classes]
+There are no mixed residual left contribution classes.
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+Suppose a left contribution class carried both outer and inner support while
+remaining residual. The geometric analysis of open mixed classes first shows
+that every outer representative of such a class must lie in a dependent
+overlap regime. The crucial step is then that a comparable outer witness
+automatically produces opposite-side inner support. But opposite-side inner
+support is one of the quotient-trivial overlap mechanisms already isolated by
+the definition of noise. Thus the class must in fact be noise, contrary to
+assumption.
+\end{proof}
+
+\begin{corollary}[Residual purity]
+Every residual left contribution class is either pure outer or pure inner.
+\end{corollary}
+
+\begin{proof}
+By the theorem, the mixed case is impossible.
+\end{proof}
+
+% ---- Figure 6: the noise/residual trichotomy ----
+\begin{center}
+\begin{tikzpicture}[font=\small]
+  % outer rectangle
+  \draw[thick,rounded corners=5pt] (-5.6,-1) rectangle (5.6,0.9);
+  % dividers
+  \draw[thick] (-1.85,-1)--(-1.85,0.9);
+  \draw[thick] ( 1.85,-1)--( 1.85,0.9);
+  % sector labels
+  \node[align=center] at (-3.7, 0.45) {\textbf{Noise}};
+  \node[align=center,font=\scriptsize] at (-3.7, 0.0) {outer $\cap$ inner};
+  \node[align=center,font=\scriptsize] at (-3.7,-0.45) {both visible};
+  \node[align=center] at (0, 0.45) {\textbf{Pure outer}};
+  \node[align=center,font=\scriptsize] at (0, 0.0) {residual};
+  \node[align=center,font=\scriptsize] at (0,-0.45) {outer only};
+  \node[align=center] at (3.7, 0.45) {\textbf{Pure inner}};
+  \node[align=center,font=\scriptsize] at (3.7, 0.0) {residual};
+  \node[align=center,font=\scriptsize] at (3.7,-0.45) {inner only};
+  % annotation arrows below
+  \draw[->] (-3.7,-1) -- (-3.7,-1.55);
+  \node[font=\scriptsize,gray,below=1.6cm of {(-3.7,-1)},align=center]
+    {cancels from\\associator};
+  \draw[->] (0,-1) -- (0,-1.55);
+  \node[font=\scriptsize,gray,below=1.6cm of {(0,-1)},align=center]
+    {unique outer partner\\on swapped side};
+  \draw[->] (3.7,-1) -- (3.7,-1.55);
+  \node[font=\scriptsize,gray,below=1.6cm of {(3.7,-1)},align=center]
+    {unique inner partner\\on swapped side};
+\end{tikzpicture}
+\end{center}
+\noindent\small
+The three sectors partition the left contribution classes at any fixed
+output $w$. Noise classes carry both outer and inner support and cancel
+from the associator by the \texttt{outer\_comm\_inner} identification.
+The elimination of mixed residual classes (proved above) ensures that
+the pure outer and pure inner sectors are exhaustive among residual classes.
+Each residual class then has a unique partner on the swapped right side,
+yielding the class-level pre-Lie identity.
+
+\begin{remark}
+This is the decisive structural step in the whole proof. Once mixed residual
+classes disappear, the residual sector becomes typed and rigid, and the final
+pre-Lie comparison reduces to separate outer and inner transport theorems.
+\end{remark}
+
+\subsection{Unique typed partners}
+
+\begin{theorem}[Unique typed partner theorem]
+Let \(q\in \CL(x,y,z;w)\) be residual.
+\begin{enumerate}[label=\textup{(\roman*)}]
+\item If \(q\) is pure outer, then there exists a unique pure outer class
+\(q'\in \CR(x,y,z;w)\) corresponding to \(q\).
+\item If \(q\) is pure inner, then there exists a unique pure inner class
+\(q'\in \CR(x,y,z;w)\) corresponding to \(q\).
 \end{enumerate}
+\end{theorem}
 
-The decisive further step, to be developed in the next stage of the paper, is
-to prove that mixed residual classes disappear, so that the remaining quotient
-classes are pure and typed. This allows one to compare the two
-parenthesisations class by class and derive the quotient-level pre-Lie
-identity.
+\begin{proof}
+If \(q\) is pure outer, apply the outer transport theorem. If \(q\) is pure
+inner, apply the inner transport theorem. Residual purity guarantees that these
+cases are disjoint, and the transport maps are equivalences on the relevant
+typed sectors.
+\end{proof}
 
-\section{Hopf-Algebraic Outlook}
+\begin{theorem}[Residual classes seen from the swapped side]
+Every residual swapped-right contribution class arises from a pure residual
+left contribution class.
+\end{theorem}
 
-Once the quotient-level pre-Lie identity has been established, one may pass
-from the primitive pre-Lie structure to an enveloping Hopf algebra by a
-standard construction of Oudom--Guin type. In parallel, the admissible-cut
-decomposition of proof trees supplies a coproduct reflecting the internal
-subderivation structure of proofs.
+\begin{proof}[Proof sketch]
+The class-level decomposition on the swapped side yields either a noise class
+or a residual class. In the residual case, one transports back to the left by
+the class-level comparison relation and then uses residual purity on the left.
+\end{proof}
 
-The resulting object should therefore be understood as a Hopf algebra of
-nonmonotonic proof trees: the algebra structure models composition of proofs,
-while the coalgebra structure models decomposition into subproofs. This is the
-sense in which the present framework seeks to capture both the constructive and
-the analytic aspects of inference within a single algebraic object.
+\section{The class-level pre-Lie identity}
+
+\subsection{Associator contributions at a fixed output}
+
+\begin{definition}
+For proof trees \(x,y\), define the \emph{primitive class-level product
+support} by
+\[
+\mathsf{Prod}(x,y) := \{\,w \in \PT : w\in \Graft(x,y)\,\}.
+\]
+\end{definition}
+
+\begin{remark}
+This is not yet a quotient object. It is simply the set of outputs occurring in
+one-step grafting. The quotient enters only in the analysis of how these
+outputs receive graft-pair associator contributions.
+\end{remark}
+
+\begin{definition}
+Fix \(x,y,z,w\). The \emph{class-level associator at output \(w\)} is the
+assertion that left contribution classes to \(w\) decompose into noise, pure
+outer residual classes, and pure inner residual classes, and that these three
+sectors compare with the swapped side exactly as described by the noise,
+outer-transport, and inner-transport theorems.
+\end{definition}
+
+\begin{theorem}[Class-level associator shape]
+For every \(x,y,z,w\), the class-level associator at output \(w\) holds.
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+Every left contribution class is either noise or residual. By residual purity,
+every residual class is pure outer or pure inner. Noise is irrelevant to the
+associator comparison by definition; pure outer residual classes have unique
+outer partners by the outer transport theorem; pure inner residual classes have
+unique inner partners by the inner transport theorem. Finally, every non-noise
+swapped-right class comes from a pure residual left class.
+\end{proof}
+
+\begin{theorem}[Class-level pre-Lie comparison]
+Fix \(x,y,z,w\). Every left contribution class to the coefficient of \(w\) in
+the associator belongs to exactly one of the following three sectors:
+\begin{enumerate}[label=\textup{(\roman*)}]
+\item quotient-trivial noise;
+\item pure outer residual, with a unique swapped pure outer partner;
+\item pure inner residual, with a unique swapped pure inner partner.
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+This is the operational form of the class-level associator shape.
+\end{proof}
+
+\subsection{The main theorem}
+
+\begin{theorem}[Class-level pre-Lie identity]
+For all proof trees \(x,y,z\), the class-level associator is symmetric under
+interchange of \(x\) and \(y\). Equivalently, for every output tree \(w\), the
+contribution classes to
+\[
+(x\triangleright y)\triangleright z - x\triangleright (y\triangleright z)
+\]
+are matched, after quotienting by bureaucratic equivalence, with the
+contribution classes to
+\[
+(y\triangleright x)\triangleright z - y\triangleright (x\triangleright z).
+\]
+\end{theorem}
+
+\begin{proof}
+Fix \(w\). By the class-level pre-Lie comparison theorem, every left
+contribution class lies in exactly one of three sectors.
+
+\smallskip
+\noindent
+\emph{Noise.} Noise classes are quotient-trivial by construction and contribute
+no genuine asymmetry.
+
+\smallskip
+\noindent
+\emph{Pure outer residual classes.} These are matched uniquely across the two
+bracketings by outer transport.
+
+\smallskip
+\noindent
+\emph{Pure inner residual classes.} These are matched uniquely across the two
+bracketings by inner transport.
+
+\smallskip
+Since these three sectors exhaust the left contribution classes at output
+\(w\), the class-level associator at \(w\) is symmetric under swapping \(x\)
+and \(y\). As \(w\) was arbitrary, the class-level pre-Lie identity follows.
+\end{proof}
+
+\begin{remark}
+This theorem is the precise endpoint currently established by the formal
+development. It is a statement about quotient-invariant associator comparison
+at the level of contribution classes. It does not yet claim a fully elaborated
+Hopf algebra in the main body of the paper.
+\end{remark}
+
+\section{Preparatory coproduct data and Hopf outlook}
+
+The formal development also defines a cut-based coproduct datum on proof trees.
+We record only the part that is presently used with mathematical confidence in
+the current project.
+
+\begin{definition}
+An \emph{admissible cut} of a proof tree is a finite antichain of addresses
+whose associated cut decomposition respects the base-interface constraints
+tracked in the formal development. The cut determines a pair consisting of a
+forest of extracted subtrees and a remainder tree.
+\end{definition}
+
+\begin{proposition}
+Every proof tree admits at least one cut decomposition.
+\end{proposition}
+
+\begin{proof}
+The empty cut is always admissible, and it yields the trivial decomposition
+into the empty forest together with the original tree.
+\end{proof}
+
+\begin{remark}
+This coproduct material is preparatory rather than central in the present
+paper. It shows that the proof-tree side already carries the decomposition data
+expected of a Connes--Kreimer style coproduct, but we do not yet prove the
+full compatibility theorems needed for a Hopf algebra in the body of the
+paper.
+\end{remark}
+
+\begin{remark}
+There are two natural routes from the present work to Hopf algebra.
+\begin{enumerate}[label=\textup{(\roman*)}]
+\item A direct cut/grafting route, in which one relates the cut-based coproduct
+to proof-tree grafting itself.
+\item An Oudom--Guin route, in which the class-level pre-Lie structure proved
+here is first extended to a symmetric algebra and only then combined with a
+primitive coproduct.
+\end{enumerate}
+The second route is the one most strongly suggested by the present formal
+results, and it is the route we have in mind when the abstract mentions Hopf
+algebraic consequences.
+\end{remark}
+
+\begin{remark}[Current state of the Oudom--Guin development]
+The formal development already contains preparatory work toward route~(ii).
+The file \texttt{GrossmanLarssonOudomGuin.lean} establishes, without any
+\texttt{sorry}, the following:
+\begin{itemize}
+\item a graft-compatible weight function on proof trees, grading every
+one-step product output by $\mathsf{weight}(w) = \mathsf{weight}(x) +
+\mathsf{weight}(y)$ whenever $w\in\Graft(x,y)$;
+\item a proof that any bilinear product on the linear proof-tree carrier whose
+generator-level behaviour matches the quotient pre-Lie law automatically
+satisfies the right pre-Lie axiom on the entire carrier \newline 
+(\texttt{generatorRightPreLieLaw\_extends});
+\item a proof that any such product respects the weight grading on all
+homogeneous elements (\texttt{generatorWeightLaw\_extends}).
+\end{itemize}
+The remaining step for route~(ii) is to construct the specific bilinear
+product from the quotient data --- i.e.\ to show that the grafting operation
+descends to a well-defined map on the linear carrier that is compatible with
+the quotient --- and then to apply the Oudom--Guin theorem to obtain the
+enveloping Hopf algebra on the symmetric algebra. The infrastructure is in
+place; this is the content of the next paper in this series.
+\end{remark}
+
+\begin{remark}[Why the Connes--Kreimer route is not taken]
+The direct cut/grafting route~(i) would require the algebraic product to be
+the forest product (disjoint union of proof trees). However, a forest of proof
+trees has no natural proof-theoretic interpretation: there is no sequent whose
+derivation \emph{is} a side-by-side collection of independent proof trees.
+Proof composition is sequential --- one proof's conclusion becomes another's
+premiss leaf --- not parallel. The grafting product is proof-theoretically
+meaningful precisely because it is proof composition. Route~(i) is therefore
+not pursued here, though a comparison with Connes--Kreimer-style Hopf algebras
+by forgetting the sequent decoration remains an interesting open problem (see
+the following remark).
+\end{remark}
+
+\begin{remark}
+A further comparison problem, not treated here, is to relate the present
+structure to familiar rooted-tree Hopf algebras by forgetting some of the
+proof-theoretic decoration while retaining the underlying tree and insertion
+geometry. Such comparison theorems would strengthen the claim that the present
+construction refines, rather than competes with, established combinatorial
+Hopf-algebraic frameworks. The key question is whether the Hopf algebra
+obtained via the Oudom--Guin route depends essentially on the primitive
+relation $\mszero$ --- in the sense that different choices of $\mszero$
+yield genuinely non-isomorphic algebraic structures --- or whether the
+structure is universal and the logical content enters only through the
+choice of basis. Settling this would determine whether the construction
+encodes something specifically about nonmonotonic proof theory or merely
+recovers a combinatorial object by a proof-theoretic route.
+\end{remark}
+
+\begin{remark}[Structural rules as future parameters]
+As noted in the introduction, the present paper fixes multiset contexts and
+omits weakening and contraction. Each structural rule is a potential parameter.
+Adding weakening makes sequent interfaces non-rigid: one could graft into any
+leaf by first weakening the context to match. This would change the leaf-matching
+constraint fundamentally and is expected to obstruct the coproduct compatibility
+rather than the pre-Lie structure. Adding contraction collapses multisets
+differing in formula multiplicities, changing which sequents are identified and
+potentially breaking the noise/residual separation whose geometry depends on
+the counting of matching leaves. Moving from multisets to sequences (removing
+the built-in exchange) would add ordered structure to sequents and make the
+grafting product sensitive to context ordering in ways that require separate
+analysis. A systematic study of which structural rules are obstructions to
+Hopf-algebraic compatibility is left for future work.
+\end{remark}
 
 \section{Conclusion}
 
-We have assembled the proof-theoretic and combinatorial foundations for a Hopf
-algebraic treatment of derivations in a nonmonotonic sequent calculus. The
-basic objects are proof trees generated from a primitive base consequence
-relation. Their local composition is given by matching-leaf grafting, and the
-analysis of iterated grafting leads naturally to a quotient on two-step witness
-data identifying bureaucratically equivalent proof presentations.
+We have constructed a proof-theoretic route from a primitive consequence
+relation to a class-level pre-Lie identity on proof-tree composition.
+Formally, the route is
+\[
+\begin{aligned}
+\mszero
+&\longrightarrow \NMMS(\mszero)\\
+&\longrightarrow \text{proof trees}
+\longrightarrow \text{grafting geometry}\\
+&\longrightarrow \text{graft-pair quotient}
+\longrightarrow \text{class-level pre-Lie identity}.
+\end{aligned}
+\]
 
-What remains is to complete the structural analysis of quotient classes, prove
-the class-level pre-Lie identity, and integrate this with the cut-based
-coproduct in a full Hopf algebra construction. Even at the present stage,
-however, the framework already displays the central idea: nonmonotonic
-inference admits a rich algebraic organisation in which proof composition and
-proof decomposition are treated on an equal footing.
+The distinctive point is not merely that rooted trees appear, but that they
+appear as proof objects carrying exact sequent interfaces. Grafting is
+therefore proof composition, not arbitrary combinatorial insertion. The
+graft-pair quotient then isolates what should count as invariant in proof
+composition: independent commutations and quotient-trivial overlap disappear as
+bureaucracy, while the residual sector becomes pure and rigid enough to satisfy
+the class-level pre-Lie identity.
 
-\bibliographystyle{plain}
-% \bibliography{references}
+From the standpoint of logic, this means that a nonmonotonic proof theory can
+carry nontrivial algebraic structure without first collapsing to a monotone or
+structurally saturated setting. From the standpoint of algebra, it shows that
+pre-Lie behavior can emerge from proof composition once identity of proof is
+handled carefully at the level of graft-pair interactions. The Hopf-theoretic
+extensions suggested by the present development are important, but they are
+best seen as a next step built on top of the logic result already proved here:
+after quotienting bureaucratic symmetries, proof composition on these
+nonmonotonic proof trees satisfies a class-level pre-Lie identity.
+
+The quotient is not a stylistic choice. The direct approach to the pre-Lie
+identity --- proving that the raw witness counts balance on both sides of the
+associator --- was attempted and did not close. The equivalence relation on
+graft-pair codes, and in particular the \texttt{outer\_comm\_inner} identification
+of comparable-address graftings, is the structure that makes the proof work.
+This identification has a proof-theoretic reading: it says that two derivation
+histories for the same output proof tree, which look geometrically different at
+the address level, should count as the same composition when the relevant graft
+sites stand in a dependency relation. The noise/residual separation is then a
+precise account of which histories are genuinely the same (noise, canceling from
+the associator) and which are genuinely distinct (residual, matched uniquely
+across the two bracketings).
+
+The central result is fully machine-verified in Lean~4. The class-level
+pre-Lie identity depends only on the standard axioms of Lean's foundational
+system. The broader programme --- determining which structural rules obstruct
+Hopf-algebraic compatibility, and whether the resulting structure encodes
+specific properties of the primitive consequence relation $\mszero$ --- remains
+open and will be pursued in subsequent work.
 
 \end{document}

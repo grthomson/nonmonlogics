@@ -136,4 +136,430 @@ The importance of the antipode, from the perspective of representation theory, l
 IDEA: SHOULD WE BE ENCODING HERE STRUCTURAL RULES RATHER THAN THE INFERENCE RULES?
 
 
+
+Positive remarks
+
+The mathematical framework is coherent and draws on well-established machinery (pre-Lie algebras, Oudom–Guin, Grossman–Larson style grafting) in a way that shows genuine familiarity with the relevant literature. The core object — sequent-interface-constrained leaf grafting on proof trees — is genuinely different from abstract rooted tree grafting, because the matching constraint encodes logical content that is not present in the purely combinatorial case.
+
+The decision to parameterize the sequent calculus by a primitive consequence relation rather than fixing a specific logic is clever. It makes the framework maximally general and positions the structural rules as variables to be tested rather than fixed assumptions.
+
+The rejection of the Connes–Kreimer route in favor of grafting is well-motivated: the forest product has no natural proof-theoretic meaning, while grafting is literally proof composition. This is the right call.
+
+The distinction between meta-nonmonotonicity (your setting) and the inner nonmonotonicity of linear logic is mathematically sharp and important. The fact that any rigid algebraic structure survives in a setting where proof existence is sensitive to context extension is genuinely non-obvious.
+
+The Lean formalization, if substantially sorry-free, is a significant asset. It means the core claims are machine-verified rather than sketch-level.
+
+The broader research program — using Hopf-algebraic compatibility as a diagnostic for which structural rules obstruct product/coproduct compatibility — is the most compelling framing of the project and more interesting than the paper currently makes explicit.
+
+Criticisms
+
+The title overclaims. The paper establishes a pre-Lie identity; it does not construct a Hopf algebra. This should be corrected.
+
+Remark 31 creates an obligation the paper does not fully discharge. Stating that the raw product already satisfies the pre-Lie identity raises an immediate question: what then is the quotient analysis for? The paper says it is explanatory, but you have indicated it was actually necessary for the proof. This distinction should be made explicit in the paper — whether the quotient is needed for the statement, for the proof strategy, or for the eventual coproduct compatibility.
+
+The proof sketches are too thin for the claims being made. Theorems 33, 35, 40, 41, and 46 are the load-bearing results and they are presented as sketches with references to Lean theorems. A reader who cannot check the Lean code has no way to verify the central arguments. Either the sketches should be made into complete proofs, or the paper should be explicit that it is a companion to the Lean development rather than a self-contained mathematical paper.
+
+The quotient machinery in Sections 7–9 is elaborate but its necessity is not clearly justified within the paper itself. The noise/residual/purity decomposition is conceptually clear but the paper does not explain why this specific quotient — rather than some coarser or finer one — is the right choice. Is it the minimal quotient needed for the pre-Lie identity? Is it chosen to be compatible with the eventual coproduct? This should be addressed.
+
+The coproduct in Section 10 is too underdeveloped to carry the weight the abstract places on it. The Hopf algebra is mentioned prominently but the compatibility of product and coproduct is not established. The paper should either develop this further or scale back the framing.
+
+The most significant open question — whether the Hopf algebra encodes something specific about the nonmonotonic logic or merely recovers a combinatorial object — is acknowledged in Remark 62 but not engaged with. Given that this is arguably the central motivation for the whole project, it deserves more than a remark.
+
+\section*{Towards a Functor to $*$-Autonomous Categories}
+
+\subsection*{The Melli\`es--Zeilberger Reading}
+
+Melli\`es and Zeilberger \cite{MZ15} propose reading a functor $U \colon \mathcal{D} \to \mathcal{T}$
+as a \emph{refinement system}: objects of $\mathcal{T}$ are types, objects of $\mathcal{D}$ are
+refined types (or typing judgements), and $U$ forgets the refinement.
+In our setting the natural reading is:
+\[
+  U \colon \mathbf{PTree}_{SR} \longrightarrow \mathbf{Seq}
+\]
+where $\mathbf{Seq}$ is the category of sequents (under some suitable notion of morphism)
+and $\mathbf{PTree}_{SR}$ is the category of proof trees for a fixed set of structural rules $SR$.
+A proof tree is a refinement of its conclusion sequent.
+
+For $U$ to be a \emph{fibration} in the sense of Jacobs, every reindexing along a sequent morphism
+would have to lift to proof trees; this is exactly the content of the \emph{weakening rule}.
+Meta-nonmonotonicity is therefore the precise obstruction to $U$ being a fibration:
+when weakening fails, the functor $U$ loses the cartesian lifting property and
+$\mathbf{PTree}_{SR} \to \mathbf{Seq}$ is merely an opfibration (or neither).
+
+The theorem \texttt{classLevel\_preLie\_identity} --- that matching-leaf grafting satisfies
+the pre-Lie identity at the level of the two-step quotient --- can be read as a
+\emph{coherence theorem for this refinement system}: it says that the compositional structure
+of proof trees, modulo bureaucratic reordering of composition witnesses,
+is well-defined and algebraically structured.
+
+\subsection*{Structural Rules and Categorical Properties}
+
+The four classical structural rules interact with the algebraic structure as follows.
+
+\begin{center}
+\begin{tabular}{lll}
+\hline
+\textbf{Structural Rule} & \textbf{Categorical Property} & \textbf{Algebraic Consequence} \\
+\hline
+Exchange & symmetry of $\otimes$ & commutativity of $\Delta$; $H_{SR}$ cocommutative \\
+Weakening & cartesian lifting / fibration & $U$ is a fibration; coalgebra admits counit \\
+Contraction & diagonal map $A \to A \otimes A$ & divided-power-like coproduct structure \\
+Cut & composition of morphisms & non-trivial product; pre-Lie operation non-degenerate \\
+\hline
+\end{tabular}
+\end{center}
+
+In particular, cut non-eliminability is not a defect: it is what makes the Hopf algebra
+non-trivial. The pre-Lie product on $L_{SR}$ is exactly the proof-theoretic residue of cut
+that cannot be absorbed into the sequent structure.
+
+\subsection*{The Route to $*$-Autonomous Categories via Blute}
+
+Blute \cite{Blute93} proves that for a Hopf algebra $H$ with involutive antipode ($S^2 = \mathrm{id}$),
+the category $\mathbf{RTMod}(H)$ of ribbon-twisted modules is cyclic $*$-autonomous and
+models multiplicative linear logic (MLL).
+
+This suggests the following chain:
+\[
+  SR
+  \;\longmapsto\;
+  L_{SR}
+  \;\xrightarrow{\text{Oudom--Guin}}\;
+  H_{SR}
+  \;\xrightarrow{\text{Blute}}\;
+  \mathbf{RTMod}(H_{SR})
+\]
+where:
+\begin{itemize}
+  \item $SR$ is the set of structural rules (parameters of the logic);
+  \item $L_{SR}$ is the pre-Lie algebra of proof trees under matching-leaf grafting;
+  \item $H_{SR} = \mathcal{U}(L_{SR})$ is the Oudom--Guin Hopf algebra on the symmetric algebra $S(L_{SR})$;
+  \item $\mathbf{RTMod}(H_{SR})$ is cyclic $*$-autonomous when $H_{SR}$ has involutive antipode.
+\end{itemize}
+
+The involutivity condition $S^2 = \mathrm{id}$ is controlled by the structural rules:
+full exchange (commutativity) is necessary for the ribbon structure to be symmetric,
+and absence of contraction prevents the coalgebra from collapsing the duality.
+
+\subsection*{Tannaka--Krein Reconstruction}
+
+If $\mathbf{RTMod}(H_{SR})$ carries a fiber functor
+$\omega \colon \mathbf{RTMod}(H_{SR}) \to \mathbf{Vect}_k$,
+then by Tannaka--Krein duality, $H_{SR}$ is the endomorphism Hopf algebra of $\omega$.
+This would mean that $H_{SR}$ is \emph{reconstructible} from the $*$-autonomous category
+of its modules --- i.e., the proof-theoretic content of $SR$ is fully encoded in the
+categorical semantics, and conversely.
+
+Concretely, the label structure of our decorated proof trees (sequent decorations,
+address labels, the two-step equivalence quotient) is precisely the data of the
+fiber functor: it assigns to each module its underlying vector space by forgetting
+the proof-tree decoration. The coherence theorem \texttt{classLevel\_preLie\_identity}
+is then the statement that this forgetful structure is compatible with the pre-Lie
+(and hence Hopf) algebra structure.
+
+\subsection*{Concrete Predictions}
+
+\begin{itemize}
+  \item \textbf{Full structural rules} (Exchange + Weakening + Contraction + Cut):
+    $H_{SR}$ should be commutative, have $S^2 = \mathrm{id}$, and
+    $\mathbf{RTMod}(H_{SR})$ should be cyclic $*$-autonomous, modelling MLL.
+  \item \textbf{No Exchange}: the pre-Lie algebra $L_{SR}$ is non-symmetric;
+    $H_{SR}$ is non-cocommutative; the target category is non-symmetric monoidal
+    (models of non-commutative linear logic, e.g.\ cyclic linear logic).
+  \item \textbf{No Weakening}: $U \colon \mathbf{PTree}_{SR} \to \mathbf{Seq}$ loses
+    fibration; the Hopf algebra lacks a natural counit interpretation from the
+    sequent level; this is new territory not covered by Blute's theorem as stated.
+  \item \textbf{No Contraction}: divided-power structure absent; $H_{SR}$ is
+    more like a Leibniz--Hopf algebra; coproduct does not split along diagonals.
+\end{itemize}
+
+
+
+\section*{Future Directions and Promising Ideas (Notes)}
+
+\subsection*{Operads for Sequent Calculus (Another Paper)}
+
+Proof trees in a sequent calculus naturally form a \emph{coloured operad}: an $n$-ary
+operation in $O(n)$ is a proof rule with $n$ premiss sequents (the colours) and one
+conclusion sequent, and operadic substitution is cut. The symmetric operad structure
+handles exchange. Meta-nonmonotonicity makes this a \emph{partial} coloured operad:
+substitution is only defined when the colour (sequent) at the leaf matches the conclusion
+of the tree being grafted, which is exactly the matching-leaf grafting constraint.
+
+The pre-Lie algebra $L_{SR}$ is close to a coloured binary operad with the pre-Lie
+identity as a shadow of operadic associativity. The Oudom--Guin construction then
+builds the enveloping Hopf algebra of this proto-operadic object. This suggests that
+the correct foundational object is a \emph{partial coloured binary operad}, and $H_{SR}$
+is its enveloping Hopf algebra in a suitable sense.
+
+Existing relevant work: Do\v{s}en--Petri\'c on proof nets and operads; Melli\`es on
+categorical semantics and operads. Non-monotonic partial coloured operads do not appear
+to have been studied. Note: a coloured operad is essentially a multicategory, closing the
+loop with the multicategory / partial composition observation.
+
+\subsection*{Why Standard Categorical Machinery Fails Here}
+
+Standard tools for context-dependence (comonads, Kleisli categories, fibred categories,
+presheaves) all assume at least monotone dependence of derivations on contexts. The
+co-Kleisli construction restores compositionality by threading context; it does not model
+the \emph{destruction} of a derivation by context extension.
+
+The precise categorical statement: the assignment $\Gamma \mapsto \{\text{proof trees for } \Gamma \vdash A\}$
+is not a presheaf on $\mathcal{P}(\mathrm{Formulas})^{\mathrm{op}}$ ordered by reverse
+inclusion, because the maps go in the wrong direction for either a presheaf or a copresheaf.
+AGM belief revision and Dung-style abstract argumentation are the closest frameworks in
+the literature, neither of which has (to our knowledge) been connected to Hopf algebras.
+
+The Hopf algebra $H_{SR}$ exists at a level \emph{below} categorical structure. The
+Oudom--Guin construction promotes it to a level that generates categorical representations
+via $\mathbf{Mod}(H_{SR})$, but these representations live in well-behaved linear
+categories, not in a nonmonotonic proof-tree category that does not exist.
+
+\subsection*{Hopf Monads (Bruguières--Lack--Virelizier)}
+
+A \emph{Hopf monad} is a monad $T$ on a monoidal category such that the Eilenberg--Moore
+category $\mathcal{C}^T$ inherits $*$-autonomous structure whenever $\mathcal{C}$ is
+$*$-autonomous and $T$ carries a compatible Hopf structure. If one could exhibit a monad
+$T$ on a base $*$-autonomous category $\mathcal{C}$ such that $T$ encodes
+``nonmonotonic defeasibility'' and the algebra of $T$ is $H_{SR}$, then $\mathcal{C}^T$
+would be $*$-autonomous automatically --- bypassing Blute's theorem as a separate step.
+
+The monad unit $\eta_A \colon A \to T(A)$ would be the single-node (axiom) proof tree;
+monad multiplication would be grafting; the Hopf monad condition would be what is needed
+to promote $\mathcal{C}$ to a $*$-autonomous category of proof-tree modules. Whether
+$H_{SR}$ arises as a Hopf monad in this sense is open and potentially very clean.
+
+\subsection*{Functoriality in Structural Rules (Blute)}
+
+The map $SR \mapsto H_{SR}$ should be functorial: an inclusion $SR \subseteq SR'$ gives
+a Hopf algebra morphism $H_{SR} \to H_{SR'}$, since any proof tree valid under $SR$
+remains valid under $SR'$, and grafting is compatible. This organises the family of
+nonmonotonic logics into a diagram of Hopf algebras, with the ``most nonmonotonic''
+logics (fewest structural rules, richest $H_{SR}$) at the bottom and classical logic
+as a colimit where the algebra degenerates. The representation categories
+$\mathbf{Mod}(H_{SR})$ then form a corresponding diagram of $*$-autonomous categories.
+
+\subsection*{Tannaka--Krein and Reconstruction}
+
+If $\mathbf{RTMod}(H_{SR})$ carries a fiber functor $\omega$, Tannaka--Krein reconstructs
+$H_{SR}$ as the endomorphism Hopf algebra of $\omega$. The label structure of decorated
+proof trees (sequent labels, address labels, TwoStepEquiv quotient) is the candidate
+fiber functor: it forgets the proof-tree decoration and retains the underlying vector
+space. The coherence theorem \texttt{classLevel\_preLie\_identity} is the statement that
+this forgetful structure is compatible with the Hopf algebra structure.
+
+\subsection*{Deduction-Detachment, CM/CT Failure, and the Nonmonotonic Conditional}
+
+\paragraph{Deduction-Detachment holds.}
+The Deduction-Detachment (DD) condition
+\[
+  \Gamma \ms A \Rightarrow B, \Delta \;\iff\; \Gamma, A \ms B, \Delta
+\]
+holds in $\mathit{NMMS}(\mszero)$ thanks to the invertibility of the $(\Rightarrow R)$ and
+$(\Rightarrow L)$ rules. This is one sense in which $\Rightarrow$ \emph{makes explicit}
+the metalinguistic implication: derivability with $A$ as a premiss is exactly captured by
+provability of $A \Rightarrow B$ in the conclusion. There is no failure of the deduction
+theorem for $\Rightarrow$.
+
+\paragraph{The real structural failures: MO, CM, CT.}
+The nonmonotonicity is a failure of \textbf{Monotonicity (MO)}:
+\[
+  \frac{\Gamma \ms \Delta}{\Gamma, A \ms \Delta} \quad \text{not in general valid.}
+\]
+Two further structural principles --- \textbf{Cautious Monotonicity (CM)} and
+\textbf{Cumulative Transitivity (CT)} --- are also rejected:
+\[
+  \frac{\Gamma \ms A \quad \Gamma \ms \Delta}{\Gamma, A \ms \Delta} \quad \text{[CM]}
+  \qquad\qquad
+  \frac{\Gamma \ms A \quad \Gamma, A \ms \Delta}{\Gamma \ms \Delta} \quad \text{[CT]}
+\]
+CM says adding a consequence to the premiss-set cannot lose further consequences.
+CT says adding a consequence to the premiss-set cannot gain further consequences.
+Together they say \emph{explicitation is inconsequential} --- which is exactly what we
+reject. In the Tweety example: ``Tweety is a bird'' implies ``can fly'', and
+``Tweety is a bird and can fly'' implies ``non-penguin'' --- so explicating the consequence
+``can fly'' into the premiss-set gains the new consequence ``non-penguin'', violating CT.
+Likewise, MO failure: ``Tweety is a bird $\Rightarrow$ can fly'' fails to survive adding
+``Tweety is a penguin''.
+
+\paragraph{Why CM cannot be a global constraint given DD.}
+There is an important interaction: if DD holds (as it does) and CM were a global constraint,
+one could derive contradictions with the conservativity of the logical extension over the
+base. Suppose $\Gamma, B, C \mszero D$ and $\Gamma \mszero A$ but $\Gamma, B, C \not\mszero A$.
+By DD, $\Gamma, B, C \ms D$ iff $\Gamma \ms B \Rightarrow (C \Rightarrow D)$.
+Applying CM with $A$ (which $\Gamma$ implies) gives $\Gamma, A \ms B \Rightarrow (C \Rightarrow D)$,
+and then DD recovers $\Gamma, A, B, C \ms D$ --- but this contradicts the base stipulation.
+So DD plus CM plus conservativity is inconsistent. Since DD and conservativity are
+desiderata, CM must be rejected globally.
+
+\paragraph{Containment: a weaker monotonicity principle.}
+\textbf{Containment (CO)}: if $\Gamma \ms \Delta$ and $\Gamma \subseteq \Gamma'$
+with $\Gamma' \subseteq \Gamma \cup \Delta$, then $\Gamma' \ms \Delta'$ for appropriate
+$\Delta'$. This is a restricted monotonicity saying that consequences of implications
+that are also premisses can be weakened by those premisses. The base relation $\mszero$
+may satisfy CO without satisfying MO.
+
+\paragraph{What about a nonmonotonic conditional connective?}
+There is no object-language connective $|\Rightarrow$ whose provability tracks $\mszero$:
+the nonmonotonic relation has no image in $L$. If one tried to add such a connective with
+both a deduction theorem and modus ponens for $|\Rightarrow$, one would face the
+Makinson--Gabbay collapse: this would restore Cut for $\mathrel{|\!\sim}$, forcing
+monotonicity. KLM preferential entailment salvages only a one-way result
+(Lehmann--Magidor \cite{LM92}, Theorem 3): from $A \wedge B \mathrel{|\!\sim} C$ one
+derives $A \mathrel{|\!\sim} B \to C$, or equivalently:
+\[
+  \alpha \mathrel{|\!\sim} \beta
+  \;\Longrightarrow\;
+  \top \mathrel{|\!\sim} \neg\alpha \vee \beta.
+\]
+The consequent uses the classical material conditional, not $|\Rightarrow$. A full
+nonmonotonic conditional connective is a separate project (conditional logic, KLM tradition).
+
+\paragraph{Algebraic relevance.}
+The pre-Lie product is a restricted form of Cut --- proof composition at matching sequent
+interfaces. This is a different operation from DD ($\Rightarrow R$), which is hypothesis
+abstraction. The failure of MO (and hence of CM and CT) is what makes sequent interfaces
+rigid and grafting non-trivial: in a monotone system, the leaf-matching constraint would
+be relaxed by weakening and the pre-Lie structure would degenerate. The non-trivial algebra
+and the failure of CM/CT trace to the same source.
+
+\paragraph{Signpost for future work.}
+The one-way deduction theorem and the KLM framework suggest a natural question: does the
+Hopf algebra $H_{SR}$ carry a representation of the preferential entailment order $\succeq$,
+and does the one-way deduction theorem have an algebraic formulation in terms of the
+coproduct or antipode? This is open. The connection to AGM belief revision noted elsewhere
+in these notes may also be relevant here.
+
+\subsection*{The Detachable Conditional: What It Means and Why It Matters}
+
+\paragraph{What we actually have.}
+The object-language conditional $\Rightarrow$ in $\mathit{NMMS}(\mszero)$ satisfies the
+full Deduction-Detachment condition:
+\[
+  \Gamma \ms A \Rightarrow B,\, \Delta \;\iff\; A, \Gamma \ms B,\, \Delta.
+\]
+Both directions hold. The forward direction is $(\Rightarrow R)$; the backward direction
+is the invertibility of $(\Rightarrow R)$, which holds by the standard proof-height
+induction on the Ketonen-style rules. The base axiom being nonmonotonic does not affect
+rule invertibility, since invertibility is established purely at the rule level.
+Our system is the Ketonen/G3cp rule set with a nonmonotonic base axiom --- G3cp with
+$\mszero$ instead of identity axioms.
+
+\paragraph{This is not a collapse to classical logic.}
+The obvious objection is: if DD holds and the rules are classical, isn't the logic just
+classical logic over a funny set of base facts? No, for the following reasons.
+
+First, the base relation $\mszero$ is genuinely nonmonotonic: $\Gamma \mszero \Theta$ does
+not imply $\Gamma, A \mszero \Theta$ in general. This is a real and intended property ---
+it models defeasible base inferences in the Tweety sense.
+
+Second, the structural principles Cautious Monotonicity (CM) and Cumulative Transitivity
+(CT) both fail at the level of the derived consequence relation $\ms$. These failures
+propagate from MO failure at the base level: since adding a formula to the premiss set can
+defeat a base derivation, the same can happen to derived sequents. The Tweety examples
+(bird $\ms$ fly, but bird $\wedge$ penguin $\not\ms$ fly; bird $\ms$ fly and bird
+$\wedge$ fly $\ms$ non-penguin but bird $\not\ms$ non-penguin) are real at the level
+of the induced consequence relation.
+
+Third, the detachable $\Rightarrow$ is the \emph{explicitation device} for the base
+relation --- it makes the metalinguistic implication explicit in the object language ---
+but it is not identical to it. The metalinguistic $\ms$ is not captured by any
+object-language connective: there is no $|\Rightarrow$ in $L$ such that $A \ms B$ iff
+$\vdash A \,|\Rightarrow B$. Attempting to add such a connective runs into the
+Makinson--Gabbay collapse: a full deduction theorem for the \emph{metalinguistic}
+$\mathrel{|\!\sim}$ combined with modus ponens for $\mathrel{|\!\sim}$ forces
+monotonicity. But this is a threat to a hypothetical object-language encoding of
+$\mszero$, not to what we have. We deliberately chose the other horn: keep $\Rightarrow$
+classical and detachable, and let the nonmonotonicity reside entirely in $\mszero$.
+
+\paragraph{Why detachability is good for the algebra.}
+The pre-Lie product (matching-leaf grafting) requires proof trees with exact, rigid
+sequent interfaces at their leaves. This rigidity comes from the leaf-matching constraint:
+a leaf labelled $\Gamma \ms A$ can only be grafted by a tree whose conclusion is exactly
+$\Gamma \ms A$. The rigidity is a consequence of MO failure at the base level --- in a
+monotone system, weakening would relax the interface and grafting would become
+unconstrained, recovering classical Grossman-Larson on abstract trees.
+
+The detachability of $\Rightarrow$ is independently important: it means derivations have
+a clean compositional structure. Each proof tree has a well-defined conclusion sequent,
+the rules decompose sequents deterministically (invertibility), and the leaf interfaces
+are stable objects that can be matched against. If $\Rightarrow$ were a genuinely
+nonmonotonic conditional (tracking $\mszero$ directly), the semantics of implication and
+the semantics of leaf-matching would interact in ways that are hard to control. As it
+stands, the two levels are cleanly separated: $\mszero$ is primitive and nonmonotonic;
+$\Rightarrow$ is classical and detachable; and proof composition (grafting) operates at
+the level of sequent labels, which are determined by the full derived relation $\ms$.
+
+In short: the nonmonotonicity of $\mszero$ is what makes grafting non-trivial and the
+algebra interesting. The classicality and detachability of $\Rightarrow$ is what makes
+the proof trees well-structured enough to carry the algebraic argument. Both are needed,
+and the Ketonen-plus-nonmonotonic-base architecture provides both simultaneously.
+
+\subsection*{Livernet Rigidity and Our Pre-Lie Algebra}
+
+\paragraph{What Livernet's rigidity theorem says.}
+Livernet \cite{Livernet06} proves a Leray-type theorem for pre-Lie algebras. Define a
+\emph{non-associative permutative} (NAP) algebra as a vector space with a product
+satisfying $(ab)c = (ac)b$. The main theorem is:
+
+\begin{quote}
+\textbf{Theorem (Livernet, Main Theorem 3.4).} Any pre-Lie algebra $H$ together with a
+connected NAP coproduct $\Delta$ satisfying the distributive law
+\[
+  \Delta(a \circ b) = a \otimes b + \Delta(a) \circ b
+\]
+is isomorphic to $\mathcal{RT}(\mathrm{Prim}\, H)$ --- i.e.\ is \emph{free} as a pre-Lie
+algebra on its primitive elements.
+\end{quote}
+
+This is a pre-Lie analogue of Milnor-Moore/Cartier-Leray. The three equivalent conditions
+(Theorem 5.3.3) are: (a) NAP coalgebra + distributive law; (b) free pre-Lie algebra;
+(c) abelian cogroup in the category of pre-Lie algebras.
+
+The free pre-Lie algebra on a vector space $V$ is, by Chapoton-Livernet \cite{CL01},
+the space $\mathcal{RT}(V)$ of $V$-labelled rooted trees with the product
+$S \circ T = \sum_{v \in \mathrm{Vert}(S)} S \circ_v T$, where $S \circ_v T$ grafts the
+root of $T$ onto the vertex $v$ of $S$ (creating a new edge).
+
+\paragraph{Our operation is not the free pre-Lie operation.}
+The Chapoton-Livernet product grafts the root of $T$ onto \emph{every} vertex of $S$
+unconditionally. Our matching-leaf grafting $x \triangleright y$ replaces a leaf of $y$
+with $x$, but only when that leaf's sequent label equals the conclusion of $x$. These
+are genuinely different operations:
+\begin{itemize}
+  \item Chapoton-Livernet: root-onto-any-vertex, no constraint, sum over all $\mathrm{Vert}(S)$
+  \item Ours: leaf-substitution, constrained by sequent matching, sum over matching leaves of $y$
+\end{itemize}
+Our algebra is therefore almost certainly \emph{not free} as a pre-Lie algebra, and
+Livernet's rigidity theorem does not apply to us directly. If we dropped the sequent
+constraint and allowed grafting at any leaf (or vertex), we would recover the free
+pre-Lie algebra on proof trees as abstract trees --- classical Grossman-Larson,
+independent of $\mszero$.
+
+\paragraph{What ``rigidity'' in our sense actually is.}
+The leaf-matching constraint is not Livernet's rigidity. It is the constraint that makes
+our algebra \emph{non-free}: the algebra is sensitive to $\mszero$ precisely because the
+set of eligible graft sites in $y$ for a given $x$ depends on the sequent labels, which
+are determined by $\mszero$. Informally, our algebra sits as a \emph{constrained
+quotient} inside the free pre-Lie algebra on abstract trees.
+
+\paragraph{Livernet's theorem as a diagnostic.}
+Livernet's theorem gives a useful test. If our proof-tree pre-Lie algebra $L_{SR}$ could
+be equipped with a NAP coproduct $\Delta$ satisfying
+$\Delta(x \triangleright y) = x \otimes y + \Delta(x) \triangleright y$, then by Livernet's
+theorem it would have to be free --- which would mean the sequent constraint was
+algebraically invisible, and the algebra would not depend on $\mszero$. Conversely, if no
+such coproduct exists, the algebra is genuinely non-free and the constraint does real
+algebraic work.
+
+The NAP coproduct on $\mathcal{RT}(V)$ is (Theorem 2.10):
+\[
+  \Delta(B(v, T_1, \ldots, T_n)) = \sum_{i=1}^n B(v, T_1, \ldots, \hat{T}_i, \ldots, T_n) \otimes T_i,
+\]
+i.e.\ remove one child subtree. In the proof-tree context this would mean removing one
+immediate subtree from a node. This is different from the CK admissible-cut coproduct.
+Whether our algebra admits any NAP coproduct satisfying the distributive law is an open
+question, and its answer would determine whether $L_{SR}$ is free or genuinely constrained
+by $\mszero$.
+
 \end{document}
