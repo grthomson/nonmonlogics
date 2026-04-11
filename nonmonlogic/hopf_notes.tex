@@ -14,6 +14,9 @@
 \usepackage{tikz-cd}
 \usepackage{tikz}
 
+\newcommand{\ms}{\mathrel{\mid\!\sim}}
+\newcommand{\mszero}{\mathrel{\mid\!\sim_{0}}}
+
 \begin{document}
 Logic first approach to both nonmonotonic and monotonic entailment
 
@@ -561,5 +564,150 @@ immediate subtree from a node. This is different from the CK admissible-cut copr
 Whether our algebra admits any NAP coproduct satisfying the distributive law is an open
 question, and its answer would determine whether $L_{SR}$ is free or genuinely constrained
 by $\mszero$.
+
+
+\section*{Horty's Criticisms of NMMS and Their Algebraic Import}
+
+\subsection*{The Criticisms}
+
+Horty raises four interlocking objections to $\mathit{NMMS}$ as a model of nonmonotonic
+reasoning. We state them precisely before assessing them against the Lean implementation.
+
+\paragraph{The misnomer objection.}
+Horty argues that calling $\mathit{NMMS}$ ``nonmonotonic'' is a misnomer.
+The inference rules of $\mathit{NMMS}$ are standard Gentzen-style rules, and the system
+behaves monotonically with respect to the material base: adding further sequents to the base
+cannot destroy previously derivable sequents. On this view, the nonmonotonicity is located
+entirely in the base relation $\mszero$ and not in the rules of $\mathit{NMMS}$ itself.
+$\mathit{NMMS}$ then proceeds in the usual fashion, beginning with a fixed material base and
+deriving more complex consequence relations through rules that introduce logical connectives
+on the left or right of the turnstile. The rule for implication on the right is the usual:
+\[
+  \frac{\Gamma, X \ms Y, \Delta}{\Gamma \ms X \Rightarrow Y, \Delta}
+\]
+Applied to a base sequent $B \mszero F$, for instance, this yields $\ms B \Rightarrow F$.
+
+\paragraph{Conservativity over the base.}
+NMMS will yield new sequents containing logical connectives, but it will not derive
+primitive sequents not already present in the material base. This is presented as a
+positive feature: since NMMS is supposed to \emph{explicate} the reason relations implicit
+in the base, it should not alter the base.
+When applied to a base containing all and only the classically valid primitive sequents
+(those $\Gamma \mszero \Delta$ with $\Gamma \cap \Delta \neq \emptyset$), NMMS coincides
+with classical logic. It extends classical logic only when the base contains non-classically
+valid primitive sequents such as $B \mszero F$.
+
+\paragraph{Cut non-admissibility.}
+The transitivity or Cut rule is not admissible in $\mathit{NMMS}$:
+$\Gamma \ms X$ and $\Gamma, X \ms \Delta$ may both be derivable even though
+$\Gamma \ms \Delta$ is not.
+The Tweety example illustrates: suppose the base contains only $\mszero B$
+(\emph{there is reason to conclude Tweety is a bird}) and $B \mszero F$
+(\emph{being a bird provides reason to conclude Tweety can fly}).
+Admissibility of Cut would deliver $\mszero F$, but $\mathit{NMMS}$ does not permit this:
+$\mszero F$ is a primitive sequent not in the base, and no connective rule applies.
+
+\paragraph{Modus ponens failure.}
+As a consequence of Cut non-admissibility, a form of modus ponens fails. From $B \mszero F$
+the rule $(\Rightarrow R)$ yields $\ms B \Rightarrow F$. But this explicit implication,
+together with $\ms B$ (derivable from the base), does not allow derivation of $\ms F$.
+
+\subsection*{Assessment Against the Lean Implementation}
+
+\paragraph{The misnomer objection: partially correct but overstated.}
+It is true that the NMMS derivation rules are monotone with respect to extending the base:
+any derivation that existed before still exists after adding base facts.
+In the Lean formalisation, \texttt{BaseRel} is a plain structure with no monotonicity
+constraint, and the \texttt{NMMS} inductive type uses it only in \texttt{baseAx}; adding
+facts to \texttt{base} can only make more \texttt{baseAx} applications available.
+
+However, Horty's conclusion that $\mathit{NMMS}$ is ``perfectly monotonic'' is false
+for the \emph{derived consequence relation}. The system deliberately omits Weakening as a
+structural rule. Even with a fixed base, $\Gamma \ms \Theta$ does not imply
+$A, \Gamma \ms \Theta$ in general: the only way to close a purely primitive sequent is
+via \texttt{baseAx}, which requires the extended antecedent to satisfy the base relation.
+If $\mszero$ is nonmonotonic --- as it is in the Tweety case --- that fails, and no
+connective rule can rescue it.
+In standard proof theory, the absence of Weakening \emph{is} the definition of a
+nonmonotonic system. The name $\mathit{NMMS}$ is therefore apt.
+
+\paragraph{Conservativity: true and structurally enforced.}
+The \texttt{BaseRel} structure requires \texttt{lhs\_base} and \texttt{rhs\_base}: both
+sides of any base fact must belong to the prelogical fragment (atoms and $\bot$).
+Since every NMMS rule strictly increases formula complexity, a sequent of pure atoms or
+$\bot$ can only be closed by \texttt{baseAx}. No derivation produces a primitive sequent
+not already in the base. This is a theorem of the Lean formalisation.
+
+\paragraph{Cut non-admissibility: true.}
+There is no Cut rule in \texttt{NMMS}. In the Tweety example with
+$\mathtt{base} = \{\emptyset \mszero \{B\},\; \{B\} \mszero \{F\}\}$,
+the sequent $\emptyset \mszero \{F\}$ is a primitive sequent not in the base,
+no connective rule applies, and \texttt{baseAx} cannot fire. Cut is genuinely
+non-admissible.
+
+\paragraph{Modus ponens failure: true.}
+With the same base, $\ms B \Rightarrow F$ is derivable (via \texttt{imp\_r} from
+$\{B\} \mszero \{F\}$) and $\ms B$ is derivable (via \texttt{baseAx}).
+To apply \texttt{imp\_l} and derive $\ms F$ one would additionally need $\{F\} \ms \{F\}$
+as a subderivation, which requires this identity sequent to be in the base --- it need not
+be. The failure is genuine.
+
+\subsection*{Algebraic Consequences}
+
+\paragraph{Cut non-admissibility is constitutive of the pre-Lie algebra.}
+The pre-Lie product $x \triangleright y$ is the proof-theoretic analogue of a single Cut
+step: it grafts proof tree $x$ into a matching leaf of $y$, i.e.\ it composes two
+derivations at a shared sequent interface. Cut non-admissibility means this composition
+\emph{cannot be absorbed back into the base}: the result is a genuinely new element of
+$L_{SR}$, not reducible to a base derivation. If Cut were admissible, every graftable
+pair $(x, y)$ would collapse to a base-level derivation, the pre-Lie product would be
+trivial, and the algebra $L_{SR}$ would degenerate. Non-admissibility of Cut is precisely
+what ensures $L_{SR}$ is non-trivial and that $H_{SR}$ is a non-trivial Hopf algebra.
+
+\paragraph{Weakening failure is constitutive of the leaf-matching constraint.}
+Horty's observation that the nonmonotonicity propagates from $\mszero$ has a direct
+algebraic reading. The leaf-matching constraint --- that $x \triangleright y$ grafts $x$
+only at leaves whose sequent label equals the conclusion of $x$ --- is exactly the
+constraint imposed by the absence of Weakening. In a system with Weakening, any leaf
+could absorb any proof tree (the conclusion could be weakened to match), and the product
+would become unconstrained grafting on abstract trees: the classical Grossman--Larson
+product, independent of $\mszero$. The sequent constraint is the algebraic shadow of
+Weakening failure; the algebra is sensitive to $\mszero$ because and only because
+Weakening fails.
+
+\paragraph{Conservativity and primitive elements.}
+The conservativity of $\mathit{NMMS}$ over the base has a direct algebraic counterpart:
+base sequents correspond to \emph{primitive elements} of $H_{SR}$. Primitives satisfy
+$\Delta(x) = x \otimes 1 + 1 \otimes x$; they are indecomposable. Conservativity says
+that the base sequents cannot be derived from anything else inside the logical system,
+which is exactly indecomposability. The base is the generating set of the algebra, and
+the derived sequents (those involving connectives) are the non-primitive elements built
+from it by the product.
+
+\paragraph{Modus ponens failure and the antipode.}
+The failure of modus ponens --- from $\ms B \Rightarrow F$ and $\ms B$ we cannot derive
+$\ms F$ --- has a speculative but suggestive algebraic analogue. In a Hopf algebra the
+antipode $S$ satisfies $\mu \circ (S \otimes \mathrm{id}) \circ \Delta = \eta \circ
+\varepsilon$: ``running a coproduct backwards'' via $S$ returns the unit. The failure of
+modus ponens suggests that composition of proof trees does not in general admit a clean
+inversion back to a single derivation. Whether the Hopf-algebraic antipode of $H_{SR}$
+encodes an exact obstruction to modus ponens --- i.e.\ whether the antipode precisely
+measures the gap between $\ms B \Rightarrow F \,\wedge\, \ms B$ and $\ms F$ --- is an
+open question, but it is the natural algebraic question to ask. Note that if we were in a
+classical monotone system where Cut is admissible, $S$ would be involutive ($S^2 =
+\mathrm{id}$), consistent with the Blute route to $*$-autonomous categories. Cut
+non-admissibility is therefore the obstruction to $S^2 = \mathrm{id}$ and hence to the
+involutive antipode needed for MLL semantics.
+
+\paragraph{Horty's ``monotone in the base'' observation as a functoriality constraint.}
+Even if Horty is right that extending the base can only extend (never shrink) the set of
+derivable sequents, this does not trivialise the algebra. The map $\mszero \mapsto
+H_{SR(\mszero)}$ should be functorial: an inclusion $\mszero \subseteq \mszero'$ induces
+a Hopf algebra morphism $H_{SR} \to H_{SR'}$, since any derivation valid under the
+smaller base remains valid under the larger one, and leaf-matching is preserved. This
+organises the family of base relations into a diagram of Hopf algebras, with the most
+defeasible bases (fewest primitive sequents) producing the richest algebras at the bottom,
+and classical logic (the largest base) at the top where the algebra degenerates to the
+commutative case and Weakening becomes admissible.
 
 \end{document}

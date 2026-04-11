@@ -61,8 +61,23 @@ structural rules controls the existence and form of the algebraic structure.
 
 \section{Introduction}
 
-The aim of this paper is to define a proof-theoretically meaningful algebraic structure in a setting where monotonicity and familiar structural rules are not built in
-from the outset. We work in a setting where non-monotonicity is reflected proof-theoretically by the \emph{failure} of Weakening. Structural rules such as weakening and contraction have of course been studied extensively in linear and other substructural logics, where their management gives rise to resource-sensitive or relevance-sensitive proof systems. Our aim here is different: rather than studying the algebraic consequences of controlling structural rules within an otherwise monotone proof system, we seek an algebraic account of proof composition for a consequence relation that is nonmonotonic in the meta-sense --- one where provability itself may be defeated by enlarging the premiss set. In this sense, the primitive consequence relation is meant to reflect patterns of defeasible inference whose validity is not necessarily preserved under addition of new information.
+The aim of this paper is to describe a proof-theoretically meaningful algebraic setting in which monotonicity of consequence and the familiar structural rules are not built in
+from the outset. This allows structural rules to be analysed as constraints on algebraic structures.
+
+Our proof calculus is the Non-Monotonic Multi-Succedent sequent calculus NMMS introduced by Kaplan (2018). Non-monotonicity of consequence is represented proof-theoretically by the {failure} of Weakening. Structural rules such as Weakening and Contraction have of course been studied extensively in substructural logics such as linear logic, which controls duplication of hypotheses but also possesses the Cut Elimination property which is desirable from the point of view of computational content. NMMS is a very different setting -- here the sequent calculus is equipped on a primitive {base} consequence relation $\mszero$, which serves to encode non-logical patterns of defeasible \emph{material inference} of the sort studied by Brandom and collaborators in the \emph{inferentialist} analysis of meaning in natural language. 
+
+Such non-monotonic consequence relations will generally fail to admit the Cut rule, and Girard has famously said that ``a logic without Cut Elimination is like a car without an engine''. This is reflected in the fact that NMMS does not admit a \emph{categorical semantics} such that Cut is represented in the composition of morphisms of some suitable category, as the case of linear logic (star autonomous or symmetric closed monoidal categories), intuitionistic logic (cartesian closed categories), or CLASSICAL LOGIC. Here we show that NMMS nonetheless admits a meaningful algebraic interpretation in terms of a Hopf algebra on labelled and decorated rooted trees, which are the proof trees of the sequent calculus.
+
+Hopf algebras on rooted trees are well-studied objects that have seen applications in areas ranging from renormalization for perturbative Quantum Field Theory (Connes and Kreimer) to syntactic trees in generative linguistics (Chomsky, Marcolli, Berwick). Hopf algebras on typed and decorated binary trees have been studied in the combinatorics literature, especially by Foissy. To the author's knowledge no Hopf algebra on proof trees has yet been discussed explicitly, but the idea is certainly not far removed from the recent work in generative linguistics. This naturally invites the question of whether there is sufficient novelty in the construction here. 
+
+In fact, it is the non-monotonicity property that makes NMMS a ``non-starter" from the view of categorical semantics that makes the Hopf algebra construction interesting. The sequent calculus rules admit an interpretation as a \emph{grafting} operation on proof trees -- but the absence of Weakening means that the grafting operation is \emph{not} free to extend contexts arbitrarily by structural rules. This makes the combinatorics of proof tree grafting more constrained and more intricate than the Weakening-admissible setting. In order to define  
+
+and the associator analysis more subtle, than in a setting where structural rules are built in. 
+
+
+The key point is that the proof-theoretic structure itself determines the relevant rooted trees, the grafting operation, the quotient of bureaucratic symmetries, and ultimately the class-level associator comparison from which the pre-Lie identity emerges.
+
+Our aim here is different: rather than studying the algebraic consequences of controlling structural rules within an otherwise monotone proof system, we seek an algebraic account of proof composition for a consequence relation that is nonmonotonic in the meta-sense --- one where provability itself may be defeated by enlarging the premiss set. In this sense, the primitive consequence relation is meant to reflect patterns of defeasible inference whose validity is not necessarily preserved under addition of new information.
 
 
 We begin with a primitive consequence relation on a

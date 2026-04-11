@@ -2,6 +2,10 @@ import Mathlib.Algebra.NonAssoc.PreLie.Basic
 import Mathlib.Algebra.NonAssoc.LieAdmissible.Defs
 import Mathlib.Algebra.Lie.UniversalEnveloping
 import Mathlib.LinearAlgebra.TensorProduct.Basic
+import Mathlib.LinearAlgebra.TensorProduct.Associator
+import Mathlib.LinearAlgebra.TensorProduct.Map
+import Mathlib.RingTheory.Coalgebra.Basic
+import Mathlib.RingTheory.HopfAlgebra.Basic
 import Mathlib.LinearAlgebra.Quotient.Bilinear
 import Mathlib.LinearAlgebra.Quotient.Defs
 import Nonmonlogics.GrossmanLarssonQuotient
@@ -3907,7 +3911,9 @@ abbrev stableUEATensor :=
   TensorProduct ℤ preLieDifferenceStableQuotientUEA preLieDifferenceStableQuotientUEA
 
 structure StableUEAComultiplication where
-  comul : preLieDifferenceStableQuotientUEA →ₗ[ℤ] stableUEATensor
+  comul :
+    preLieDifferenceStableQuotientUEA →ₗ[ℤ]
+      TensorProduct ℤ preLieDifferenceStableQuotientUEA preLieDifferenceStableQuotientUEA
   counit : preLieDifferenceStableQuotientUEA →ₗ[ℤ] ℤ
 
 def StableUEAComulOnGenerators (Δ : StableUEAComultiplication) : Prop :=
@@ -3953,7 +3959,993 @@ def StableUEAComultiplicationData.counit (D : StableUEAComultiplicationData) :=
     StableUEACounitOnGenerators D.Δ :=
   D.axioms.counit_on_generators
 
+def StableUEAAntipodeOnGenerators (S : preLieDifferenceStableQuotientUEA →ₗ[ℤ]
+    preLieDifferenceStableQuotientUEA) : Prop :=
+  ∀ x : PTree, S (stableUEA_treeGen x) = -stableUEA_treeGen x
+
+structure StableUEACoalgebraAxioms (Δ : StableUEAComultiplication) : Prop where
+  coassoc :
+    (TensorProduct.assoc ℤ
+        preLieDifferenceStableQuotientUEA
+        preLieDifferenceStableQuotientUEA
+        preLieDifferenceStableQuotientUEA).toLinearMap ∘ₗ
+        (Δ.comul.rTensor preLieDifferenceStableQuotientUEA) ∘ₗ Δ.comul =
+      (Δ.comul.lTensor preLieDifferenceStableQuotientUEA) ∘ₗ Δ.comul
+  rTensor_counit_comp_comul :
+    (Δ.counit.rTensor preLieDifferenceStableQuotientUEA) ∘ₗ Δ.comul =
+      TensorProduct.mk ℤ _ _ 1
+  lTensor_counit_comp_comul :
+    (Δ.counit.lTensor preLieDifferenceStableQuotientUEA) ∘ₗ Δ.comul =
+      (TensorProduct.mk ℤ _ _).flip 1
+
+structure StableUEACoalgebraData where
+  Δ : StableUEAComultiplication
+  axioms : StableUEACoalgebraAxioms Δ
+
+def StableUEACoalgebraData.comul (D : StableUEACoalgebraData) :=
+  D.Δ.comul
+
+def StableUEACoalgebraData.counit (D : StableUEACoalgebraData) :=
+  D.Δ.counit
+
+@[simp] theorem StableUEACoalgebraData.coassoc
+    (D : StableUEACoalgebraData) :
+    (TensorProduct.assoc ℤ
+        preLieDifferenceStableQuotientUEA
+        preLieDifferenceStableQuotientUEA
+        preLieDifferenceStableQuotientUEA).toLinearMap ∘ₗ
+        (D.Δ.comul.rTensor preLieDifferenceStableQuotientUEA) ∘ₗ D.Δ.comul =
+      (D.Δ.comul.lTensor preLieDifferenceStableQuotientUEA) ∘ₗ D.Δ.comul :=
+  D.axioms.coassoc
+
+@[simp] theorem StableUEACoalgebraData.rTensor_counit_comp_comul
+    (D : StableUEACoalgebraData) :
+    (D.Δ.counit.rTensor preLieDifferenceStableQuotientUEA) ∘ₗ D.Δ.comul =
+      TensorProduct.mk ℤ _ _ 1 :=
+  D.axioms.rTensor_counit_comp_comul
+
+@[simp] theorem StableUEACoalgebraData.lTensor_counit_comp_comul
+    (D : StableUEACoalgebraData) :
+    (D.Δ.counit.lTensor preLieDifferenceStableQuotientUEA) ∘ₗ D.Δ.comul =
+      (TensorProduct.mk ℤ _ _).flip 1 :=
+  D.axioms.lTensor_counit_comp_comul
+
+section StableUEACoalgebraCompatibility
+
+variable [Coalgebra ℤ preLieDifferenceStableQuotientUEA]
+
+noncomputable def stableUEAComultiplication_ofCoalgebra :
+    StableUEAComultiplication where
+  comul := Coalgebra.comul (R := ℤ) (A := preLieDifferenceStableQuotientUEA)
+  counit := Coalgebra.counit (R := ℤ) (A := preLieDifferenceStableQuotientUEA)
+
+noncomputable def stableUEACoalgebraAxioms_ofCoalgebra :
+    StableUEACoalgebraAxioms stableUEAComultiplication_ofCoalgebra := by
+  refine
+    { coassoc := ?_
+      rTensor_counit_comp_comul := ?_
+      lTensor_counit_comp_comul := ?_ }
+  · simpa using
+      (Coalgebra.coassoc (R := ℤ) (A := preLieDifferenceStableQuotientUEA))
+  · simpa using
+      (Coalgebra.rTensor_counit_comp_comul
+        (R := ℤ) (A := preLieDifferenceStableQuotientUEA))
+  · simpa using
+      (Coalgebra.lTensor_counit_comp_comul
+        (R := ℤ) (A := preLieDifferenceStableQuotientUEA))
+
+noncomputable def stableUEACoalgebraData_ofCoalgebra :
+    StableUEACoalgebraData :=
+  ⟨stableUEAComultiplication_ofCoalgebra, stableUEACoalgebraAxioms_ofCoalgebra⟩
+
+end StableUEACoalgebraCompatibility
+
+section StableUEABialgebra
+
+variable [Semiring stableUEATensor]
+variable [Algebra ℤ stableUEATensor]
+
+structure StableUEABialgebraData where
+  coalgebra : StableUEACoalgebraData
+  comulAlgHom : preLieDifferenceStableQuotientUEA →ₐ[ℤ] stableUEATensor
+  counitAlgHom : preLieDifferenceStableQuotientUEA →ₐ[ℤ] ℤ
+  comulAlgHom_apply :
+    ∀ x, comulAlgHom x = coalgebra.Δ.comul x
+  counitAlgHom_apply :
+    ∀ x, counitAlgHom x = coalgebra.Δ.counit x
+
+def StableUEABialgebraData.comul (D : StableUEABialgebraData) :=
+  D.coalgebra.Δ.comul
+
+def StableUEABialgebraData.counit (D : StableUEABialgebraData) :=
+  D.coalgebra.Δ.counit
+
+@[simp] theorem StableUEABialgebraData.comulAlgHom_apply_simp
+    (D : StableUEABialgebraData) (x : preLieDifferenceStableQuotientUEA) :
+    D.comulAlgHom x = D.comul x :=
+  D.comulAlgHom_apply x
+
+@[simp] theorem StableUEABialgebraData.counitAlgHom_apply_simp
+    (D : StableUEABialgebraData) (x : preLieDifferenceStableQuotientUEA) :
+    D.counitAlgHom x = D.counit x :=
+  D.counitAlgHom_apply x
+
+section StableUEABialgebraCompatibility
+
+open Bialgebra
+
+-- The compatibility construction is postponed because the module structures
+-- induced by the `Bialgebra` instance are not definitionally equal to the
+-- ones used by the coalgebra wrapper on the stable UEA.
+
+end StableUEABialgebraCompatibility
+
+end StableUEABialgebra
+
+-- Note: a concrete OG comultiplication candidate should ultimately provide
+-- `StableUEABialgebraData` (and then an antipode), but this requires the
+-- tensor product semiring/algebra instances that are not yet available in
+-- the local snapshot.
+
 end StableUEAComultiplication
+
+/-!
+### Left and right pre-Lie conventions (minimal, algebra-agnostic)
+
+These are lightweight laws used only to align our right-pre-Lie development
+with the left-pre-Lie conventions in Guin–Oudom style statements.
+-/
+
+section PreLieConventions
+
+variable {A : Type*} [AddCommGroup A] [Mul A] [Semigroup A]
+
+def LeftPreLieLaw (A : Type*) [AddCommGroup A] [Mul A] : Prop :=
+  ∀ x y z : A, x * (y * z) - (x * y) * z = y * (x * z) - (y * x) * z
+
+def RightPreLieLaw (A : Type*) [AddCommGroup A] [Mul A] : Prop :=
+  ∀ x y z : A, (x * y) * z - x * (y * z) = (x * z) * y - x * (z * y)
+
+theorem associative_leftPreLieLaw : LeftPreLieLaw A := by
+  intro x y z
+  simp [LeftPreLieLaw, mul_assoc]
+
+theorem associative_rightPreLieLaw : RightPreLieLaw A := by
+  intro x y z
+  simp [RightPreLieLaw, mul_assoc]
+
+end PreLieConventions
+
+/-!
+### Hopf-style axioms on the stable UEA (linear form)
+
+These axioms mirror Mathlib's Hopf algebra laws, but are formulated purely in
+terms of linear maps so they remain meaningful before we have the full tensor
+product algebra instances.
+-/
+
+section StableUEAHopfAxioms
+
+variable [Semiring stableUEATensor]
+variable [Algebra ℤ stableUEATensor]
+
+variable (Δ : StableUEAComultiplication)
+
+abbrev stableUEATensorToUEA :=
+  stableUEATensor →ₗ[ℤ] preLieDifferenceStableQuotientUEA
+
+abbrev stableUEAUnitLinear :=
+  ℤ →ₗ[ℤ] preLieDifferenceStableQuotientUEA
+
+abbrev stableUEAAntipode :=
+  preLieDifferenceStableQuotientUEA →ₗ[ℤ] preLieDifferenceStableQuotientUEA
+
+def StableUEAAntipodeAxioms
+    (mulTensor : stableUEATensorToUEA)
+    (unitLinear : stableUEAUnitLinear)
+    (S : stableUEAAntipode) :
+    Prop :=
+  mulTensor ∘ₗ
+      (LinearMap.rTensor preLieDifferenceStableQuotientUEA S) ∘ₗ Δ.comul =
+    unitLinear ∘ₗ Δ.counit
+  ∧
+  mulTensor ∘ₗ
+      (LinearMap.lTensor preLieDifferenceStableQuotientUEA S) ∘ₗ Δ.comul =
+    unitLinear ∘ₗ Δ.counit
+
+section StableUEAHopfAxiomsStd
+
+-- The canonical choice `mulTensor = LinearMap.mul'` and
+-- `unitLinear = Algebra.linearMap` requires extra scalar-tower instances,
+-- so we postpone it to avoid instance-search failures.
+
+end StableUEAHopfAxiomsStd
+
+structure StableUEAHopfData where
+  bialgebra : StableUEABialgebraData
+  mulTensor : stableUEATensorToUEA
+  unitLinear : stableUEAUnitLinear
+  antipode : stableUEAAntipode
+  antipode_on_generators : StableUEAAntipodeOnGenerators antipode
+  antipode_axioms :
+    StableUEAAntipodeAxioms bialgebra.coalgebra.Δ mulTensor unitLinear antipode
+
+def StableUEAHopfData.comul (H : StableUEAHopfData) :=
+  H.bialgebra.coalgebra.Δ.comul
+
+def StableUEAHopfData.counit (H : StableUEAHopfData) :=
+  H.bialgebra.coalgebra.Δ.counit
+
+@[simp] theorem StableUEAHopfData.antipode_axioms_left
+    (H : StableUEAHopfData) :
+    H.mulTensor ∘ₗ
+        (LinearMap.rTensor preLieDifferenceStableQuotientUEA H.antipode) ∘ₗ
+        H.comul =
+      H.unitLinear ∘ₗ H.counit :=
+  H.antipode_axioms.1
+
+@[simp] theorem StableUEAHopfData.antipode_axioms_right
+    (H : StableUEAHopfData) :
+    H.mulTensor ∘ₗ
+        (LinearMap.lTensor preLieDifferenceStableQuotientUEA H.antipode) ∘ₗ
+        H.comul =
+      H.unitLinear ∘ₗ H.counit :=
+  H.antipode_axioms.2
+
+end StableUEAHopfAxioms
+
+/-!
+### Generator-level comultiplication data (stable UEA)
+
+This is the concrete interface we can use now: a linear map determined on tree
+generators, with the expected primitive-grouplike formula.
+-/
+
+section StableUEAGeneratorComul
+
+structure StableUEAGeneratorComulData where
+  comulGen : PTree → stableUEATensor
+  counitGen : PTree → ℤ
+  comulGen_eq :
+    ∀ x : PTree,
+      comulGen x =
+        TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+          TensorProduct.tmul ℤ 1 (stableUEA_treeGen x)
+  counitGen_eq : ∀ x : PTree, counitGen x = 0
+
+def StableUEAGeneratorComulData.comul_on_treeGen
+    (D : StableUEAGeneratorComulData) (x : PTree) :
+    stableUEATensor := D.comulGen x
+
+def StableUEAGeneratorComulData.counit_on_treeGen
+    (D : StableUEAGeneratorComulData) (x : PTree) : ℤ := D.counitGen x
+
+@[simp] theorem StableUEAGeneratorComulData.comul_on_treeGen_eq
+    (D : StableUEAGeneratorComulData) (x : PTree) :
+    D.comul_on_treeGen x =
+      TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen x) :=
+  D.comulGen_eq x
+
+@[simp] theorem StableUEAGeneratorComulData.counit_on_treeGen_eq
+    (D : StableUEAGeneratorComulData) (x : PTree) :
+    D.counit_on_treeGen x = 0 :=
+  D.counitGen_eq x
+
+end StableUEAGeneratorComul
+
+/-!
+### Linear extension of generator-level comultiplication
+
+We can at least extend the generator data linearly to the free `ℤ`-module on
+trees (the raw proof-tree carrier). This does not yet descend to the stable
+quotient, but it enables concrete computations on sums of tree generators.
+-/
+
+section StableUEAGeneratorComulLinear
+
+/-- Linear extension of a generator-level comultiplication to the free carrier. -/
+noncomputable def stableUEA_comul_linear
+    (D : StableUEAGeneratorComulData) :
+    linearProofTreeCarrier →ₗ[ℤ] stableUEATensor :=
+  Finsupp.lsum ℤ (fun x : PTree =>
+    (LinearMap.id : ℤ →ₗ[ℤ] ℤ).smulRight (D.comulGen x))
+
+/-- Linear extension of the generator-level counit to the free carrier. -/
+noncomputable def stableUEA_counit_linear
+    (D : StableUEAGeneratorComulData) :
+    linearProofTreeCarrier →ₗ[ℤ] ℤ :=
+  Finsupp.lsum ℤ (fun x : PTree =>
+    (LinearMap.id : ℤ →ₗ[ℤ] ℤ).smulRight (D.counitGen x))
+
+@[simp] theorem stableUEA_comul_linear_treeGen
+    (D : StableUEAGeneratorComulData) (x : PTree) :
+    stableUEA_comul_linear D (treeGen x) = D.comulGen x := by
+  classical
+  simp [stableUEA_comul_linear, treeGen]
+
+@[simp] theorem stableUEA_counit_linear_treeGen
+    (D : StableUEAGeneratorComulData) (x : PTree) :
+    stableUEA_counit_linear D (treeGen x) = D.counitGen x := by
+  classical
+  simp [stableUEA_counit_linear, treeGen]
+
+theorem stableUEA_comul_linear_apply
+    (D : StableUEAGeneratorComulData) (a : linearProofTreeCarrier) :
+    stableUEA_comul_linear D a = a.sum (fun x c => c • D.comulGen x) := by
+  classical
+  simp [stableUEA_comul_linear, Finsupp.lsum_apply]
+
+theorem stableUEA_counit_linear_apply
+    (D : StableUEAGeneratorComulData) (a : linearProofTreeCarrier) :
+    stableUEA_counit_linear D a = a.sum (fun x c => c • D.counitGen x) := by
+  classical
+  simp [stableUEA_counit_linear, Finsupp.lsum_apply]
+
+@[simp] theorem stableUEA_comul_linear_add
+    (D : StableUEAGeneratorComulData) (a b : linearProofTreeCarrier) :
+    stableUEA_comul_linear D (a + b) =
+      stableUEA_comul_linear D a + stableUEA_comul_linear D b := by
+  simpa using (stableUEA_comul_linear D).map_add a b
+
+@[simp] theorem stableUEA_counit_linear_add
+    (D : StableUEAGeneratorComulData) (a b : linearProofTreeCarrier) :
+    stableUEA_counit_linear D (a + b) =
+      stableUEA_counit_linear D a + stableUEA_counit_linear D b := by
+  simpa using (stableUEA_counit_linear D).map_add a b
+
+@[simp] theorem stableUEA_comul_linear_smul
+    (D : StableUEAGeneratorComulData) (z : ℤ) (a : linearProofTreeCarrier) :
+    stableUEA_comul_linear D (z • a) = z • stableUEA_comul_linear D a := by
+  simpa using (stableUEA_comul_linear D).map_smul z a
+
+@[simp] theorem stableUEA_counit_linear_smul
+    (D : StableUEAGeneratorComulData) (z : ℤ) (a : linearProofTreeCarrier) :
+    stableUEA_counit_linear D (z • a) = z • stableUEA_counit_linear D a := by
+  simpa using (stableUEA_counit_linear D).map_smul z a
+
+end StableUEAGeneratorComulLinear
+
+/-!
+### Quotient-compatibility interface for generator comultiplication
+
+This is the minimal condition we need to descend the linear extensions to the
+stable quotient of proof trees.
+-/
+
+section StableUEAComulDescend
+
+structure StableQuotientComultiplication where
+  comul : PreLieDifferenceStableQuotient →ₗ[ℤ] stableUEATensor
+  counit : PreLieDifferenceStableQuotient →ₗ[ℤ] ℤ
+
+def StableUEAGeneratorComulRespectsStableQuotient
+    (D : StableUEAGeneratorComulData) : Prop :=
+  ∀ a : linearProofTreeCarrier,
+    a ∈ preLieDifferenceStableSubmodule →
+      stableUEA_comul_linear D a = 0
+    ∧ stableUEA_counit_linear D a = 0
+
+noncomputable def stableUEA_comul_descend
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D) :
+    PreLieDifferenceStableQuotient →ₗ[ℤ] stableUEATensor :=
+  Submodule.liftQ
+    preLieDifferenceStableSubmodule
+    (stableUEA_comul_linear D)
+    (by
+      intro a ha
+      exact (h a ha).1)
+
+noncomputable def stableUEA_counit_descend
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D) :
+    PreLieDifferenceStableQuotient →ₗ[ℤ] ℤ :=
+  Submodule.liftQ
+    preLieDifferenceStableSubmodule
+    (stableUEA_counit_linear D)
+    (by
+      intro a ha
+      exact (h a ha).2)
+
+@[simp] theorem stableUEA_comul_descend_mk
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D)
+    (a : linearProofTreeCarrier) :
+    stableUEA_comul_descend D h (mkPreLieDifferenceStableQuotient a) =
+      stableUEA_comul_linear D a := by
+  simpa [stableUEA_comul_descend, mkPreLieDifferenceStableQuotient]
+    using (Submodule.liftQ_apply
+      (p := preLieDifferenceStableSubmodule)
+      (f := stableUEA_comul_linear D)
+      (h := by
+        intro a ha
+        exact (h a ha).1)
+      (x := a))
+
+@[simp] theorem stableUEA_counit_descend_mk
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D)
+    (a : linearProofTreeCarrier) :
+    stableUEA_counit_descend D h (mkPreLieDifferenceStableQuotient a) =
+      stableUEA_counit_linear D a := by
+  simpa [stableUEA_counit_descend, mkPreLieDifferenceStableQuotient]
+    using (Submodule.liftQ_apply
+      (p := preLieDifferenceStableSubmodule)
+      (f := stableUEA_counit_linear D)
+      (h := by
+        intro a ha
+        exact (h a ha).2)
+      (x := a))
+
+noncomputable def stableUEA_comultiplication_descend
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D) :
+    StableQuotientComultiplication :=
+  { comul := stableUEA_comul_descend D h
+    counit := stableUEA_counit_descend D h }
+
+theorem stableUEA_comultiplication_descend_comul_on_generators
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D)
+    (x : PTree) :
+    (stableUEA_comultiplication_descend D h).comul
+        (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      D.comulGen x := by
+  simpa [stableUEA_comultiplication_descend]
+    using (stableUEA_comul_descend_mk D h (treeGen x))
+
+theorem stableUEA_comultiplication_descend_counit_on_generators
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D)
+    (x : PTree) :
+    (stableUEA_comultiplication_descend D h).counit
+        (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      D.counitGen x := by
+  simpa [stableUEA_comultiplication_descend]
+    using (stableUEA_counit_descend_mk D h (treeGen x))
+
+@[simp] theorem stableUEA_comul_descend_treeGen_add
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D)
+    (x y : PTree) :
+    stableUEA_comul_descend D h
+        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) =
+      D.comulGen x + D.comulGen y := by
+  simp [stableUEA_comul_descend_mk, stableUEA_comul_linear_add,
+    stableUEA_comul_linear_treeGen]
+
+@[simp] theorem stableUEA_counit_descend_treeGen_add
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D)
+    (x y : PTree) :
+    stableUEA_counit_descend D h
+        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) =
+      D.counitGen x + D.counitGen y := by
+  simp [stableUEA_counit_descend_mk, stableUEA_counit_linear_add,
+    stableUEA_counit_linear_treeGen]
+
+@[simp] theorem stableUEA_comul_descend_treeGen_smul
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D)
+    (z : ℤ) (x : PTree) :
+    stableUEA_comul_descend D h
+        (mkPreLieDifferenceStableQuotient (z • treeGen x)) =
+      z • D.comulGen x := by
+  simp [stableUEA_comul_descend_mk, stableUEA_comul_linear_smul,
+    stableUEA_comul_linear_treeGen]
+
+@[simp] theorem stableUEA_counit_descend_treeGen_smul
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D)
+    (z : ℤ) (x : PTree) :
+    stableUEA_counit_descend D h
+        (mkPreLieDifferenceStableQuotient (z • treeGen x)) =
+      z • D.counitGen x := by
+  simp [stableUEA_counit_descend_mk, stableUEA_counit_linear_smul,
+    stableUEA_counit_linear_treeGen]
+
+theorem stableUEA_comul_descend_treeGen_sum_two
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D)
+    (x y : PTree) :
+    stableUEA_comul_descend D h
+        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) =
+      TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen x) +
+      (TensorProduct.tmul ℤ (stableUEA_treeGen y) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen y)) := by
+  have hx : D.comulGen x =
+      TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen x) := D.comulGen_eq x
+  have hy : D.comulGen y =
+      TensorProduct.tmul ℤ (stableUEA_treeGen y) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen y) := D.comulGen_eq y
+  calc
+    stableUEA_comul_descend D h
+        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) =
+      D.comulGen x + D.comulGen y := by
+        simpa using (stableUEA_comul_descend_treeGen_add D h x y)
+    _ =
+      TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen x) +
+      (TensorProduct.tmul ℤ (stableUEA_treeGen y) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen y)) := by
+        -- rewrite by the generator formulas, then reassociate
+        calc
+          D.comulGen x + D.comulGen y =
+              (TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+                TensorProduct.tmul ℤ 1 (stableUEA_treeGen x)) +
+              (TensorProduct.tmul ℤ (stableUEA_treeGen y) 1 +
+                TensorProduct.tmul ℤ 1 (stableUEA_treeGen y)) := by
+            simpa [hx, hy]
+          _ =
+              TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+                TensorProduct.tmul ℤ 1 (stableUEA_treeGen x) +
+              (TensorProduct.tmul ℤ (stableUEA_treeGen y) 1 +
+                TensorProduct.tmul ℤ 1 (stableUEA_treeGen y)) := by
+            -- just reassociate once
+            simp [add_assoc]
+
+theorem stableUEA_counit_descend_treeGen_sum_two
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D)
+    (x y : PTree) :
+    stableUEA_counit_descend D h
+        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) = 0 := by
+  simp [stableUEA_counit_descend_treeGen_add, D.counitGen_eq x, D.counitGen_eq y]
+
+theorem stableUEA_comul_descend_apply
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D)
+    (a : linearProofTreeCarrier) :
+    stableUEA_comul_descend D h (mkPreLieDifferenceStableQuotient a) =
+      a.sum (fun x c => c • D.comulGen x) := by
+  simpa [stableUEA_comul_descend_mk, stableUEA_comul_linear_apply]
+
+theorem stableUEA_counit_descend_apply
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D)
+    (a : linearProofTreeCarrier) :
+    stableUEA_counit_descend D h (mkPreLieDifferenceStableQuotient a) =
+      a.sum (fun x c => c • D.counitGen x) := by
+  simpa [stableUEA_counit_descend_mk, stableUEA_counit_linear_apply]
+
+@[simp] theorem stableUEA_comul_descend_zero
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D) :
+    stableUEA_comul_descend D h
+        (mkPreLieDifferenceStableQuotient 0) = 0 := by
+  simpa using (stableUEA_comul_descend_mk D h 0)
+
+@[simp] theorem stableUEA_counit_descend_zero
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D) :
+    stableUEA_counit_descend D h
+        (mkPreLieDifferenceStableQuotient 0) = 0 := by
+  simpa using (stableUEA_counit_descend_mk D h 0)
+
+theorem stableUEA_comul_descend_treeGen_eq
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D)
+    (x : PTree) :
+    stableUEA_comul_descend D h
+        (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen x) := by
+  calc
+    stableUEA_comul_descend D h
+        (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      D.comulGen x := by
+        simpa using
+          (stableUEA_comultiplication_descend_comul_on_generators D h x)
+    _ =
+      TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen x) := D.comulGen_eq x
+
+theorem stableUEA_counit_descend_treeGen_eq
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D)
+    (x : PTree) :
+    stableUEA_counit_descend D h
+        (mkPreLieDifferenceStableQuotient (treeGen x)) = 0 := by
+  calc
+    stableUEA_counit_descend D h
+        (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      D.counitGen x := by
+        simpa using
+          (stableUEA_comultiplication_descend_counit_on_generators D h x)
+    _ = 0 := D.counitGen_eq x
+
+theorem stableUEA_comul_descend_treeGen_smul_eq
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D)
+    (z : ℤ) (x : PTree) :
+    stableUEA_comul_descend D h
+        (mkPreLieDifferenceStableQuotient (z • treeGen x)) =
+      z • (TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen x)) := by
+  calc
+    stableUEA_comul_descend D h
+        (mkPreLieDifferenceStableQuotient (z • treeGen x)) =
+      z • D.comulGen x := by
+        simpa using (stableUEA_comul_descend_treeGen_smul D h z x)
+    _ =
+      z • (TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen x)) := by
+        simp [D.comulGen_eq x]
+
+theorem stableUEA_counit_descend_treeGen_smul_eq
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D)
+    (z : ℤ) (x : PTree) :
+    stableUEA_counit_descend D h
+        (mkPreLieDifferenceStableQuotient (z • treeGen x)) = 0 := by
+  calc
+    stableUEA_counit_descend D h
+        (mkPreLieDifferenceStableQuotient (z • treeGen x)) =
+      z • D.counitGen x := by
+        simpa using (stableUEA_counit_descend_treeGen_smul D h z x)
+    _ = 0 := by
+        simp [D.counitGen_eq x]
+
+structure StableQuotientComultiplicationData where
+  Δ : StableQuotientComultiplication
+  comul_on_generators :
+    ∀ x : PTree,
+      Δ.comul (mkPreLieDifferenceStableQuotient (treeGen x)) =
+        TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+          TensorProduct.tmul ℤ 1 (stableUEA_treeGen x)
+  counit_on_generators :
+    ∀ x : PTree,
+      Δ.counit (mkPreLieDifferenceStableQuotient (treeGen x)) = 0
+
+def StableQuotientComultiplicationData.comul (D : StableQuotientComultiplicationData) :=
+  D.Δ.comul
+
+def StableQuotientComultiplicationData.counit (D : StableQuotientComultiplicationData) :=
+  D.Δ.counit
+
+@[simp] theorem StableQuotientComultiplicationData.comul_on_treeGen
+    (D : StableQuotientComultiplicationData) (x : PTree) :
+    D.comul (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen x) :=
+  D.comul_on_generators x
+
+@[simp] theorem StableQuotientComultiplicationData.counit_on_treeGen
+    (D : StableQuotientComultiplicationData) (x : PTree) :
+    D.counit (mkPreLieDifferenceStableQuotient (treeGen x)) = 0 :=
+  D.counit_on_generators x
+
+noncomputable def stableUEA_comultiplication_descend_data
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D) :
+    StableQuotientComultiplicationData :=
+  { Δ := stableUEA_comultiplication_descend D h
+    comul_on_generators := by
+      intro x
+      have hgen :=
+        stableUEA_comultiplication_descend_comul_on_generators D h x
+      calc
+        (stableUEA_comultiplication_descend D h).comul
+            (mkPreLieDifferenceStableQuotient (treeGen x)) =
+          D.comulGen x := hgen
+        _ =
+          TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+            TensorProduct.tmul ℤ 1 (stableUEA_treeGen x) :=
+          D.comulGen_eq x
+    counit_on_generators := by
+      intro x
+      have hgen :=
+        stableUEA_comultiplication_descend_counit_on_generators D h x
+      calc
+        (stableUEA_comultiplication_descend D h).counit
+            (mkPreLieDifferenceStableQuotient (treeGen x)) =
+          D.counitGen x := hgen
+        _ = 0 := D.counitGen_eq x }
+
+end StableUEAComulDescend
+
+/-!
+### Lifting quotient comultiplication into the stable UEA
+
+This is a lightweight interface: once a linear lift from the stable quotient
+into the UEA is chosen, we can transport quotient-level comultiplication data
+to the UEA. This keeps the dependency explicit and avoids committing to a
+specific universal-property proof in this file.
+-/
+
+section StableUEALiftInterface
+
+structure StableUEALiftData where
+  lift : PreLieDifferenceStableQuotient → preLieDifferenceStableQuotientUEA
+  lift_treeGen :
+    ∀ x : PTree,
+      lift (mkPreLieDifferenceStableQuotient (treeGen x)) = stableUEA_treeGen x
+
+@[simp] theorem StableUEALiftData.lift_treeGen_eq
+    (L : StableUEALiftData) (x : PTree) :
+    L.lift (mkPreLieDifferenceStableQuotient (treeGen x)) = stableUEA_treeGen x :=
+  L.lift_treeGen x
+
+noncomputable def stableUEA_canonicalLiftData : StableUEALiftData := by
+  classical
+  letI : LieRing PreLieDifferenceStableQuotient :=
+    preLieDifferenceStableQuotientLieRing
+  refine
+    { lift := fun q => preLieDifferenceStableQuotientUEA_ι q
+      lift_treeGen := ?_ }
+  intro x
+  simpa [stableUEA_treeGen_eq_ι]
+
+@[simp] theorem stableUEA_canonicalLiftData_treeGen
+    (x : PTree) :
+    stableUEA_canonicalLiftData.lift
+        (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      stableUEA_treeGen x := by
+  simpa using (stableUEA_canonicalLiftData.lift_treeGen x)
+
+-- Note: a linear-lift structure can be added later once the module structures
+-- on the stable quotient and the UEA are definitionally aligned. For now we
+-- keep only the function-level lift to avoid instance mismatch noise.
+
+theorem StableQuotientComultiplicationData.comul_on_treeGen_via
+    (D : StableQuotientComultiplicationData) (L : StableUEALiftData) (x : PTree) :
+    D.comul (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      TensorProduct.tmul ℤ (L.lift (mkPreLieDifferenceStableQuotient (treeGen x))) 1 +
+        TensorProduct.tmul ℤ 1 (L.lift (mkPreLieDifferenceStableQuotient (treeGen x))) := by
+  simpa [L.lift_treeGen_eq] using D.comul_on_treeGen x
+
+theorem StableQuotientComultiplicationData.counit_on_treeGen_via
+    (D : StableQuotientComultiplicationData) (L : StableUEALiftData) (x : PTree) :
+    D.counit (mkPreLieDifferenceStableQuotient (treeGen x)) = 0 := by
+  simpa using D.counit_on_treeGen x
+
+-- Note: Once a concrete lift `ι` is fixed, we will compose it with the
+-- quotient comultiplication data to obtain an OG-style comultiplication
+-- on the UEA. This section only records the intended interface.
+
+end StableUEALiftInterface
+
+/-!
+### Quotient-level computation helpers
+
+These are small corollaries that let us compute quotient comultiplication data
+on concrete finite sums without unfolding the entire construction.
+-/
+
+section StableQuotientComulHelpers
+
+theorem finsupp_sum_eq_sum_support
+    {α M N : Type*} [Zero M] [AddCommMonoid N]
+    (a : α →₀ M) (f : α → M → N) :
+    a.sum f = (a.support).sum (fun x => f x (a x)) := rfl
+
+theorem stableUEA_comul_descend_treeGen_sum_three
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D)
+    (x y z : PTree) :
+    stableUEA_comul_descend D h
+        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y + treeGen z)) =
+      (D.comulGen x + D.comulGen y) + D.comulGen z := by
+  calc
+    stableUEA_comul_descend D h
+        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y + treeGen z)) =
+      stableUEA_comul_descend D h
+        (mkPreLieDifferenceStableQuotient ((treeGen x + treeGen y) + treeGen z)) := by
+        simp [add_assoc]
+    _ =
+      D.comulGen x + D.comulGen y + D.comulGen z := by
+        simp [stableUEA_comul_descend_treeGen_add, add_assoc]
+
+theorem stableUEA_counit_descend_treeGen_sum_three
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D)
+    (x y z : PTree) :
+    stableUEA_counit_descend D h
+        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y + treeGen z)) = 0 := by
+  calc
+    stableUEA_counit_descend D h
+        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y + treeGen z)) =
+      stableUEA_counit_descend D h
+        (mkPreLieDifferenceStableQuotient ((treeGen x + treeGen y) + treeGen z)) := by
+        simp [add_assoc]
+    _ =
+      D.counitGen x + D.counitGen y + D.counitGen z := by
+        simp [stableUEA_counit_descend_treeGen_add, add_assoc]
+    _ = 0 := by
+        simp [D.counitGen_eq x, D.counitGen_eq y, D.counitGen_eq z]
+
+theorem stableUEA_comul_descend_treeGen_sum_three_expanded
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D)
+    (x y z : PTree) :
+    stableUEA_comul_descend D h
+        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y + treeGen z)) =
+      (TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen x)) +
+      (TensorProduct.tmul ℤ (stableUEA_treeGen y) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen y)) +
+      (TensorProduct.tmul ℤ (stableUEA_treeGen z) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen z)) := by
+  calc
+    stableUEA_comul_descend D h
+        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y + treeGen z)) =
+      D.comulGen x + D.comulGen y + D.comulGen z := by
+        simpa using (stableUEA_comul_descend_treeGen_sum_three D h x y z)
+    _ =
+      (TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen x)) +
+      (TensorProduct.tmul ℤ (stableUEA_treeGen y) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen y)) +
+      (TensorProduct.tmul ℤ (stableUEA_treeGen z) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen z)) := by
+        -- expand each generator formula in order
+        simp [D.comulGen_eq x, D.comulGen_eq y, D.comulGen_eq z, add_assoc]
+
+theorem stableUEA_comul_descend_treeGen_sum_four
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D)
+    (w x y z : PTree) :
+    stableUEA_comul_descend D h
+        (mkPreLieDifferenceStableQuotient (treeGen w + treeGen x + treeGen y + treeGen z)) =
+      (D.comulGen w + D.comulGen x) + (D.comulGen y + D.comulGen z) := by
+  calc
+    stableUEA_comul_descend D h
+        (mkPreLieDifferenceStableQuotient (treeGen w + treeGen x + treeGen y + treeGen z)) =
+      stableUEA_comul_descend D h
+        (mkPreLieDifferenceStableQuotient ((treeGen w + treeGen x) +
+          (treeGen y + treeGen z))) := by
+        simp [add_assoc]
+    _ =
+      (D.comulGen w + D.comulGen x) + (D.comulGen y + D.comulGen z) := by
+        simp [stableUEA_comul_descend_treeGen_add, add_assoc]
+
+theorem stableUEA_counit_descend_treeGen_sum_four
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D)
+    (w x y z : PTree) :
+    stableUEA_counit_descend D h
+        (mkPreLieDifferenceStableQuotient (treeGen w + treeGen x + treeGen y + treeGen z)) = 0 := by
+  calc
+    stableUEA_counit_descend D h
+        (mkPreLieDifferenceStableQuotient (treeGen w + treeGen x + treeGen y + treeGen z)) =
+      stableUEA_counit_descend D h
+        (mkPreLieDifferenceStableQuotient ((treeGen w + treeGen x) +
+          (treeGen y + treeGen z))) := by
+        simp [add_assoc]
+    _ =
+      (D.counitGen w + D.counitGen x) + (D.counitGen y + D.counitGen z) := by
+        simp [stableUEA_counit_descend_treeGen_add, add_assoc]
+    _ = 0 := by
+        simp [D.counitGen_eq w, D.counitGen_eq x, D.counitGen_eq y, D.counitGen_eq z]
+
+theorem stableUEA_comul_descend_treeGen_sum_four_expanded
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D)
+    (w x y z : PTree) :
+    stableUEA_comul_descend D h
+        (mkPreLieDifferenceStableQuotient (treeGen w + treeGen x + treeGen y + treeGen z)) =
+      (TensorProduct.tmul ℤ (stableUEA_treeGen w) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen w)) +
+      (TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen x)) +
+      (TensorProduct.tmul ℤ (stableUEA_treeGen y) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen y)) +
+      (TensorProduct.tmul ℤ (stableUEA_treeGen z) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen z)) := by
+  calc
+    stableUEA_comul_descend D h
+        (mkPreLieDifferenceStableQuotient (treeGen w + treeGen x + treeGen y + treeGen z)) =
+      (D.comulGen w + D.comulGen x) + (D.comulGen y + D.comulGen z) := by
+        simpa using (stableUEA_comul_descend_treeGen_sum_four D h w x y z)
+    _ =
+      (TensorProduct.tmul ℤ (stableUEA_treeGen w) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen w)) +
+      (TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen x)) +
+      (TensorProduct.tmul ℤ (stableUEA_treeGen y) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen y)) +
+      (TensorProduct.tmul ℤ (stableUEA_treeGen z) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen z)) := by
+        simp [D.comulGen_eq w, D.comulGen_eq x, D.comulGen_eq y, D.comulGen_eq z, add_assoc]
+
+theorem stableUEA_comul_descend_sum_support
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D)
+    (a : linearProofTreeCarrier) :
+    stableUEA_comul_descend D h (mkPreLieDifferenceStableQuotient a) =
+      (a.support).sum (fun x => a x • D.comulGen x) := by
+  classical
+  have hsum :=
+    stableUEA_comul_descend_apply (D := D) (h := h) (a := a)
+  simpa [finsupp_sum_eq_sum_support] using hsum
+
+theorem stableUEA_counit_descend_sum_support
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D)
+    (a : linearProofTreeCarrier) :
+    stableUEA_counit_descend D h (mkPreLieDifferenceStableQuotient a) =
+      (a.support).sum (fun x => a x • D.counitGen x) := by
+  classical
+  have hsum :=
+    stableUEA_counit_descend_apply (D := D) (h := h) (a := a)
+  simpa [finsupp_sum_eq_sum_support] using hsum
+
+structure StableQuotientComultiplicationAxioms
+    (Δ : StableQuotientComultiplication) : Prop where
+  comul_on_generators :
+    ∀ x : PTree,
+      Δ.comul (mkPreLieDifferenceStableQuotient (treeGen x)) =
+        TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+          TensorProduct.tmul ℤ 1 (stableUEA_treeGen x)
+  counit_on_generators :
+    ∀ x : PTree,
+      Δ.counit (mkPreLieDifferenceStableQuotient (treeGen x)) = 0
+
+structure StableQuotientComultiplicationPack where
+  Δ : StableQuotientComultiplication
+  axioms : StableQuotientComultiplicationAxioms Δ
+
+def StableQuotientComultiplicationPack.comul (D : StableQuotientComultiplicationPack) :=
+  D.Δ.comul
+
+def StableQuotientComultiplicationPack.counit (D : StableQuotientComultiplicationPack) :=
+  D.Δ.counit
+
+@[simp] theorem StableQuotientComultiplicationPack.comul_on_treeGen
+    (D : StableQuotientComultiplicationPack) (x : PTree) :
+    D.comul (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen x) :=
+  D.axioms.comul_on_generators x
+
+@[simp] theorem StableQuotientComultiplicationPack.counit_on_treeGen
+    (D : StableQuotientComultiplicationPack) (x : PTree) :
+    D.counit (mkPreLieDifferenceStableQuotient (treeGen x)) = 0 :=
+  D.axioms.counit_on_generators x
+
+theorem StableQuotientComultiplicationPack_comul_on_treeGen_via
+    (D : StableQuotientComultiplicationPack) (L : StableUEALiftData) (x : PTree) :
+    D.comul (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      TensorProduct.tmul ℤ (L.lift (mkPreLieDifferenceStableQuotient (treeGen x))) 1 +
+        TensorProduct.tmul ℤ 1 (L.lift (mkPreLieDifferenceStableQuotient (treeGen x))) := by
+  simpa [L.lift_treeGen_eq] using (D.axioms.comul_on_generators x)
+
+theorem StableQuotientComultiplicationPack_counit_on_treeGen_via
+    (D : StableQuotientComultiplicationPack) (L : StableUEALiftData) (x : PTree) :
+    D.counit (mkPreLieDifferenceStableQuotient (treeGen x)) = 0 := by
+  simpa using (D.axioms.counit_on_generators x)
+
+noncomputable def stableUEA_comultiplication_descend_pack
+    (D : StableUEAGeneratorComulData)
+    (h : StableUEAGeneratorComulRespectsStableQuotient D) :
+    StableQuotientComultiplicationPack :=
+  { Δ := stableUEA_comultiplication_descend D h
+    axioms :=
+      { comul_on_generators := by
+          intro x
+          have hgen :=
+            stableUEA_comultiplication_descend_comul_on_generators D h x
+          calc
+            (stableUEA_comultiplication_descend D h).comul
+                (mkPreLieDifferenceStableQuotient (treeGen x)) =
+              D.comulGen x := hgen
+            _ =
+              TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+                TensorProduct.tmul ℤ 1 (stableUEA_treeGen x) := D.comulGen_eq x
+        counit_on_generators := by
+          intro x
+          have hgen :=
+            stableUEA_comultiplication_descend_counit_on_generators D h x
+          calc
+            (stableUEA_comultiplication_descend D h).counit
+                (mkPreLieDifferenceStableQuotient (treeGen x)) =
+              D.counitGen x := hgen
+            _ = 0 := D.counitGen_eq x } }
+
+end StableQuotientComulHelpers
 
 /-!
 ### Cut-based coproduct support (raw trees)
@@ -3974,6 +4966,26 @@ def forestWeight : Forest → Nat
 
 @[simp] theorem forestWeight_cons (t : PTree) (ts : Forest) :
     forestWeight (t :: ts) = PTree.graftWeight t + forestWeight ts := rfl
+
+@[simp] theorem forestWeight_singleton (t : PTree) :
+    forestWeight [t] = PTree.graftWeight t := by
+  simp [forestWeight]
+
+theorem forestWeight_append (f g : Forest) :
+    forestWeight (f ++ g) = forestWeight f + forestWeight g := by
+  induction f with
+  | nil =>
+      simp [forestWeight]
+  | cons t ts ih =>
+      simp [forestWeight, ih, Nat.add_assoc, Nat.add_left_comm, Nat.add_comm]
+
+theorem forestWeight_eq_sum_map (f : Forest) :
+    forestWeight f = (f.map PTree.graftWeight).sum := by
+  induction f with
+  | nil =>
+      simp [forestWeight]
+  | cons t ts ih =>
+      simp [forestWeight, ih]
 
 /-- The raw coproduct support set of forest–tree pairs. -/
 def coproductSupport (t : PTree) : Set (Forest × PTree) :=
@@ -4004,6 +5016,107 @@ def coproductForests (t : PTree) : Set Forest :=
 def coproductRemainders (t : PTree) : Set PTree :=
   { r | ∃ f : Forest, (f, r) ∈ coproductSupport t }
 
+theorem mem_coproductForests_iff (t : PTree) (f : Forest) :
+    f ∈ coproductForests t ↔ ∃ r : PTree, (f, r) ∈ coproductSupport t := by
+  rfl
+
+theorem mem_coproductRemainders_iff (t : PTree) (r : PTree) :
+    r ∈ coproductRemainders t ↔ ∃ f : Forest, (f, r) ∈ coproductSupport t := by
+  rfl
+
+noncomputable def coproductSupportFinset (t : PTree) : Finset (Forest × PTree) :=
+  (PTree.coproductData t).toFinset
+
+@[simp] theorem mem_coproductSupportFinset (t : PTree) (p : Forest × PTree) :
+    p ∈ coproductSupportFinset t ↔ p ∈ t.coproductData := by
+  classical
+  simpa [coproductSupportFinset] using
+    (List.mem_toFinset : p ∈ (PTree.coproductData t).toFinset ↔ p ∈ PTree.coproductData t)
+
+theorem coproductSupportFinset_coe (t : PTree) :
+    (coproductSupportFinset t : Set (Forest × PTree)) = coproductSupport t := by
+  classical
+  ext p
+  constructor
+  · intro hp
+    have hp' : p ∈ coproductSupportFinset t := by
+      exact hp
+    have hp'' : p ∈ PTree.coproductData t :=
+      (mem_coproductSupportFinset t p).1 hp'
+    exact (mem_coproductSupport t p).2 hp''
+  · intro hp
+    have hp' : p ∈ PTree.coproductData t := by
+      simpa [coproductSupport] using hp
+    have hp'' : p ∈ coproductSupportFinset t :=
+      (mem_coproductSupportFinset t p).2 hp'
+    exact (show p ∈ (coproductSupportFinset t : Set (Forest × PTree)) from hp'')
+
+noncomputable def coproductForestsFinset (t : PTree) : Finset Forest :=
+  (coproductSupportFinset t).image Prod.fst
+
+noncomputable def coproductRemaindersFinset (t : PTree) : Finset PTree :=
+  (coproductSupportFinset t).image Prod.snd
+
+theorem mem_coproductForestsFinset (t : PTree) (f : Forest) :
+    f ∈ coproductForestsFinset t ↔ ∃ r : PTree, (f, r) ∈ coproductSupportFinset t := by
+  classical
+  constructor
+  · intro hf
+    rcases Finset.mem_image.1 hf with ⟨p, hp, hpf⟩
+    cases p with
+    | mk f' r =>
+        cases hpf
+        exact ⟨r, hp⟩
+  · rintro ⟨r, hr⟩
+    exact Finset.mem_image.2 ⟨(f, r), hr, rfl⟩
+
+theorem mem_coproductRemaindersFinset (t : PTree) (r : PTree) :
+    r ∈ coproductRemaindersFinset t ↔ ∃ f : Forest, (f, r) ∈ coproductSupportFinset t := by
+  classical
+  constructor
+  · intro hr
+    rcases Finset.mem_image.1 hr with ⟨p, hp, hpr⟩
+    cases p with
+    | mk f r' =>
+        cases hpr
+        exact ⟨f, hp⟩
+  · rintro ⟨f, hf⟩
+    exact Finset.mem_image.2 ⟨(f, r), hf, rfl⟩
+
+theorem coproductForestsFinset_coe (t : PTree) :
+    (coproductForestsFinset t : Set Forest) = coproductForests t := by
+  classical
+  ext f
+  constructor
+  · intro hf
+    have hf' := (mem_coproductForestsFinset t f).1 hf
+    rcases hf' with ⟨r, hr⟩
+    have hr' : (f, r) ∈ coproductSupport t := by
+      simpa [mem_coproductSupportFinset] using hr
+    exact ⟨r, hr'⟩
+  · intro hf
+    rcases hf with ⟨r, hr⟩
+    have hr' : (f, r) ∈ coproductSupportFinset t := by
+      simpa [mem_coproductSupportFinset] using hr
+    exact (mem_coproductForestsFinset t f).2 ⟨r, hr'⟩
+
+theorem coproductRemaindersFinset_coe (t : PTree) :
+    (coproductRemaindersFinset t : Set PTree) = coproductRemainders t := by
+  classical
+  ext r
+  constructor
+  · intro hr
+    have hr' := (mem_coproductRemaindersFinset t r).1 hr
+    rcases hr' with ⟨f, hf⟩
+    have hf' : (f, r) ∈ coproductSupport t := by
+      simpa [mem_coproductSupportFinset] using hf
+    exact ⟨f, hf'⟩
+  · intro hr
+    rcases hr with ⟨f, hf⟩
+    have hf' : (f, r) ∈ coproductSupportFinset t := by
+      simpa [mem_coproductSupportFinset] using hf
+    exact (mem_coproductRemaindersFinset t r).2 ⟨f, hf'⟩
+
 @[simp] theorem coproductForests_contains_nil (t : PTree) :
     [] ∈ coproductForests t := by
   refine ⟨t, ?_⟩
@@ -4013,6 +5126,202 @@ def coproductRemainders (t : PTree) : Set PTree :=
     t ∈ coproductRemainders t := by
   refine ⟨[], ?_⟩
   simpa using coproductSupport_contains_trivial t
+
+theorem coproductSupport_nonempty (t : PTree) :
+    (coproductSupport t).Nonempty := by
+  refine ⟨([], t), coproductSupport_contains_trivial t⟩
+
+theorem coproductForests_eq_image_fst (t : PTree) :
+    coproductForests t = Prod.fst '' coproductSupport t := by
+  ext f
+  constructor
+  · intro hf
+    rcases hf with ⟨r, hr⟩
+    exact ⟨(f, r), hr, rfl⟩
+  · intro hf
+    rcases hf with ⟨p, hp, hpf⟩
+    cases p with
+    | mk f' r =>
+        cases hpf
+        exact ⟨r, hp⟩
+
+theorem coproductRemainders_eq_image_snd (t : PTree) :
+    coproductRemainders t = Prod.snd '' coproductSupport t := by
+  ext r
+  constructor
+  · intro hr
+    rcases hr with ⟨f, hf⟩
+    exact ⟨(f, r), hf, rfl⟩
+  · intro hr
+    rcases hr with ⟨p, hp, hps⟩
+    cases p with
+    | mk f r' =>
+        cases hps
+        exact ⟨f, hp⟩
+
+theorem coproductForests_finite (t : PTree) :
+    Set.Finite (coproductForests t) := by
+  classical
+  simpa [coproductForests_eq_image_fst] using
+    (coproductSupport_finite t).image Prod.fst
+
+theorem coproductRemainders_finite (t : PTree) :
+    Set.Finite (coproductRemainders t) := by
+  classical
+  simpa [coproductRemainders_eq_image_snd] using
+    (coproductSupport_finite t).image Prod.snd
+
+theorem coproductForests_nonempty (t : PTree) :
+    (coproductForests t).Nonempty := by
+  rcases coproductSupport_nonempty t with ⟨p, hp⟩
+  exact ⟨p.1, ⟨p.2, hp⟩⟩
+
+theorem coproductRemainders_nonempty (t : PTree) :
+    (coproductRemainders t).Nonempty := by
+  rcases coproductSupport_nonempty t with ⟨p, hp⟩
+  exact ⟨p.2, ⟨p.1, hp⟩⟩
+
+theorem coproductForests_mem_of_support
+    {t : PTree} {f : Forest} {r : PTree}
+    (h : (f, r) ∈ coproductSupport t) :
+    f ∈ coproductForests t := by
+  exact ⟨r, h⟩
+
+theorem coproductRemainders_mem_of_support
+    {t : PTree} {f : Forest} {r : PTree}
+    (h : (f, r) ∈ coproductSupport t) :
+    r ∈ coproductRemainders t := by
+  exact ⟨f, h⟩
+
+theorem coproductForests_mem_iff_support
+    (t : PTree) (f : Forest) :
+    f ∈ coproductForests t ↔ ∃ r : PTree, (f, r) ∈ coproductSupport t := by
+  rfl
+
+theorem coproductRemainders_mem_iff_support
+    (t : PTree) (r : PTree) :
+    r ∈ coproductRemainders t ↔ ∃ f : Forest, (f, r) ∈ coproductSupport t := by
+  rfl
+
+theorem coproductSupport_mem_iff
+    (t : PTree) (f : Forest) (r : PTree) :
+    (f, r) ∈ coproductSupport t ↔ (f, r) ∈ PTree.coproductData t := by
+  rfl
+
+theorem coproductSupport_subset_product
+    (t : PTree) :
+    coproductSupport t ⊆
+      (coproductForests t ×ˢ coproductRemainders t) := by
+  intro p hp
+  rcases p with ⟨f, r⟩
+  exact ⟨coproductForests_mem_of_support (t := t) hp,
+    coproductRemainders_mem_of_support (t := t) hp⟩
+
+theorem coproductSupportFinset_subset_product
+    (t : PTree) :
+    (coproductSupportFinset t : Set (Forest × PTree)) ⊆
+      (coproductForests t ×ˢ coproductRemainders t) := by
+  intro p hp
+  have hp' : p ∈ coproductSupport t := by
+    have hp' : p ∈ (coproductSupportFinset t : Set (Forest × PTree)) := hp
+    simpa [coproductSupportFinset_coe] using hp'
+  exact coproductSupport_subset_product t hp'
+
+theorem coproductSupportFinset_nonempty (t : PTree) :
+    (coproductSupportFinset t : Set (Forest × PTree)).Nonempty := by
+  have h : (coproductSupport t).Nonempty := coproductSupport_nonempty t
+  rcases h with ⟨p, hp⟩
+  refine ⟨p, ?_⟩
+  simpa [coproductSupportFinset_coe] using hp
+
+theorem coproductForestsFinset_nonempty (t : PTree) :
+    (coproductForestsFinset t : Set Forest).Nonempty := by
+  rcases coproductSupportFinset_nonempty t with ⟨p, hp⟩
+  refine ⟨p.1, ?_⟩
+  have hp' : p.1 ∈ coproductForests t := by
+    have hp'' : p ∈ coproductSupport t := by
+      simpa [coproductSupportFinset_coe] using hp
+    exact coproductForests_mem_of_support (t := t) hp''
+  simpa [coproductForestsFinset_coe] using hp'
+
+theorem coproductRemaindersFinset_nonempty (t : PTree) :
+    (coproductRemaindersFinset t : Set PTree).Nonempty := by
+  rcases coproductSupportFinset_nonempty t with ⟨p, hp⟩
+  refine ⟨p.2, ?_⟩
+  have hp' : p.2 ∈ coproductRemainders t := by
+    have hp'' : p ∈ coproductSupport t := by
+      simpa [coproductSupportFinset_coe] using hp
+    exact coproductRemainders_mem_of_support (t := t) hp''
+  simpa [coproductRemaindersFinset_coe] using hp'
+
+theorem coproductForestsFinset_mem_of_support
+    {t : PTree} {f : Forest} {r : PTree}
+    (h : (f, r) ∈ coproductSupportFinset t) :
+    f ∈ coproductForestsFinset t := by
+  exact (mem_coproductForestsFinset t f).2 ⟨r, h⟩
+
+theorem coproductRemaindersFinset_mem_of_support
+    {t : PTree} {f : Forest} {r : PTree}
+    (h : (f, r) ∈ coproductSupportFinset t) :
+    r ∈ coproductRemaindersFinset t := by
+  exact (mem_coproductRemaindersFinset t r).2 ⟨f, h⟩
+
+theorem coproductSupportFinset_image_fst_subset
+    (t : PTree) :
+    (coproductSupportFinset t).image Prod.fst ⊆
+      coproductForestsFinset t := by
+  intro f hf
+  exact hf
+
+theorem coproductSupportFinset_image_snd_subset
+    (t : PTree) :
+    (coproductSupportFinset t).image Prod.snd ⊆
+      coproductRemaindersFinset t := by
+  intro r hr
+  exact hr
+
+theorem coproductForestsFinset_eq_image_fst
+    (t : PTree) :
+    coproductForestsFinset t = (coproductSupportFinset t).image Prod.fst := by
+  rfl
+
+theorem coproductRemaindersFinset_eq_image_snd
+    (t : PTree) :
+    coproductRemaindersFinset t = (coproductSupportFinset t).image Prod.snd := by
+  rfl
+
+theorem coproductSupportFinset_sum_pair
+    {α : Type*} [AddCommMonoid α]
+    (t : PTree) (g : Forest × PTree → α) :
+    (coproductSupportFinset t).sum g =
+      (coproductSupportFinset t).sum (fun p => g (p.1, p.2)) := by
+  classical
+  refine Finset.sum_congr rfl ?_
+  intro p hp
+  rfl
+
+theorem coproductSupportFinset_sum_ext
+    {α : Type*} [AddCommMonoid α]
+    (t : PTree) (g h : Forest × PTree → α)
+    (hgh : ∀ p ∈ coproductSupportFinset t, g p = h p) :
+    (coproductSupportFinset t).sum g =
+      (coproductSupportFinset t).sum h := by
+  classical
+  refine Finset.sum_congr rfl ?_
+  intro p hp
+  exact hgh p hp
+
+theorem coproductSupportFinset_sum_subtype
+    {α : Type*} [AddCommMonoid α]
+    (t : PTree) (g : {p // p ∈ coproductSupportFinset t} → α) :
+    (Finset.univ : Finset {p // p ∈ coproductSupportFinset t}).sum g =
+      (coproductSupportFinset t).sum (fun p => g ⟨p, by
+        have : p ∈ coproductSupportFinset t := by
+          simp
+        exact this⟩) := by
+  classical
+  simpa [Finset.univ_eq_attach] using
+    (Finset.sum_attach (s := coproductSupportFinset t) (f := g))
 
 end CoproductSupport
 
