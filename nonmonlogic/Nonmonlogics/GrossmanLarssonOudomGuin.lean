@@ -4098,7 +4098,7 @@ with the left-pre-Lie conventions in Guin–Oudom style statements.
 
 section PreLieConventions
 
-variable {A : Type*} [AddCommGroup A] [Mul A] [Semigroup A]
+variable {A : Type*} [AddCommGroup A] [Semigroup A]
 
 def LeftPreLieLaw (A : Type*) [AddCommGroup A] [Mul A] : Prop :=
   ∀ x y z : A, x * (y * z) - (x * y) * z = y * (x * z) - (y * x) * z
@@ -4108,11 +4108,27 @@ def RightPreLieLaw (A : Type*) [AddCommGroup A] [Mul A] : Prop :=
 
 theorem associative_leftPreLieLaw : LeftPreLieLaw A := by
   intro x y z
-  simp [LeftPreLieLaw, mul_assoc]
+  have h1 : x * (y * z) = (x * y) * z := by
+    simpa using (mul_assoc x y z).symm
+  have h2 : y * (x * z) = (y * x) * z := by
+    simpa using (mul_assoc y x z).symm
+  calc
+    x * (y * z) - (x * y) * z = 0 := by
+      simp [h1]
+    _ = y * (x * z) - (y * x) * z := by
+      simp [h2]
 
 theorem associative_rightPreLieLaw : RightPreLieLaw A := by
   intro x y z
-  simp [RightPreLieLaw, mul_assoc]
+  have h1 : (x * y) * z = x * (y * z) := by
+    simpa using (mul_assoc x y z)
+  have h2 : (x * z) * y = x * (z * y) := by
+    simpa using (mul_assoc x z y)
+  calc
+    (x * y) * z - x * (y * z) = 0 := by
+      simp [h1]
+    _ = (x * z) * y - x * (z * y) := by
+      simp [h2]
 
 end PreLieConventions
 
@@ -5010,11 +5026,175 @@ theorem coproductSupport_contains_trivial (t : PTree) :
   refine ⟨[], PTree.empty_cut_mem_allAdmissibleCuts t, ?_⟩
   simpa [PTree.coproductTerm_nil]
 
+def coproductForestsList (t : PTree) : List Forest :=
+  (PTree.coproductData t).map Prod.fst
+
+def coproductRemaindersList (t : PTree) : List PTree :=
+  (PTree.coproductData t).map Prod.snd
+
+theorem mem_coproductForestsList_iff (t : PTree) (f : Forest) :
+    f ∈ coproductForestsList t ↔ ∃ r : PTree, (f, r) ∈ PTree.coproductData t := by
+  constructor
+  · intro hf
+    rcases List.mem_map.1 hf with ⟨p, hp, hpf⟩
+    cases p with
+    | mk f' r =>
+        cases hpf
+        exact ⟨r, hp⟩
+  · rintro ⟨r, hr⟩
+    exact List.mem_map.2 ⟨(f, r), hr, rfl⟩
+
+theorem mem_coproductRemaindersList_iff (t : PTree) (r : PTree) :
+    r ∈ coproductRemaindersList t ↔ ∃ f : Forest, (f, r) ∈ PTree.coproductData t := by
+  constructor
+  · intro hr
+    rcases List.mem_map.1 hr with ⟨p, hp, hpr⟩
+    cases p with
+    | mk f r' =>
+        cases hpr
+        exact ⟨f, hp⟩
+  · rintro ⟨f, hf⟩
+    exact List.mem_map.2 ⟨(f, r), hf, rfl⟩
+
+theorem coproductForestsList_mem_of_support
+    {t : PTree} {f : Forest} {r : PTree}
+    (h : (f, r) ∈ PTree.coproductData t) :
+    f ∈ coproductForestsList t := by
+  exact (mem_coproductForestsList_iff t f).2 ⟨r, h⟩
+
+theorem coproductRemaindersList_mem_of_support
+    {t : PTree} {f : Forest} {r : PTree}
+    (h : (f, r) ∈ PTree.coproductData t) :
+    r ∈ coproductRemaindersList t := by
+  exact (mem_coproductRemaindersList_iff t r).2 ⟨f, h⟩
+
+@[simp] theorem coproductForestsList_contains_nil (t : PTree) :
+    [] ∈ coproductForestsList t := by
+  have h : ([], t) ∈ PTree.coproductData t := by
+    simpa [coproductSupport] using coproductSupport_contains_trivial t
+  exact (mem_coproductForestsList_iff t []).2 ⟨t, h⟩
+
+@[simp] theorem coproductRemaindersList_contains_root (t : PTree) :
+    t ∈ coproductRemaindersList t := by
+  have h : ([], t) ∈ PTree.coproductData t := by
+    simpa [coproductSupport] using coproductSupport_contains_trivial t
+  exact (mem_coproductRemaindersList_iff t t).2 ⟨[], h⟩
+
+theorem coproductForestsList_nonempty (t : PTree) :
+    (coproductForestsList t).length > 0 := by
+  cases h : coproductForestsList t with
+  | nil =>
+      have hmem : ([] : Forest) ∈ ([] : List Forest) := by
+        simpa [h] using coproductForestsList_contains_nil t
+      cases hmem
+  | cons a l =>
+      simp [h]
+
+theorem coproductRemaindersList_nonempty (t : PTree) :
+    (coproductRemaindersList t).length > 0 := by
+  cases h : coproductRemaindersList t with
+  | nil =>
+      have hmem : t ∈ ([] : List PTree) := by
+        simpa [h] using coproductRemaindersList_contains_root t
+      cases hmem
+  | cons a l =>
+      simp [h]
+
+theorem coproductForestsList_length_pos (t : PTree) :
+    0 < (coproductForestsList t).length := by
+  exact coproductForestsList_nonempty t
+
+theorem coproductRemaindersList_length_pos (t : PTree) :
+    0 < (coproductRemaindersList t).length := by
+  exact coproductRemaindersList_nonempty t
+
+theorem coproductForestsList_map_length (t : PTree) :
+    (coproductForestsList t).map List.length =
+      (PTree.coproductData t).map (fun p => (p.1).length) := by
+  simp [coproductForestsList, List.map_map]
+
+theorem coproductRemaindersList_map_id (t : PTree) :
+    (coproductRemaindersList t).map (fun r => r) =
+      (PTree.coproductData t).map (fun p => p.2) := by
+  simp [coproductRemaindersList]
+
+theorem coproductForestsList_mem_map_fst
+    (t : PTree) (f : Forest) :
+    f ∈ (PTree.coproductData t).map Prod.fst ↔
+      f ∈ coproductForestsList t := by
+  rfl
+
+theorem coproductRemaindersList_mem_map_snd
+    (t : PTree) (r : PTree) :
+    r ∈ (PTree.coproductData t).map Prod.snd ↔
+      r ∈ coproductRemaindersList t := by
+  rfl
+
 def coproductForests (t : PTree) : Set Forest :=
   { f | ∃ r : PTree, (f, r) ∈ coproductSupport t }
 
 def coproductRemainders (t : PTree) : Set PTree :=
   { r | ∃ f : Forest, (f, r) ∈ coproductSupport t }
+
+def coproductForestsListSet (t : PTree) : Set Forest :=
+  { f | f ∈ coproductForestsList t }
+
+def coproductRemaindersListSet (t : PTree) : Set PTree :=
+  { r | r ∈ coproductRemaindersList t }
+
+@[simp] theorem mem_coproductForestsListSet_iff
+    (t : PTree) (f : Forest) :
+    f ∈ coproductForestsListSet t ↔ f ∈ coproductForestsList t := by
+  rfl
+
+@[simp] theorem mem_coproductRemaindersListSet_iff
+    (t : PTree) (r : PTree) :
+    r ∈ coproductRemaindersListSet t ↔ r ∈ coproductRemaindersList t := by
+  rfl
+
+
+theorem mem_coproductForestsList_iff_mem_coproductForests
+    (t : PTree) (f : Forest) :
+    f ∈ coproductForestsList t ↔ f ∈ coproductForests t := by
+  refine Iff.intro ?mp ?mpr
+  case mp =>
+    intro hf
+    have hf' := (mem_coproductForestsList_iff t f).1 hf
+    cases hf' with
+    | intro r hr =>
+        exact Exists.intro r hr
+  case mpr =>
+    intro hf
+    cases hf with
+    | intro r hr =>
+        exact (mem_coproductForestsList_iff t f).2 (Exists.intro r hr)
+
+theorem mem_coproductRemaindersList_iff_mem_coproductRemainders
+    (t : PTree) (r : PTree) :
+    r ∈ coproductRemaindersList t ↔ r ∈ coproductRemainders t := by
+  refine Iff.intro ?mp ?mpr
+  case mp =>
+    intro hr
+    have hr' := (mem_coproductRemaindersList_iff t r).1 hr
+    cases hr' with
+    | intro f hf =>
+        exact Exists.intro f hf
+  case mpr =>
+    intro hr
+    cases hr with
+    | intro f hf =>
+        exact (mem_coproductRemaindersList_iff t r).2 (Exists.intro f hf)
+
+theorem coproductForestsListSet_eq (t : PTree) :
+    coproductForestsListSet t = coproductForests t := by
+  ext f
+  exact mem_coproductForestsList_iff_mem_coproductForests t f
+
+theorem coproductRemaindersListSet_eq (t : PTree) :
+    coproductRemaindersListSet t = coproductRemainders t := by
+  ext r
+  exact mem_coproductRemaindersList_iff_mem_coproductRemainders t r
+
 
 theorem mem_coproductForests_iff (t : PTree) (f : Forest) :
     f ∈ coproductForests t ↔ ∃ r : PTree, (f, r) ∈ coproductSupport t := by
@@ -5083,6 +5263,62 @@ theorem mem_coproductRemaindersFinset (t : PTree) (r : PTree) :
   · rintro ⟨f, hf⟩
     exact Finset.mem_image.2 ⟨(f, r), hf, rfl⟩
 
+theorem coproductSupportFinset_card_le_length (t : PTree) :
+    (coproductSupportFinset t).card ≤ (PTree.coproductData t).length := by
+  simpa [coproductSupportFinset] using
+    (List.toFinset_card_le (PTree.coproductData t))
+
+theorem coproductForestsFinset_card_le_support (t : PTree) :
+    (coproductForestsFinset t).card ≤ (coproductSupportFinset t).card := by
+  classical
+  simpa [coproductForestsFinset] using
+    (Finset.card_image_le (s := coproductSupportFinset t) (f := Prod.fst))
+
+theorem coproductRemaindersFinset_card_le_support (t : PTree) :
+    (coproductRemaindersFinset t).card ≤ (coproductSupportFinset t).card := by
+  classical
+  simpa [coproductRemaindersFinset] using
+    (Finset.card_image_le (s := coproductSupportFinset t) (f := Prod.snd))
+
+theorem coproductForestsFinset_card_le_length (t : PTree) :
+    (coproductForestsFinset t).card ≤ (PTree.coproductData t).length := by
+  exact le_trans (coproductForestsFinset_card_le_support t)
+    (coproductSupportFinset_card_le_length t)
+
+theorem coproductRemaindersFinset_card_le_length (t : PTree) :
+    (coproductRemaindersFinset t).card ≤ (PTree.coproductData t).length := by
+  exact le_trans (coproductRemaindersFinset_card_le_support t)
+    (coproductSupportFinset_card_le_length t)
+
+@[simp] theorem coproductSupportFinset_contains_trivial (t : PTree) :
+    ([], t) ∈ coproductSupportFinset t := by
+  have hlist : ([], t) ∈ PTree.coproductData t := by
+    simpa [coproductSupport] using coproductSupport_contains_trivial t
+  exact (mem_coproductSupportFinset t ([], t)).2 hlist
+
+@[simp] theorem coproductForestsFinset_contains_nil (t : PTree) :
+    [] ∈ coproductForestsFinset t := by
+  exact (mem_coproductForestsFinset t []).2 ⟨t, coproductSupportFinset_contains_trivial t⟩
+
+@[simp] theorem coproductRemaindersFinset_contains_root (t : PTree) :
+    t ∈ coproductRemaindersFinset t := by
+  exact (mem_coproductRemaindersFinset t t).2 ⟨[], coproductSupportFinset_contains_trivial t⟩
+
+theorem coproductSupportFinset_card_pos (t : PTree) :
+    0 < (coproductSupportFinset t).card := by
+  classical
+  exact Finset.card_pos.mpr ⟨([], t), coproductSupportFinset_contains_trivial t⟩
+
+theorem coproductForestsFinset_card_pos (t : PTree) :
+    0 < (coproductForestsFinset t).card := by
+  classical
+  exact Finset.card_pos.mpr ⟨[], coproductForestsFinset_contains_nil t⟩
+
+theorem coproductRemaindersFinset_card_pos (t : PTree) :
+    0 < (coproductRemaindersFinset t).card := by
+  classical
+  exact Finset.card_pos.mpr ⟨t, coproductRemaindersFinset_contains_root t⟩
+
 theorem coproductForestsFinset_coe (t : PTree) :
     (coproductForestsFinset t : Set Forest) = coproductForests t := by
   classical
@@ -5116,6 +5352,48 @@ theorem coproductRemaindersFinset_coe (t : PTree) :
     have hf' : (f, r) ∈ coproductSupportFinset t := by
       simpa [mem_coproductSupportFinset] using hf
     exact (mem_coproductRemaindersFinset t r).2 ⟨f, hf'⟩
+
+theorem coproductForestsListSet_eq_finset (t : PTree) :
+    coproductForestsListSet t = (coproductForestsFinset t : Set Forest) := by
+  classical
+  ext f
+  constructor
+  · intro hf
+    have hf' : f ∈ coproductForestsList t := hf
+    rcases (mem_coproductForestsList_iff t f).1 hf' with ⟨r, hr⟩
+    have hr' : (f, r) ∈ coproductSupportFinset t :=
+      (mem_coproductSupportFinset t (f, r)).2 hr
+    have hf'' : f ∈ coproductForestsFinset t :=
+      (mem_coproductForestsFinset t f).2 ⟨r, hr'⟩
+    simpa using hf''
+  · intro hf
+    have hf' : f ∈ coproductForestsFinset t := by
+      simpa using hf
+    rcases (mem_coproductForestsFinset t f).1 hf' with ⟨r, hr⟩
+    have hr' : (f, r) ∈ PTree.coproductData t :=
+      (mem_coproductSupportFinset t (f, r)).1 hr
+    exact (mem_coproductForestsList_iff t f).2 ⟨r, hr'⟩
+
+theorem coproductRemaindersListSet_eq_finset (t : PTree) :
+    coproductRemaindersListSet t = (coproductRemaindersFinset t : Set PTree) := by
+  classical
+  ext r
+  constructor
+  · intro hr
+    have hr' : r ∈ coproductRemaindersList t := hr
+    rcases (mem_coproductRemaindersList_iff t r).1 hr' with ⟨f, hf⟩
+    have hf' : (f, r) ∈ coproductSupportFinset t :=
+      (mem_coproductSupportFinset t (f, r)).2 hf
+    have hr'' : r ∈ coproductRemaindersFinset t :=
+      (mem_coproductRemaindersFinset t r).2 ⟨f, hf'⟩
+    simpa using hr''
+  · intro hr
+    have hr' : r ∈ coproductRemaindersFinset t := by
+      simpa using hr
+    rcases (mem_coproductRemaindersFinset t r).1 hr' with ⟨f, hf⟩
+    have hf' : (f, r) ∈ PTree.coproductData t :=
+      (mem_coproductSupportFinset t (f, r)).1 hf
+    exact (mem_coproductRemaindersList_iff t r).2 ⟨f, hf'⟩
 
 @[simp] theorem coproductForests_contains_nil (t : PTree) :
     [] ∈ coproductForests t := by
@@ -5315,14 +5593,2854 @@ theorem coproductSupportFinset_sum_subtype
     {α : Type*} [AddCommMonoid α]
     (t : PTree) (g : {p // p ∈ coproductSupportFinset t} → α) :
     (Finset.univ : Finset {p // p ∈ coproductSupportFinset t}).sum g =
-      (coproductSupportFinset t).sum (fun p => g ⟨p, by
-        have : p ∈ coproductSupportFinset t := by
-          simp
-        exact this⟩) := by
+      (coproductSupportFinset t).sum
+        (fun p => if h : p ∈ coproductSupportFinset t then g ⟨p, h⟩ else 0) := by
   classical
-  simpa [Finset.univ_eq_attach] using
-    (Finset.sum_attach (s := coproductSupportFinset t) (f := g))
+  let s := coproductSupportFinset t
+  let f : Forest × PTree → α :=
+    fun p => if h : p ∈ s then g ⟨p, h⟩ else 0
+  have hsum :
+      (Finset.univ : Finset {p // p ∈ s}).sum g = s.sum f := by
+    classical
+    refine Finset.sum_bij (fun x _ => x.1) ?_ ?_ ?_ ?_
+    · intro x hx
+      exact x.2
+    · intro x hx y hy hxy
+      exact Subtype.ext (by simpa using hxy)
+    · intro y hy
+      refine ⟨⟨y, hy⟩, by simp, rfl⟩
+    · intro x hx
+      have hx' : x.1 ∈ s := x.2
+      simp [f, hx', Subtype.ext_iff]
+  simpa [s, f] using hsum
 
 end CoproductSupport
 
+end QuotientConnected
+
+namespace QuotientConnected
+namespace CoproductSupport
+
+/-- The raw coproduct list itself, recorded under the support namespace. -/
+def coproductSupportList (t : PTree) : List (Forest × PTree) :=
+  PTree.coproductData t
+
+@[simp] theorem mem_coproductSupportList_iff
+    (t : PTree) (p : Forest × PTree) :
+    p ∈ coproductSupportList t ↔ p ∈ coproductSupport t := by
+  rfl
+
+@[simp] theorem coproductSupportList_contains_trivial (t : PTree) :
+    ([], t) ∈ coproductSupportList t := by
+  simpa [coproductSupportList] using coproductSupport_contains_trivial t
+
+theorem coproductSupportList_nonempty (t : PTree) :
+    (coproductSupportList t).length > 0 := by
+  cases h : coproductSupportList t with
+  | nil =>
+      have hmem : ([], t) ∈ ([] : List (Forest × PTree)) := by
+        simpa [h] using coproductSupportList_contains_trivial t
+      cases hmem
+  | cons a l =>
+      simp [h]
+
+theorem coproductSupportList_length_pos (t : PTree) :
+    0 < (coproductSupportList t).length := by
+  exact coproductSupportList_nonempty t
+
+@[simp] theorem coproductSupportList_length_eq_data (t : PTree) :
+    (coproductSupportList t).length = (PTree.coproductData t).length := by
+  rfl
+
+@[simp] theorem coproductSupportList_map_fst (t : PTree) :
+    (coproductSupportList t).map Prod.fst = coproductForestsList t := by
+  rfl
+
+@[simp] theorem coproductSupportList_map_snd (t : PTree) :
+    (coproductSupportList t).map Prod.snd = coproductRemaindersList t := by
+  rfl
+
+@[simp] theorem coproductForestsList_length_eq_support (t : PTree) :
+    (coproductForestsList t).length = (coproductSupportList t).length := by
+  simp [coproductForestsList, coproductSupportList]
+
+@[simp] theorem coproductRemaindersList_length_eq_support (t : PTree) :
+    (coproductRemaindersList t).length = (coproductSupportList t).length := by
+  simp [coproductRemaindersList, coproductSupportList]
+
+theorem coproductSupportList_mem_fst
+    {t : PTree} {p : Forest × PTree}
+    (hp : p ∈ coproductSupportList t) :
+    p.1 ∈ coproductForestsList t := by
+  exact coproductForestsList_mem_of_support (t := t) (f := p.1) (r := p.2) hp
+
+theorem coproductSupportList_mem_snd
+    {t : PTree} {p : Forest × PTree}
+    (hp : p ∈ coproductSupportList t) :
+    p.2 ∈ coproductRemaindersList t := by
+  exact coproductRemaindersList_mem_of_support (t := t) (f := p.1) (r := p.2) hp
+
+def coproductSupportListSet (t : PTree) : Set (Forest × PTree) :=
+  { p | p ∈ coproductSupportList t }
+
+@[simp] theorem mem_coproductSupportListSet_iff
+    (t : PTree) (p : Forest × PTree) :
+    p ∈ coproductSupportListSet t ↔ p ∈ coproductSupportList t := by
+  rfl
+
+theorem coproductSupportListSet_eq (t : PTree) :
+    coproductSupportListSet t = coproductSupport t := by
+  ext p
+  rfl
+
+theorem coproductSupportListSet_eq_finset (t : PTree) :
+    coproductSupportListSet t = (coproductSupportFinset t : Set (Forest × PTree)) := by
+  calc
+    coproductSupportListSet t = coproductSupport t := coproductSupportListSet_eq t
+    _ = (coproductSupportFinset t : Set (Forest × PTree)) := (coproductSupportFinset_coe t).symm
+
+theorem coproductSupportListSet_nonempty (t : PTree) :
+    (coproductSupportListSet t).Nonempty := by
+  rcases coproductSupport_nonempty t with ⟨p, hp⟩
+  exact ⟨p, (mem_coproductSupportListSet_iff t p).2 (by
+    simpa [coproductSupportList, coproductSupport] using hp)⟩
+
+theorem coproductSupportListSet_finite (t : PTree) :
+    Set.Finite (coproductSupportListSet t) := by
+  classical
+  simpa [coproductSupportListSet_eq t] using coproductSupport_finite t
+
+theorem coproductSupportListSet_subset_product (t : PTree) :
+    Set.Subset (coproductSupportListSet t)
+      (Set.prod (coproductForests t) (coproductRemainders t)) := by
+  simpa [coproductSupportListSet_eq t] using coproductSupport_subset_product t
+
+theorem coproductSupportListSet_contains_trivial (t : PTree) :
+    ([], t) ∈ coproductSupportListSet t := by
+  simpa using coproductSupportList_contains_trivial t
+
+theorem coproductSupportListSet_card_pos (t : PTree) :
+    (coproductSupportListSet t).Nonempty := by
+  exact coproductSupportListSet_nonempty t
+
+theorem coproductSupportListSet_image_fst
+    (t : PTree) :
+    Set.image Prod.fst (coproductSupportListSet t) = coproductForests t := by
+  calc
+    Set.image Prod.fst (coproductSupportListSet t)
+        = Set.image Prod.fst (coproductSupport t) := by
+          simpa [coproductSupportListSet_eq t]
+    _ = coproductForests t := (coproductForests_eq_image_fst t).symm
+
+theorem coproductSupportListSet_image_snd
+    (t : PTree) :
+    Set.image Prod.snd (coproductSupportListSet t) = coproductRemainders t := by
+  calc
+    Set.image Prod.snd (coproductSupportListSet t)
+        = Set.image Prod.snd (coproductSupport t) := by
+          simpa [coproductSupportListSet_eq t]
+    _ = coproductRemainders t := (coproductRemainders_eq_image_snd t).symm
+
+theorem coproductSupportListSet_image_fst_subset
+    (t : PTree) :
+    Set.image Prod.fst (coproductSupportListSet t) ⊆ coproductForests t := by
+  intro f hf
+  rcases hf with ⟨p, hp, rfl⟩
+  have hp' : p ∈ coproductSupport t := by
+    simpa [coproductSupportListSet_eq t] using hp
+  exact coproductForests_mem_of_support (t := t) hp'
+
+theorem coproductSupportListSet_image_snd_subset
+    (t : PTree) :
+    Set.image Prod.snd (coproductSupportListSet t) ⊆ coproductRemainders t := by
+  intro r hr
+  rcases hr with ⟨p, hp, rfl⟩
+  have hp' : p ∈ coproductSupport t := by
+    simpa [coproductSupportListSet_eq t] using hp
+  exact coproductRemainders_mem_of_support (t := t) hp'
+
+-- old version (disabled; contained mojibake bullets)
+theorem coproductSupportList_mem_iff_finset
+    (t : PTree) (p : Forest × PTree) :
+    p ∈ coproductSupportList t ↔ p ∈ coproductSupportFinset t := by
+  constructor
+  · intro hp
+    exact (mem_coproductSupportFinset t p).2 hp
+  · intro hp
+    exact (mem_coproductSupportFinset t p).1 hp
+
+--
+theorem coproductSupportListSet_eq_finset_coe (t : PTree) :
+    coproductSupportListSet t = (coproductSupportFinset t : Set (Forest × PTree)) := by
+  exact coproductSupportListSet_eq_finset t
+
+/- A bundled, list-based summary of coproduct support. -/
+structure CoproductSupportSummary where
+  supportList : List (Forest × PTree)
+  forestsList : List Forest
+  remaindersList : List PTree
+  forestsList_eq : forestsList = supportList.map Prod.fst
+  remaindersList_eq : remaindersList = supportList.map Prod.snd
+
+/- The concrete summary for `PTree.coproductData`. -/
+def coproductSupportSummary (t : PTree) : CoproductSupportSummary :=
+  { supportList := PTree.coproductData t
+    forestsList := coproductForestsList t
+    remaindersList := coproductRemaindersList t
+    forestsList_eq := rfl
+    remaindersList_eq := rfl }
+
+@[simp] theorem coproductSupportSummary_supportList (t : PTree) :
+    (coproductSupportSummary t).supportList = PTree.coproductData t := by
+  rfl
+
+@[simp] theorem coproductSupportSummary_forestsList (t : PTree) :
+    (coproductSupportSummary t).forestsList = coproductForestsList t := by
+  rfl
+
+@[simp] theorem coproductSupportSummary_remaindersList (t : PTree) :
+    (coproductSupportSummary t).remaindersList = coproductRemaindersList t := by
+  rfl
+
+theorem coproductSupportSummary_forestsList_eq (t : PTree) :
+    (coproductSupportSummary t).forestsList =
+      (coproductSupportSummary t).supportList.map Prod.fst := by
+  simpa using (coproductSupportSummary t).forestsList_eq
+
+theorem coproductSupportSummary_remaindersList_eq (t : PTree) :
+    (coproductSupportSummary t).remaindersList =
+      (coproductSupportSummary t).supportList.map Prod.snd := by
+  simpa using (coproductSupportSummary t).remaindersList_eq
+
+def coproductSupportSummary_supportSet (t : PTree) : Set (Forest × PTree) :=
+  { p | p ∈ (coproductSupportSummary t).supportList }
+
+def coproductSupportSummary_forestsSet (t : PTree) : Set Forest :=
+  { f | f ∈ (coproductSupportSummary t).forestsList }
+
+def coproductSupportSummary_remaindersSet (t : PTree) : Set PTree :=
+  { r | r ∈ (coproductSupportSummary t).remaindersList }
+
+@[simp] theorem mem_coproductSupportSummary_supportSet
+    (t : PTree) (p : Forest × PTree) :
+    p ∈ coproductSupportSummary_supportSet t ↔
+      p ∈ (coproductSupportSummary t).supportList := by
+  rfl
+
+@[simp] theorem mem_coproductSupportSummary_forestsSet
+    (t : PTree) (f : Forest) :
+    f ∈ coproductSupportSummary_forestsSet t ↔
+      f ∈ (coproductSupportSummary t).forestsList := by
+  rfl
+
+@[simp] theorem mem_coproductSupportSummary_remaindersSet
+    (t : PTree) (r : PTree) :
+    r ∈ coproductSupportSummary_remaindersSet t ↔
+      r ∈ (coproductSupportSummary t).remaindersList := by
+  rfl
+
+theorem coproductSupportSummary_supportSet_eq (t : PTree) :
+    coproductSupportSummary_supportSet t = coproductSupportListSet t := by
+  rfl
+
+theorem coproductSupportSummary_forestsSet_eq (t : PTree) :
+    coproductSupportSummary_forestsSet t = coproductForestsListSet t := by
+  rfl
+
+theorem coproductSupportSummary_remaindersSet_eq (t : PTree) :
+    coproductSupportSummary_remaindersSet t = coproductRemaindersListSet t := by
+  rfl
+
+theorem coproductSupportSummary_supportSet_eq_finset (t : PTree) :
+    coproductSupportSummary_supportSet t =
+      (coproductSupportFinset t : Set (Forest × PTree)) := by
+  simpa [coproductSupportSummary_supportSet_eq] using
+    coproductSupportListSet_eq_finset t
+
+theorem coproductSupportSummary_supportSet_eq_support (t : PTree) :
+    coproductSupportSummary_supportSet t = coproductSupport t := by
+  simpa [coproductSupportSummary_supportSet_eq] using
+    (coproductSupportListSet_eq t)
+
+theorem coproductSupportSummary_supportSet_nonempty (t : PTree) :
+    Set.Nonempty (coproductSupportSummary_supportSet t) := by
+  simpa [coproductSupportSummary_supportSet_eq] using
+    coproductSupportListSet_nonempty t
+
+theorem coproductForestsListSet_nonempty (t : PTree) :
+    (coproductForestsListSet t).Nonempty := by
+  refine ⟨([] : Forest), ?_⟩
+  exact (mem_coproductForestsListSet_iff t []).2 (coproductForestsList_contains_nil t)
+
+theorem coproductRemaindersListSet_nonempty (t : PTree) :
+    (coproductRemaindersListSet t).Nonempty := by
+  refine ⟨t, ?_⟩
+  exact (mem_coproductRemaindersListSet_iff t t).2 (coproductRemaindersList_contains_root t)
+
+theorem coproductSupportSummary_forestsSet_nonempty (t : PTree) :
+    Set.Nonempty (coproductSupportSummary_forestsSet t) := by
+  simpa [coproductSupportSummary_forestsSet_eq] using
+    coproductForestsListSet_nonempty t
+
+theorem coproductSupportSummary_remaindersSet_nonempty (t : PTree) :
+    Set.Nonempty (coproductSupportSummary_remaindersSet t) := by
+  simpa [coproductSupportSummary_remaindersSet_eq] using
+    coproductRemaindersListSet_nonempty t
+
+theorem coproductSupportSummary_supportSet_finite (t : PTree) :
+    Set.Finite (coproductSupportSummary_supportSet t) := by
+  simpa [coproductSupportSummary_supportSet_eq] using
+    coproductSupportListSet_finite t
+
+theorem coproductForestsListSet_finite (t : PTree) :
+    Set.Finite (coproductForestsListSet t) := by
+  classical
+  refine (List.toFinset (coproductForestsList t)).finite_toSet.subset ?_
+  intro f hf
+  exact List.mem_toFinset.mpr (by
+    simpa [coproductForestsListSet] using hf)
+
+theorem coproductRemaindersListSet_finite (t : PTree) :
+    Set.Finite (coproductRemaindersListSet t) := by
+  classical
+  refine (List.toFinset (coproductRemaindersList t)).finite_toSet.subset ?_
+  intro r hr
+  exact List.mem_toFinset.mpr (by
+    simpa [coproductRemaindersListSet] using hr)
+
+theorem coproductSupportSummary_forestsSet_finite (t : PTree) :
+    Set.Finite (coproductSupportSummary_forestsSet t) := by
+  simpa [coproductSupportSummary_forestsSet_eq] using
+    coproductForestsListSet_finite t
+
+theorem coproductSupportSummary_remaindersSet_finite (t : PTree) :
+    Set.Finite (coproductSupportSummary_remaindersSet t) := by
+  simpa [coproductSupportSummary_remaindersSet_eq] using
+    coproductRemaindersListSet_finite t
+
+theorem coproductSupportSummary_supportSet_contains_trivial (t : PTree) :
+    ([], t) ∈ coproductSupportSummary_supportSet t := by
+  simpa [coproductSupportSummary_supportSet_eq] using
+    coproductSupportListSet_contains_trivial t
+
+theorem coproductSupportListSet_subset_product_list (t : PTree) :
+    Set.Subset (coproductSupportListSet t)
+      (Set.prod (coproductForestsListSet t) (coproductRemaindersListSet t)) := by
+  intro p hp
+  have hp' : p ∈ coproductSupportList t := by
+    simpa [coproductSupportListSet] using hp
+  have hf : p.1 ∈ coproductForestsList t :=
+    coproductSupportList_mem_fst (t := t) hp'
+  have hr : p.2 ∈ coproductRemaindersList t :=
+    coproductSupportList_mem_snd (t := t) hp'
+  exact And.intro
+    ((mem_coproductForestsListSet_iff t p.1).2 hf)
+    ((mem_coproductRemaindersListSet_iff t p.2).2 hr)
+
+theorem coproductSupportSummary_supportSet_subset_product_list (t : PTree) :
+    Set.Subset (coproductSupportSummary_supportSet t)
+      (Set.prod (coproductSupportSummary_forestsSet t)
+        (coproductSupportSummary_remaindersSet t)) := by
+  simpa [coproductSupportSummary_supportSet_eq,
+    coproductSupportSummary_forestsSet_eq,
+    coproductSupportSummary_remaindersSet_eq] using
+    coproductSupportListSet_subset_product_list t
+
+theorem coproductSupportListSet_subset_product_finset (t : PTree) :
+    Set.Subset (coproductSupportListSet t)
+      (Set.prod (coproductForestsFinset t : Set Forest)
+        (coproductRemaindersFinset t : Set PTree)) := by
+  intro p hp
+  have hp' : p ∈ coproductSupport t := by
+    simpa [coproductSupportListSet_eq t] using hp
+  have hf : p.1 ∈ coproductForests t :=
+    coproductForests_mem_of_support (t := t) hp'
+  have hr : p.2 ∈ coproductRemainders t :=
+    coproductRemainders_mem_of_support (t := t) hp'
+  have hf' : p.1 ∈ (coproductForestsFinset t : Set Forest) := by
+    simpa [coproductForestsFinset_coe] using hf
+  have hr' : p.2 ∈ (coproductRemaindersFinset t : Set PTree) := by
+    simpa [coproductRemaindersFinset_coe] using hr
+  exact And.intro hf' hr'
+
+theorem coproductSupportSummary_supportSet_subset_product_finset (t : PTree) :
+    Set.Subset (coproductSupportSummary_supportSet t)
+      (Set.prod (coproductForestsFinset t : Set Forest)
+        (coproductRemaindersFinset t : Set PTree)) := by
+  simpa [coproductSupportSummary_supportSet_eq] using
+    coproductSupportListSet_subset_product_finset t
+
+theorem coproductSupportSummary_supportSet_image_fst (t : PTree) :
+    Set.image Prod.fst (coproductSupportSummary_supportSet t) = coproductForests t := by
+  simpa [coproductSupportSummary_supportSet_eq] using
+    coproductSupportListSet_image_fst t
+
+theorem coproductSupportSummary_supportSet_image_snd (t : PTree) :
+    Set.image Prod.snd (coproductSupportSummary_supportSet t) = coproductRemainders t := by
+  simpa [coproductSupportSummary_supportSet_eq] using
+    coproductSupportListSet_image_snd t
+
+theorem coproductSupportListSet_image_fst_list (t : PTree) :
+    Set.image Prod.fst (coproductSupportListSet t) = coproductForestsListSet t := by
+  ext f
+  constructor
+  · intro hf
+    rcases hf with ⟨p, hp, rfl⟩
+    have hp' : p ∈ coproductSupportList t := by
+      simpa [coproductSupportListSet] using hp
+    exact (mem_coproductForestsListSet_iff t p.1).2
+      (coproductSupportList_mem_fst (t := t) hp')
+  · intro hf
+    have hf' : f ∈ coproductForestsList t := by
+      simpa [coproductForestsListSet] using hf
+    rcases (mem_coproductForestsList_iff t f).1 hf' with ⟨r, hr⟩
+    refine ⟨(f, r), ?_, rfl⟩
+    exact (mem_coproductSupportListSet_iff t (f, r)).2 hr
+
+theorem coproductSupportListSet_image_snd_list (t : PTree) :
+    Set.image Prod.snd (coproductSupportListSet t) = coproductRemaindersListSet t := by
+  ext r
+  constructor
+  · intro hr
+    rcases hr with ⟨p, hp, rfl⟩
+    have hp' : p ∈ coproductSupportList t := by
+      simpa [coproductSupportListSet] using hp
+    exact (mem_coproductRemaindersListSet_iff t p.2).2
+      (coproductSupportList_mem_snd (t := t) hp')
+  · intro hr
+    have hr' : r ∈ coproductRemaindersList t := by
+      simpa [coproductRemaindersListSet] using hr
+    rcases (mem_coproductRemaindersList_iff t r).1 hr' with ⟨f, hf⟩
+    refine ⟨(f, r), ?_, rfl⟩
+    exact (mem_coproductSupportListSet_iff t (f, r)).2 hf
+
+
+theorem coproductSupportSummary_supportSet_image_fst_list (t : PTree) :
+    Set.image Prod.fst (coproductSupportSummary_supportSet t) =
+      coproductForestsListSet t := by
+  simpa [coproductSupportSummary_supportSet_eq] using
+    coproductSupportListSet_image_fst_list t
+
+theorem coproductSupportSummary_supportSet_image_snd_list (t : PTree) :
+    Set.image Prod.snd (coproductSupportSummary_supportSet t) =
+      coproductRemaindersListSet t := by
+  simpa [coproductSupportSummary_supportSet_eq] using
+    coproductSupportListSet_image_snd_list t
+
+theorem coproductSupportListSet_mem_iff_finset
+    (t : PTree) (p : Forest × PTree) :
+    p ∈ coproductSupportListSet t ↔ p ∈ coproductSupportFinset t := by
+  refine Iff.intro ?mp ?mpr
+  case mp =>
+    intro hp
+    have hp' : p ∈ coproductSupportList t := by
+      simpa [coproductSupportListSet] using hp
+    exact (mem_coproductSupportFinset t p).2 hp'
+  case mpr =>
+    intro hp
+    have hp' : p ∈ coproductSupportList t :=
+      (mem_coproductSupportFinset t p).1 hp
+    exact (mem_coproductSupportListSet_iff t p).2 hp'
+
+theorem coproductForestsListSet_eq_image_fst_list (t : PTree) :
+    coproductForestsListSet t = Set.image Prod.fst (coproductSupportListSet t) := by
+  simpa [coproductSupportListSet_image_fst_list] using
+    (coproductSupportListSet_image_fst_list t).symm
+
+theorem coproductRemaindersListSet_eq_image_snd_list (t : PTree) :
+    coproductRemaindersListSet t = Set.image Prod.snd (coproductSupportListSet t) := by
+  simpa [coproductSupportListSet_image_snd_list] using
+    (coproductSupportListSet_image_snd_list t).symm
+
+theorem coproductSupportSummary_supportSet_mem_iff_finset
+    (t : PTree) (p : Forest × PTree) :
+    p ∈ coproductSupportSummary_supportSet t ↔ p ∈ coproductSupportFinset t := by
+  simpa [coproductSupportSummary_supportSet_eq] using
+    (coproductSupportListSet_mem_iff_finset t p)
+
+theorem coproductSupportSummary_supportList_toFinset (t : PTree) :
+    (coproductSupportSummary t).supportList.toFinset = coproductSupportFinset t := by
+  rfl
+
+theorem coproductSupportSummary_forestsList_toFinset (t : PTree) :
+    (coproductSupportSummary t).forestsList.toFinset =
+      (coproductSupportFinset t).image Prod.fst := by
+  classical
+  ext f
+  constructor
+  · intro hf
+    have hf' : f ∈ coproductForestsList t := (List.mem_toFinset).1 hf
+    obtain ⟨r, hr⟩ := (mem_coproductForestsList_iff t f).1 hf'
+    exact Finset.mem_image.2 ⟨(f, r), (mem_coproductSupportFinset t (f, r)).2 hr, rfl⟩
+  · intro hf
+    obtain ⟨p, hp, hpf⟩ := Finset.mem_image.1 hf
+    have hdata := (mem_coproductSupportFinset t p).1 hp
+    have hflist : f ∈ coproductForestsList t := by
+      refine (mem_coproductForestsList_iff t f).2 ⟨p.2, ?_⟩
+      have heq : p = (f, p.2) := Prod.ext hpf rfl
+      rwa [← heq]
+    exact (List.mem_toFinset).2 hflist
+
+theorem coproductSupportSummary_remaindersList_toFinset (t : PTree) :
+    (coproductSupportSummary t).remaindersList.toFinset =
+      (coproductSupportFinset t).image Prod.snd := by
+  classical
+  ext r
+  constructor
+  · intro hr
+    have hr' : r ∈ coproductRemaindersList t := (List.mem_toFinset).1 hr
+    obtain ⟨f, hf⟩ := (mem_coproductRemaindersList_iff t r).1 hr'
+    exact Finset.mem_image.2 ⟨(f, r), (mem_coproductSupportFinset t (f, r)).2 hf, rfl⟩
+  · intro hr
+    obtain ⟨p, hp, hpr⟩ := Finset.mem_image.1 hr
+    have hdata := (mem_coproductSupportFinset t p).1 hp
+    have hrlist : r ∈ coproductRemaindersList t := by
+      refine (mem_coproductRemaindersList_iff t r).2 ⟨p.1, ?_⟩
+      have heq : p = (p.1, r) := Prod.ext rfl hpr
+      rwa [← heq]
+    exact (List.mem_toFinset).2 hrlist
+
+theorem coproductSupportSummary_supportList_length_pos (t : PTree) :
+    (coproductSupportSummary t).supportList.length > 0 := by
+  simpa using coproductSupportList_nonempty t
+
+theorem coproductSupportSummary_forestsList_length_pos (t : PTree) :
+    (coproductSupportSummary t).forestsList.length > 0 := by
+  simpa using coproductForestsList_nonempty t
+
+theorem coproductSupportSummary_remaindersList_length_pos (t : PTree) :
+    (coproductSupportSummary t).remaindersList.length > 0 := by
+  simpa using coproductRemaindersList_nonempty t
+
+noncomputable def coproductSupportSummary_supportFinset (t : PTree) : Finset (Forest × PTree) :=
+  (coproductSupportSummary t).supportList.toFinset
+
+noncomputable def coproductSupportSummary_forestsFinset (t : PTree) : Finset Forest :=
+  (coproductSupportSummary_supportFinset t).image Prod.fst
+
+noncomputable def coproductSupportSummary_remaindersFinset (t : PTree) : Finset PTree :=
+  (coproductSupportSummary_supportFinset t).image Prod.snd
+
+@[simp] theorem coproductSupportSummary_supportFinset_eq (t : PTree) :
+    coproductSupportSummary_supportFinset t = coproductSupportFinset t := by
+  simpa [coproductSupportSummary_supportFinset] using
+    (coproductSupportSummary_supportList_toFinset t)
+
+@[simp] theorem coproductSupportSummary_forestsFinset_eq (t : PTree) :
+    coproductSupportSummary_forestsFinset t = coproductForestsFinset t := by
+  simpa [coproductSupportSummary_forestsFinset,
+    coproductSupportSummary_supportFinset_eq] using
+    (coproductForestsFinset_eq_image_fst t)
+
+@[simp] theorem coproductSupportSummary_remaindersFinset_eq (t : PTree) :
+    coproductSupportSummary_remaindersFinset t = coproductRemaindersFinset t := by
+  simpa [coproductSupportSummary_remaindersFinset,
+    coproductSupportSummary_supportFinset_eq] using
+    (coproductRemaindersFinset_eq_image_snd t)
+
+theorem coproductSupportSummary_forestsSet_eq_image_fst_supportSet (t : PTree) :
+    coproductSupportSummary_forestsSet t =
+      Set.image Prod.fst (coproductSupportSummary_supportSet t) := by
+  simpa [coproductSupportSummary_forestsSet_eq,
+    coproductSupportSummary_supportSet_eq] using
+    (coproductForestsListSet_eq_image_fst_list t)
+
+theorem coproductSupportSummary_remaindersSet_eq_image_snd_supportSet (t : PTree) :
+    coproductSupportSummary_remaindersSet t =
+      Set.image Prod.snd (coproductSupportSummary_supportSet t) := by
+  simpa [coproductSupportSummary_remaindersSet_eq,
+    coproductSupportSummary_supportSet_eq] using
+    (coproductRemaindersListSet_eq_image_snd_list t)
+
+theorem coproductSupportSummary_forestsSet_eq_finset (t : PTree) :
+    coproductSupportSummary_forestsSet t = (coproductForestsFinset t : Set Forest) := by
+  simpa [coproductSupportSummary_forestsSet_eq] using
+    (coproductForestsListSet_eq_finset t)
+
+theorem coproductSupportSummary_remaindersSet_eq_finset (t : PTree) :
+    coproductSupportSummary_remaindersSet t = (coproductRemaindersFinset t : Set PTree) := by
+  simpa [coproductSupportSummary_remaindersSet_eq] using
+    (coproductRemaindersListSet_eq_finset t)
+
+@[simp] theorem mem_coproductSupportSummary_supportFinset
+    (t : PTree) (p : Forest × PTree) :
+    p ∈ coproductSupportSummary_supportFinset t ↔
+      p ∈ (coproductSupportSummary t).supportList := by
+  classical
+  simp [coproductSupportSummary_supportFinset]
+
+
+theorem coproductSupportSummary_supportFinset_coe (t : PTree) :
+    (coproductSupportSummary_supportFinset t : Set (Forest × PTree)) =
+      coproductSupportSummary_supportSet t := by
+  classical
+  ext p
+  simp [coproductSupportSummary_supportFinset, coproductSupportSummary_supportSet]
+
+theorem coproductSupportSummary_forestsFinset_coe (t : PTree) :
+    (coproductSupportSummary_forestsFinset t : Set Forest) =
+      coproductSupportSummary_forestsSet t := by
+  classical
+  ext f
+  -- reduce to finset coercions directly
+  simp [coproductSupportSummary_forestsFinset_eq,
+        coproductSupportSummary_forestsSet_eq,
+        coproductForestsFinset_coe,
+        coproductForestsListSet_eq_finset]
+
+theorem coproductSupportSummary_remaindersFinset_coe (t : PTree) :
+    (coproductSupportSummary_remaindersFinset t : Set PTree) =
+      coproductSupportSummary_remaindersSet t := by
+  classical
+  ext r
+  simp [coproductSupportSummary_remaindersFinset_eq,
+        coproductSupportSummary_remaindersSet_eq,
+        coproductRemaindersFinset_coe,
+        coproductRemaindersListSet_eq_finset]
+
+/-!
+### Support-level coproduct packaging
+
+The list/finset summaries above are enough to define finitary sums over the
+coproduct support without committing to any algebraic structure.  We package
+just the support-layer information we currently have, and provide a canonical
+finitary summation operator that will later be reused in linearization.
+-/
+
+structure CoproductSupportData where
+  support : PTree -> Set (Prod Forest PTree)
+  support_finite : forall t : PTree, Set.Finite (support t)
+  forests : PTree -> Set Forest
+  remainders : PTree -> Set PTree
+  support_subset_product :
+    forall t : PTree,
+      Set.Subset (support t) (Set.prod (forests t) (remainders t))
+  forests_eq_image_fst :
+    forall t : PTree, forests t = Set.image Prod.fst (support t)
+  remainders_eq_image_snd :
+    forall t : PTree, remainders t = Set.image Prod.snd (support t)
+  support_nonempty : forall t : PTree, Set.Nonempty (support t)
+
+def coproductSupportSummaryData : CoproductSupportData where
+  support := coproductSupportSummary_supportSet
+  support_finite := coproductSupportSummary_supportSet_finite
+  forests := coproductSupportSummary_forestsSet
+  remainders := coproductSupportSummary_remaindersSet
+  support_subset_product := coproductSupportSummary_supportSet_subset_product_list
+  forests_eq_image_fst := coproductSupportSummary_forestsSet_eq_image_fst_supportSet
+  remainders_eq_image_snd := coproductSupportSummary_remaindersSet_eq_image_snd_supportSet
+  support_nonempty := coproductSupportSummary_supportSet_nonempty
+
+/-!
+We now define a purely finitary summation operator over the coproduct support.
+This is the cleanest point to attach later linear and algebraic structure.
+-/
+
+noncomputable def coproductSupportSummary_sum
+    {alpha : Type*} [AddCommMonoid alpha]
+    (t : PTree) (f : Prod Forest PTree -> alpha) : alpha :=
+  (coproductSupportSummary_supportFinset t).sum f
+
+@[simp] theorem coproductSupportSummary_sum_eq
+    {alpha : Type*} [AddCommMonoid alpha]
+    (t : PTree) (f : Prod Forest PTree -> alpha) :
+    coproductSupportSummary_sum t f =
+      (coproductSupportSummary_supportFinset t).sum f := by
+  rfl
+
+theorem coproductSupportSummary_sum_congr
+    {alpha : Type*} [AddCommMonoid alpha]
+    (t : PTree) (f g : Prod Forest PTree -> alpha)
+    (h : forall p, p ∈ coproductSupportSummary_supportFinset t -> f p = g p) :
+    coproductSupportSummary_sum t f = coproductSupportSummary_sum t g := by
+  classical
+  unfold coproductSupportSummary_sum
+  refine Finset.sum_congr rfl ?_
+  intro p hp
+  exact h p hp
+
+theorem coproductSupportSummary_sum_eq_supportFinset
+    {alpha : Type*} [AddCommMonoid alpha]
+    (t : PTree) (f : Prod Forest PTree -> alpha) :
+    coproductSupportSummary_sum t f =
+      (coproductSupportFinset t).sum f := by
+  classical
+  simp [coproductSupportSummary_sum, coproductSupportSummary_supportFinset_eq]
+
+theorem coproductSupportSummary_sum_eq_supportList
+    {alpha : Type*} [AddCommMonoid alpha]
+    (t : PTree) (f : Prod Forest PTree -> alpha) :
+    coproductSupportSummary_sum t f =
+      (coproductSupportSummary t).supportList.toFinset.sum f := by
+  rfl
+
+theorem coproductSupportSummary_sum_one_eq_card (t : PTree) :
+    coproductSupportSummary_sum t (fun _ => (1 : Nat)) =
+      (coproductSupportSummary_supportFinset t).card := by
+  classical
+  simp [coproductSupportSummary_sum]
+
+theorem coproductSupportSummary_sum_eq_card (t : PTree) :
+    coproductSupportSummary_sum t (fun _ => (1 : Nat)) =
+      (coproductSupportFinset t).card := by
+  classical
+  simpa [coproductSupportSummary_supportFinset_eq,
+    coproductSupportSummary_sum] using
+    (coproductSupportSummary_sum_one_eq_card t)
+
+theorem coproductSupportSummary_sum_zero
+    {alpha : Type*} [AddCommMonoid alpha]
+    (t : PTree) :
+    coproductSupportSummary_sum t (fun _ => (0 : alpha)) = 0 := by
+  classical
+  simp [coproductSupportSummary_sum]
+
+theorem coproductSupportSummary_sum_add
+    {alpha : Type*} [AddCommMonoid alpha]
+    (t : PTree) (f g : Prod Forest PTree -> alpha) :
+    coproductSupportSummary_sum t (fun p => f p + g p) =
+      coproductSupportSummary_sum t f + coproductSupportSummary_sum t g := by
+  classical
+  simp [coproductSupportSummary_sum, Finset.sum_add_distrib]
+
+theorem coproductSupportSummary_sum_congr_supportSet
+    {alpha : Type*} [AddCommMonoid alpha]
+    (t : PTree) (f g : Prod Forest PTree -> alpha)
+    (h : forall p, p ∈ coproductSupportSummary_supportSet t -> f p = g p) :
+    coproductSupportSummary_sum t f = coproductSupportSummary_sum t g := by
+  classical
+  refine coproductSupportSummary_sum_congr t f g ?_
+  intro p hp
+  have hp_list : p ∈ (coproductSupportSummary t).supportList := by
+    exact (mem_coproductSupportSummary_supportFinset t p).1 hp
+  have hp_set : p ∈ coproductSupportSummary_supportSet t := by
+    exact (mem_coproductSupportSummary_supportSet t p).2 hp_list
+  exact h p hp_set
+
+@[simp] theorem coproductSupportSummary_forestsFinset_eq_image_fst_supportFinset
+    (t : PTree) :
+    coproductSupportSummary_forestsFinset t =
+      (coproductSupportSummary_supportFinset t).image Prod.fst := by
+  rfl
+
+@[simp] theorem coproductSupportSummary_remaindersFinset_eq_image_snd_supportFinset
+    (t : PTree) :
+    coproductSupportSummary_remaindersFinset t =
+      (coproductSupportSummary_supportFinset t).image Prod.snd := by
+  rfl
+
+theorem coproductSupportSummary_supportFinset_nonempty (t : PTree) :
+    (coproductSupportSummary_supportFinset t).Nonempty := by
+  classical
+  rcases coproductSupportSummary_supportSet_nonempty t with ⟨p, hp⟩
+  have hp_list : p ∈ (coproductSupportSummary t).supportList := by
+    exact (mem_coproductSupportSummary_supportSet t p).1 hp
+  exact ⟨p, (mem_coproductSupportSummary_supportFinset t p).2 hp_list⟩
+
+theorem coproductSupportSummary_forestsFinset_nonempty (t : PTree) :
+    (coproductSupportSummary_forestsFinset t).Nonempty := by
+  classical
+  refine ⟨[], ?_⟩
+  simpa [coproductSupportSummary_forestsFinset_eq] using
+    (coproductForestsFinset_contains_nil t)
+
+theorem coproductSupportSummary_remaindersFinset_nonempty (t : PTree) :
+    (coproductSupportSummary_remaindersFinset t).Nonempty := by
+  classical
+  refine ⟨t, ?_⟩
+  simpa [coproductSupportSummary_remaindersFinset_eq] using
+    (coproductRemaindersFinset_contains_root t)
+
+theorem coproductSupportSummary_supportFinset_card_pos (t : PTree) :
+    0 < (coproductSupportSummary_supportFinset t).card := by
+  classical
+  exact Finset.card_pos.mpr (coproductSupportSummary_supportFinset_nonempty t)
+
+theorem coproductSupportSummary_forestsFinset_card_pos (t : PTree) :
+    0 < (coproductSupportSummary_forestsFinset t).card := by
+  classical
+  exact Finset.card_pos.mpr (coproductSupportSummary_forestsFinset_nonempty t)
+
+theorem coproductSupportSummary_remaindersFinset_card_pos (t : PTree) :
+    0 < (coproductSupportSummary_remaindersFinset t).card := by
+  classical
+  exact Finset.card_pos.mpr (coproductSupportSummary_remaindersFinset_nonempty t)
+
+theorem coproductSupportSummary_supportFinset_subset_product_finset (t : PTree) :
+    Set.Subset (coproductSupportSummary_supportFinset t : Set (Forest × PTree))
+      (Set.prod (coproductSupportSummary_forestsFinset t : Set Forest)
+        (coproductSupportSummary_remaindersFinset t : Set PTree)) := by
+  intro p hp
+  have hp1 : p ∈ (coproductSupportFinset t : Set (Forest × PTree)) := by
+    simpa [coproductSupportSummary_supportFinset_eq] using hp
+  have hp2 : p ∈ coproductSupport t := by
+    simpa [coproductSupportFinset_coe] using hp1
+  have hp3 : p ∈ coproductSupportSummary_supportSet t := by
+    simpa [coproductSupportSummary_supportSet_eq_support] using hp2
+  have hprod :
+      p ∈ Set.prod (coproductSupportSummary_forestsSet t)
+            (coproductSupportSummary_remaindersSet t) :=
+    (coproductSupportSummary_supportSet_subset_product_list t) hp3
+  simpa [coproductSupportSummary_forestsSet_eq_finset,
+    coproductSupportSummary_remaindersSet_eq_finset] using hprod
+
+
+
+/-!
+### Linear extension of support-level sums
+
+We can linearly extend any support-level assignment to the free carrier
+`linearProofTreeCarrier` by summing coefficients against the tree generators.
+This is the exact shape needed later for a coproduct linear map.
+-/
+
+section CoproductSupportLinear
+
+noncomputable def coproductSupportSummary_sum_linear
+    {alpha : Type*} [AddCommMonoid alpha] [Module Int alpha]
+    (f : Prod Forest PTree -> alpha) :
+    LinearMap (RingHom.id Int) linearProofTreeCarrier alpha :=
+  Finsupp.lsum Int (fun x : PTree =>
+    (LinearMap.id : LinearMap (RingHom.id Int) Int Int).smulRight
+      (coproductSupportSummary_sum x f))
+
+@[simp] theorem coproductSupportSummary_sum_linear_treeGen
+    {alpha : Type*} [AddCommMonoid alpha] [Module Int alpha]
+    (f : Prod Forest PTree -> alpha) (x : PTree) :
+    coproductSupportSummary_sum_linear f (treeGen x) =
+      coproductSupportSummary_sum x f := by
+  classical
+  simp only [coproductSupportSummary_sum_linear, treeGen, Finsupp.lsum_single,
+    LinearMap.smulRight_apply, LinearMap.id_apply]
+  exact one_smul ℤ _
+
+
+
+theorem coproductSupportSummary_sum_linear_apply
+    {alpha : Type*} [AddCommMonoid alpha] [Module Int alpha]
+    (f : Prod Forest PTree -> alpha) (a : linearProofTreeCarrier) :
+    coproductSupportSummary_sum_linear f a =
+      a.sum (fun x c => c • coproductSupportSummary_sum x f) := by
+  simp [coproductSupportSummary_sum_linear, Finsupp.lsum_apply]
+
+@[simp] theorem coproductSupportSummary_sum_linear_add
+    {alpha : Type*} [AddCommMonoid alpha] [Module Int alpha]
+    (f : Prod Forest PTree -> alpha) (a b : linearProofTreeCarrier) :
+    coproductSupportSummary_sum_linear f (a + b) =
+      coproductSupportSummary_sum_linear f a +
+        coproductSupportSummary_sum_linear f b := by
+  simpa using (coproductSupportSummary_sum_linear f).map_add a b
+
+@[simp] theorem coproductSupportSummary_sum_linear_smul
+    {alpha : Type*} [AddCommMonoid alpha] [Module Int alpha]
+    (f : Prod Forest PTree -> alpha) (z : Int) (a : linearProofTreeCarrier) :
+    coproductSupportSummary_sum_linear f (z • a) =
+      z • coproductSupportSummary_sum_linear f a := by
+  simpa using (coproductSupportSummary_sum_linear f).map_smul z a
+
+end CoproductSupportLinear
+
+/-!
+### Forest generators and a raw linear coproduct
+
+We now introduce a simple "forest generator" map that sums tree generators
+over a list. This lets us define a raw linear coproduct valued in the tensor
+product of the free carrier with itself, still purely at the support level.
+-/
+
+section CoproductSupportTensor
+
+noncomputable def forestGen : Forest -> linearProofTreeCarrier
+  | [] => 0
+  | t :: ts => treeGen t + forestGen ts
+
+@[simp] theorem forestGen_nil :
+    forestGen ([] : Forest) = 0 := by
+  rfl
+
+@[simp] theorem forestGen_cons (t : PTree) (ts : Forest) :
+    forestGen (t :: ts) = treeGen t + forestGen ts := by
+  rfl
+
+theorem forestGen_append (xs ys : Forest) :
+    forestGen (xs ++ ys) = forestGen xs + forestGen ys := by
+  induction xs with
+  | nil =>
+      simp [forestGen]
+  | cons t ts ih =>
+      simp [forestGen, ih, add_assoc, add_left_comm, add_comm]
+
+noncomputable def coproductSupportSummary_tensorGen
+    (p : Prod Forest PTree) :
+    TensorProduct Int linearProofTreeCarrier linearProofTreeCarrier :=
+  TensorProduct.tmul Int (forestGen p.1) (treeGen p.2)
+
+noncomputable def coproductSupportSummary_comul_linear :
+    LinearMap (RingHom.id Int) linearProofTreeCarrier
+      (TensorProduct Int linearProofTreeCarrier linearProofTreeCarrier) :=
+  coproductSupportSummary_sum_linear
+    (alpha := TensorProduct Int linearProofTreeCarrier linearProofTreeCarrier)
+    coproductSupportSummary_tensorGen
+
+noncomputable def coproductSupportSummary_counit_linear :
+    LinearMap (RingHom.id Int) linearProofTreeCarrier Int :=
+  coproductSupportSummary_sum_linear
+    (alpha := Int)
+    (fun p => if p.1 = [] then 0 else 0)
+
+@[simp] theorem coproductSupportSummary_comul_linear_treeGen (x : PTree) :
+    coproductSupportSummary_comul_linear (treeGen x) =
+      coproductSupportSummary_sum x coproductSupportSummary_tensorGen := by
+  simp [coproductSupportSummary_comul_linear,
+    coproductSupportSummary_sum_linear_treeGen]
+
+theorem coproductSupportSummary_comul_linear_apply (a : linearProofTreeCarrier) :
+    coproductSupportSummary_comul_linear a =
+      a.sum (fun x c => c •
+        coproductSupportSummary_sum x coproductSupportSummary_tensorGen) := by
+  simp [coproductSupportSummary_comul_linear,
+    coproductSupportSummary_sum_linear_apply]
+
+@[simp] theorem coproductSupportSummary_comul_linear_add
+    (a b : linearProofTreeCarrier) :
+    coproductSupportSummary_comul_linear (a + b) =
+      coproductSupportSummary_comul_linear a +
+        coproductSupportSummary_comul_linear b := by
+  simpa using (coproductSupportSummary_comul_linear).map_add a b
+
+@[simp] theorem coproductSupportSummary_comul_linear_smul
+    (z : Int) (a : linearProofTreeCarrier) :
+    coproductSupportSummary_comul_linear (z • a) =
+      z • coproductSupportSummary_comul_linear a := by
+  simpa using (coproductSupportSummary_comul_linear).map_smul z a
+
+@[simp] theorem coproductSupportSummary_counit_linear_treeGen (x : PTree) :
+    coproductSupportSummary_counit_linear (treeGen x) = 0 := by
+  classical
+  -- the chosen counit is zero on generators at this stage
+  simp [coproductSupportSummary_counit_linear,
+    coproductSupportSummary_sum_linear_treeGen]
+
+theorem coproductSupportSummary_counit_linear_apply (a : linearProofTreeCarrier) :
+    coproductSupportSummary_counit_linear a =
+      a.sum (fun x c =>
+        c • coproductSupportSummary_sum x (fun p => if p.1 = [] then 0 else 0)) := by
+  simp [coproductSupportSummary_counit_linear,
+    coproductSupportSummary_sum_linear_apply]
+
+@[simp] theorem coproductSupportSummary_counit_linear_add
+    (a b : linearProofTreeCarrier) :
+    coproductSupportSummary_counit_linear (a + b) =
+      coproductSupportSummary_counit_linear a +
+        coproductSupportSummary_counit_linear b := by
+  simpa using (coproductSupportSummary_counit_linear).map_add a b
+
+@[simp] theorem coproductSupportSummary_counit_linear_smul
+    (z : Int) (a : linearProofTreeCarrier) :
+    coproductSupportSummary_counit_linear (z • a) =
+      z • coproductSupportSummary_counit_linear a := by
+  simpa using (coproductSupportSummary_counit_linear).map_smul z a
+
+/-!
+### Raw support-level coalgebra data
+
+At this stage we package the linear comultiplication and counit maps without
+asserting any axioms.  This is a convenient target for quotient descent.
+-/
+
+structure CoproductSupportCoalgebraData where
+  comul : LinearMap (RingHom.id Int) linearProofTreeCarrier
+    (TensorProduct Int linearProofTreeCarrier linearProofTreeCarrier)
+  counit : LinearMap (RingHom.id Int) linearProofTreeCarrier Int
+
+noncomputable def coproductSupportSummary_coalgebraData : CoproductSupportCoalgebraData where
+  comul := coproductSupportSummary_comul_linear
+  counit := coproductSupportSummary_counit_linear
+
+@[simp] theorem coproductSupportSummary_coalgebraData_comul (a : linearProofTreeCarrier) :
+    coproductSupportSummary_coalgebraData.comul a =
+      coproductSupportSummary_comul_linear a := by
+  rfl
+
+@[simp] theorem coproductSupportSummary_coalgebraData_counit (a : linearProofTreeCarrier) :
+    coproductSupportSummary_coalgebraData.counit a =
+      coproductSupportSummary_counit_linear a := by
+  rfl
+
+/-!
+### Descent to the stable quotient
+
+To descend the raw support-level coalgebra data to the stable quotient, we ask
+that the comultiplication and counit kill the stable submodule.
+-/
+
+def CoproductSupportCoalgebraRespectsStableQuotient
+    (D : CoproductSupportCoalgebraData) : Prop :=
+  forall a : linearProofTreeCarrier,
+    a ∈ preLieDifferenceStableSubmodule ->
+      D.comul a = 0 ∧ D.counit a = 0
+
+noncomputable def coproductSupportSummary_comul_descend
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData) :
+    LinearMap (RingHom.id Int) PreLieDifferenceStableQuotient
+      (TensorProduct Int linearProofTreeCarrier linearProofTreeCarrier) :=
+  Submodule.liftQ
+    preLieDifferenceStableSubmodule
+    coproductSupportSummary_comul_linear
+    (by
+      intro a ha
+      exact (h a ha).1)
+
+noncomputable def coproductSupportSummary_counit_descend
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData) :
+    LinearMap (RingHom.id Int) PreLieDifferenceStableQuotient Int :=
+  Submodule.liftQ
+    preLieDifferenceStableSubmodule
+    coproductSupportSummary_counit_linear
+    (by
+      intro a ha
+      exact (h a ha).2)
+
+@[simp] theorem coproductSupportSummary_comul_descend_mk
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (a : linearProofTreeCarrier) :
+    coproductSupportSummary_comul_descend h
+        (mkPreLieDifferenceStableQuotient a) =
+      coproductSupportSummary_comul_linear a := by
+  simpa [coproductSupportSummary_comul_descend,
+    mkPreLieDifferenceStableQuotient] using
+    (Submodule.liftQ_apply
+      (p := preLieDifferenceStableSubmodule)
+      (f := coproductSupportSummary_comul_linear)
+      (h := by
+        intro a ha
+        exact (h a ha).1)
+      (x := a))
+
+@[simp] theorem coproductSupportSummary_counit_descend_mk
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (a : linearProofTreeCarrier) :
+    coproductSupportSummary_counit_descend h
+        (mkPreLieDifferenceStableQuotient a) =
+      coproductSupportSummary_counit_linear a := by
+  simpa [coproductSupportSummary_counit_descend,
+    mkPreLieDifferenceStableQuotient] using
+    (Submodule.liftQ_apply
+      (p := preLieDifferenceStableSubmodule)
+      (f := coproductSupportSummary_counit_linear)
+      (h := by
+        intro a ha
+        exact (h a ha).2)
+      (x := a))
+
+structure CoproductSupportQuotientCoalgebraData where
+  comul : LinearMap (RingHom.id Int) PreLieDifferenceStableQuotient
+    (TensorProduct Int linearProofTreeCarrier linearProofTreeCarrier)
+  counit : LinearMap (RingHom.id Int) PreLieDifferenceStableQuotient Int
+
+noncomputable def coproductSupportSummary_quotientCoalgebraData
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData) :
+    CoproductSupportQuotientCoalgebraData where
+  comul := coproductSupportSummary_comul_descend h
+  counit := coproductSupportSummary_counit_descend h
+
+@[simp] theorem coproductSupportSummary_quotientCoalgebraData_comul
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (a : PreLieDifferenceStableQuotient) :
+    (coproductSupportSummary_quotientCoalgebraData h).comul a =
+      coproductSupportSummary_comul_descend h a := by
+  rfl
+
+@[simp] theorem coproductSupportSummary_quotientCoalgebraData_counit
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (a : PreLieDifferenceStableQuotient) :
+    (coproductSupportSummary_quotientCoalgebraData h).counit a =
+      coproductSupportSummary_counit_descend h a := by
+  rfl
+
+/-!
+### Mapping the tensor factors to the stable quotient
+
+The quotient comultiplication currently lands in the tensor of the raw carrier.
+We can post-compose with the tensor map induced by the quotient map on each
+factor to obtain a candidate comultiplication into
+`PreLieDifferenceStableQuotient ⊗ PreLieDifferenceStableQuotient`.
+-/
+
+noncomputable def mkPreLieDifferenceStableQuotient_tensor :
+    LinearMap (RingHom.id Int)
+      (TensorProduct Int linearProofTreeCarrier linearProofTreeCarrier)
+      (TensorProduct Int PreLieDifferenceStableQuotient PreLieDifferenceStableQuotient) :=
+  TensorProduct.map mkPreLieDifferenceStableQuotient mkPreLieDifferenceStableQuotient
+
+@[simp] theorem mkPreLieDifferenceStableQuotient_tensor_apply
+    (t : TensorProduct Int linearProofTreeCarrier linearProofTreeCarrier) :
+    mkPreLieDifferenceStableQuotient_tensor t =
+      TensorProduct.map mkPreLieDifferenceStableQuotient
+        mkPreLieDifferenceStableQuotient t := by
+  rfl
+
+@[simp] theorem mkPreLieDifferenceStableQuotient_tensor_tmul
+    (a b : linearProofTreeCarrier) :
+    mkPreLieDifferenceStableQuotient_tensor
+        (TensorProduct.tmul Int a b) =
+      TensorProduct.tmul Int
+        (mkPreLieDifferenceStableQuotient a)
+        (mkPreLieDifferenceStableQuotient b) := by
+  dsimp [mkPreLieDifferenceStableQuotient_tensor]
+  exact TensorProduct.map_tmul
+    (mkPreLieDifferenceStableQuotient)
+    (mkPreLieDifferenceStableQuotient) a b
+
+
+@[simp] theorem mkPreLieDifferenceStableQuotient_tensor_add
+    (a b : TensorProduct Int linearProofTreeCarrier linearProofTreeCarrier) :
+    mkPreLieDifferenceStableQuotient_tensor (a + b) =
+      mkPreLieDifferenceStableQuotient_tensor a +
+        mkPreLieDifferenceStableQuotient_tensor b := by
+  simpa using (mkPreLieDifferenceStableQuotient_tensor.map_add a b)
+
+@[simp] theorem mkPreLieDifferenceStableQuotient_tensor_smul
+    (z : Int)
+    (a : TensorProduct Int linearProofTreeCarrier linearProofTreeCarrier) :
+    mkPreLieDifferenceStableQuotient_tensor (z • a) =
+      z • mkPreLieDifferenceStableQuotient_tensor a := by
+  simpa using (mkPreLieDifferenceStableQuotient_tensor.map_smul z a)
+
+noncomputable def coproductSupportSummary_comul_quot
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData) :
+    LinearMap (RingHom.id Int) PreLieDifferenceStableQuotient
+      (TensorProduct Int PreLieDifferenceStableQuotient PreLieDifferenceStableQuotient) :=
+  mkPreLieDifferenceStableQuotient_tensor.comp
+    (coproductSupportSummary_comul_descend h)
+
+@[simp] theorem coproductSupportSummary_comul_quot_mk
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (a : linearProofTreeCarrier) :
+    coproductSupportSummary_comul_quot h (mkPreLieDifferenceStableQuotient a) =
+      mkPreLieDifferenceStableQuotient_tensor
+        (coproductSupportSummary_comul_linear a) := by
+  simp [coproductSupportSummary_comul_quot,
+    mkPreLieDifferenceStableQuotient_tensor,
+    coproductSupportSummary_comul_descend_mk,
+    LinearMap.comp_apply]
+
+/-!
+### Quotient-level coalgebra axioms (structure only)
+
+We now state the axioms using the quotient-level comultiplication and counit.
+These are placeholders for the eventual proofs once the coproduct is shown to
+respect the stable quotient and satisfies coassociativity and counit laws.
+-/
+
+structure CoproductSupportQuotientCoalgebraAxioms
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData) : Prop where
+  coassoc :
+    LinearMap.comp
+        (LinearMap.comp
+          (TensorProduct.assoc Int
+            PreLieDifferenceStableQuotient
+            PreLieDifferenceStableQuotient
+            PreLieDifferenceStableQuotient).toLinearMap
+          (LinearMap.rTensor
+            PreLieDifferenceStableQuotient
+            (coproductSupportSummary_comul_quot h)))
+        (coproductSupportSummary_comul_quot h) =
+      LinearMap.comp
+        (LinearMap.lTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot h))
+        (coproductSupportSummary_comul_quot h)
+  rTensor_counit_comp_comul :
+    LinearMap.comp
+        (LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_counit_descend h))
+        (coproductSupportSummary_comul_quot h) =
+      TensorProduct.mk Int
+        Int
+        PreLieDifferenceStableQuotient 1
+  lTensor_counit_comp_comul :
+    LinearMap.comp
+        (LinearMap.lTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_counit_descend h))
+        (coproductSupportSummary_comul_quot h) =
+      (TensorProduct.mk Int
+        PreLieDifferenceStableQuotient
+        Int).flip 1
+
+structure CoproductSupportQuotientCoalgebra where
+  h : CoproductSupportCoalgebraRespectsStableQuotient
+    coproductSupportSummary_coalgebraData
+  axioms : CoproductSupportQuotientCoalgebraAxioms h
+
+noncomputable def CoproductSupportQuotientCoalgebra.comul
+    (H : CoproductSupportQuotientCoalgebra) :
+    LinearMap (RingHom.id Int) PreLieDifferenceStableQuotient
+      (TensorProduct Int PreLieDifferenceStableQuotient PreLieDifferenceStableQuotient) :=
+  coproductSupportSummary_comul_quot H.h
+
+noncomputable def CoproductSupportQuotientCoalgebra.counit
+    (H : CoproductSupportQuotientCoalgebra) :
+    LinearMap (RingHom.id Int) PreLieDifferenceStableQuotient Int :=
+  coproductSupportSummary_counit_descend H.h
+
+@[simp] theorem CoproductSupportQuotientCoalgebra.comul_apply
+    (H : CoproductSupportQuotientCoalgebra) (a : PreLieDifferenceStableQuotient) :
+    H.comul a = coproductSupportSummary_comul_quot H.h a := by
+  rfl
+
+@[simp] theorem CoproductSupportQuotientCoalgebra.counit_apply
+    (H : CoproductSupportQuotientCoalgebra) (a : PreLieDifferenceStableQuotient) :
+    H.counit a = coproductSupportSummary_counit_descend H.h a := by
+  rfl
+
+@[simp] theorem CoproductSupportQuotientCoalgebra.comul_mk
+    (H : CoproductSupportQuotientCoalgebra) (a : linearProofTreeCarrier) :
+    H.comul (mkPreLieDifferenceStableQuotient a) =
+      mkPreLieDifferenceStableQuotient_tensor
+        (coproductSupportSummary_comul_linear a) := by
+  simp [CoproductSupportQuotientCoalgebra.comul,
+    coproductSupportSummary_comul_quot_mk]
+
+@[simp] theorem CoproductSupportQuotientCoalgebra.counit_mk
+    (H : CoproductSupportQuotientCoalgebra) (a : linearProofTreeCarrier) :
+    H.counit (mkPreLieDifferenceStableQuotient a) =
+      coproductSupportSummary_counit_linear a := by
+  simp [CoproductSupportQuotientCoalgebra.counit,
+    coproductSupportSummary_counit_descend_mk]
+
+@[simp] theorem CoproductSupportQuotientCoalgebra.coassoc
+    (H : CoproductSupportQuotientCoalgebra) :
+    LinearMap.comp
+        (LinearMap.comp
+          (TensorProduct.assoc Int
+            PreLieDifferenceStableQuotient
+            PreLieDifferenceStableQuotient
+            PreLieDifferenceStableQuotient).toLinearMap
+          (LinearMap.rTensor
+            PreLieDifferenceStableQuotient
+            (coproductSupportSummary_comul_quot H.h)))
+        (coproductSupportSummary_comul_quot H.h) =
+      LinearMap.comp
+        (LinearMap.lTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot H.h))
+        (coproductSupportSummary_comul_quot H.h) :=
+  H.axioms.coassoc
+
+@[simp] theorem CoproductSupportQuotientCoalgebra.rTensor_counit_comp_comul
+    (H : CoproductSupportQuotientCoalgebra) :
+    LinearMap.comp
+        (LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_counit_descend H.h))
+        (coproductSupportSummary_comul_quot H.h) =
+      TensorProduct.mk Int
+        Int
+        PreLieDifferenceStableQuotient 1 :=
+  H.axioms.rTensor_counit_comp_comul
+
+@[simp] theorem CoproductSupportQuotientCoalgebra.lTensor_counit_comp_comul
+    (H : CoproductSupportQuotientCoalgebra) :
+    LinearMap.comp
+        (LinearMap.lTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_counit_descend H.h))
+        (coproductSupportSummary_comul_quot H.h) =
+      (TensorProduct.mk Int
+        PreLieDifferenceStableQuotient
+        Int).flip 1 :=
+  H.axioms.lTensor_counit_comp_comul
+
+theorem CoproductSupportQuotientCoalgebra.rTensor_counit_comp_comul_apply
+    (H : CoproductSupportQuotientCoalgebra)
+    (a : PreLieDifferenceStableQuotient) :
+    (LinearMap.comp
+        (LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_counit_descend H.h))
+        (coproductSupportSummary_comul_quot H.h)) a =
+      (TensorProduct.mk Int
+        Int
+        PreLieDifferenceStableQuotient 1) a := by
+  simpa using congrArg (fun f => f a) H.rTensor_counit_comp_comul
+
+theorem CoproductSupportQuotientCoalgebra.lTensor_counit_comp_comul_apply
+    (H : CoproductSupportQuotientCoalgebra)
+    (a : PreLieDifferenceStableQuotient) :
+    (LinearMap.comp
+        (LinearMap.lTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_counit_descend H.h))
+        (coproductSupportSummary_comul_quot H.h)) a =
+      ((TensorProduct.mk Int
+        PreLieDifferenceStableQuotient
+        Int).flip 1) a := by
+  simpa using congrArg (fun f => f a) H.lTensor_counit_comp_comul
+
+theorem CoproductSupportQuotientCoalgebra.coassoc_apply
+    (H : CoproductSupportQuotientCoalgebra)
+    (a : PreLieDifferenceStableQuotient) :
+    (LinearMap.comp
+        (LinearMap.comp
+          (TensorProduct.assoc Int
+            PreLieDifferenceStableQuotient
+            PreLieDifferenceStableQuotient
+            PreLieDifferenceStableQuotient).toLinearMap
+          (LinearMap.rTensor
+            PreLieDifferenceStableQuotient
+            (coproductSupportSummary_comul_quot H.h)))
+        (coproductSupportSummary_comul_quot H.h)) a =
+      (LinearMap.comp
+        (LinearMap.lTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot H.h))
+        (coproductSupportSummary_comul_quot H.h)) a := by
+  simpa using congrArg (fun f => f a) H.coassoc
+
+theorem CoproductSupportQuotientCoalgebra.rTensor_counit_comp_comul_treeGen
+    (H : CoproductSupportQuotientCoalgebra) (x : PTree) :
+    (LinearMap.comp
+        (LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_counit_descend H.h))
+        (coproductSupportSummary_comul_quot H.h))
+      (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      (TensorProduct.mk Int Int PreLieDifferenceStableQuotient 1)
+        (mkPreLieDifferenceStableQuotient (treeGen x)) := by
+  simpa using
+    (H.rTensor_counit_comp_comul_apply
+      (mkPreLieDifferenceStableQuotient (treeGen x)))
+
+theorem CoproductSupportQuotientCoalgebra.lTensor_counit_comp_comul_treeGen
+    (H : CoproductSupportQuotientCoalgebra) (x : PTree) :
+    (LinearMap.comp
+        (LinearMap.lTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_counit_descend H.h))
+        (coproductSupportSummary_comul_quot H.h))
+      (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      ((TensorProduct.mk Int PreLieDifferenceStableQuotient Int).flip 1)
+        (mkPreLieDifferenceStableQuotient (treeGen x)) := by
+  simpa using
+    (H.lTensor_counit_comp_comul_apply
+      (mkPreLieDifferenceStableQuotient (treeGen x)))
+
+theorem CoproductSupportQuotientCoalgebra.coassoc_treeGen
+    (H : CoproductSupportQuotientCoalgebra) (x : PTree) :
+    (LinearMap.comp
+        (LinearMap.comp
+          (TensorProduct.assoc Int
+            PreLieDifferenceStableQuotient
+            PreLieDifferenceStableQuotient
+            PreLieDifferenceStableQuotient).toLinearMap
+          (LinearMap.rTensor
+            PreLieDifferenceStableQuotient
+            (coproductSupportSummary_comul_quot H.h)))
+        (coproductSupportSummary_comul_quot H.h))
+      (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      (LinearMap.comp
+        (LinearMap.lTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot H.h))
+        (coproductSupportSummary_comul_quot H.h))
+      (mkPreLieDifferenceStableQuotient (treeGen x)) := by
+  simpa using
+    (H.coassoc_apply
+      (mkPreLieDifferenceStableQuotient (treeGen x)))
+
+theorem CoproductSupportQuotientCoalgebra.comul_add_mk
+    (H : CoproductSupportQuotientCoalgebra)
+    (a b : linearProofTreeCarrier) :
+    H.comul (mkPreLieDifferenceStableQuotient (a + b)) =
+      H.comul (mkPreLieDifferenceStableQuotient a) +
+        H.comul (mkPreLieDifferenceStableQuotient b) := by
+  simpa using
+    (H.comul.map_add
+      (mkPreLieDifferenceStableQuotient a)
+      (mkPreLieDifferenceStableQuotient b))
+
+theorem CoproductSupportQuotientCoalgebra.comul_smul_mk
+    (H : CoproductSupportQuotientCoalgebra)
+    (z : Int) (a : linearProofTreeCarrier) :
+    H.comul (mkPreLieDifferenceStableQuotient (z • a)) =
+      z • H.comul (mkPreLieDifferenceStableQuotient a) := by
+  simpa using
+    (H.comul.map_smul z (mkPreLieDifferenceStableQuotient a))
+
+theorem CoproductSupportQuotientCoalgebra.counit_add_mk
+    (H : CoproductSupportQuotientCoalgebra)
+    (a b : linearProofTreeCarrier) :
+    H.counit (mkPreLieDifferenceStableQuotient (a + b)) =
+      H.counit (mkPreLieDifferenceStableQuotient a) +
+        H.counit (mkPreLieDifferenceStableQuotient b) := by
+  simpa using
+    (H.counit.map_add
+      (mkPreLieDifferenceStableQuotient a)
+      (mkPreLieDifferenceStableQuotient b))
+
+theorem CoproductSupportQuotientCoalgebra.counit_smul_mk
+    (H : CoproductSupportQuotientCoalgebra)
+    (z : Int) (a : linearProofTreeCarrier) :
+    H.counit (mkPreLieDifferenceStableQuotient (z • a)) =
+      z • H.counit (mkPreLieDifferenceStableQuotient a) := by
+  simpa using
+    (H.counit.map_smul z (mkPreLieDifferenceStableQuotient a))
+
+@[simp] theorem CoproductSupportQuotientCoalgebra.comul_treeGen
+    (H : CoproductSupportQuotientCoalgebra) (x : PTree) :
+    H.comul (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      mkPreLieDifferenceStableQuotient_tensor
+        (coproductSupportSummary_comul_linear (treeGen x)) := by
+  simpa using (H.comul_mk (treeGen x))
+
+@[simp] theorem CoproductSupportQuotientCoalgebra.counit_treeGen
+    (H : CoproductSupportQuotientCoalgebra) (x : PTree) :
+    H.counit (mkPreLieDifferenceStableQuotient (treeGen x)) = 0 := by
+  simp [H.counit_mk, coproductSupportSummary_counit_linear_treeGen]
+
+theorem CoproductSupportQuotientCoalgebra.comul_treeGen_add
+    (H : CoproductSupportQuotientCoalgebra) (x y : PTree) :
+    H.comul (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) =
+      H.comul (mkPreLieDifferenceStableQuotient (treeGen x)) +
+        H.comul (mkPreLieDifferenceStableQuotient (treeGen y)) := by
+  simpa using
+    (H.comul_add_mk (treeGen x) (treeGen y))
+
+theorem CoproductSupportQuotientCoalgebra.counit_treeGen_add
+    (H : CoproductSupportQuotientCoalgebra) (x y : PTree) :
+    H.counit (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) =
+      H.counit (mkPreLieDifferenceStableQuotient (treeGen x)) +
+        H.counit (mkPreLieDifferenceStableQuotient (treeGen y)) := by
+  simpa using
+    (H.counit_add_mk (treeGen x) (treeGen y))
+
+theorem CoproductSupportQuotientCoalgebra.comul_treeGen_sum_three
+    (H : CoproductSupportQuotientCoalgebra) (x y z : PTree) :
+    H.comul (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y + treeGen z)) =
+      H.comul (mkPreLieDifferenceStableQuotient (treeGen x)) +
+        H.comul (mkPreLieDifferenceStableQuotient (treeGen y)) +
+        H.comul (mkPreLieDifferenceStableQuotient (treeGen z)) := by
+  have hxy :
+      H.comul (mkPreLieDifferenceStableQuotient ((treeGen x + treeGen y) + treeGen z)) =
+        H.comul (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) +
+          H.comul (mkPreLieDifferenceStableQuotient (treeGen z)) := by
+    simpa using
+      (H.comul_add_mk (treeGen x + treeGen y) (treeGen z))
+  simpa [add_assoc, H.comul_treeGen_add] using hxy
+
+theorem CoproductSupportQuotientCoalgebra.counit_treeGen_sum_three
+    (H : CoproductSupportQuotientCoalgebra) (x y z : PTree) :
+    H.counit (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y + treeGen z)) =
+      H.counit (mkPreLieDifferenceStableQuotient (treeGen x)) +
+        H.counit (mkPreLieDifferenceStableQuotient (treeGen y)) +
+        H.counit (mkPreLieDifferenceStableQuotient (treeGen z)) := by
+  have hxy :
+      H.counit (mkPreLieDifferenceStableQuotient ((treeGen x + treeGen y) + treeGen z)) =
+        H.counit (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) +
+          H.counit (mkPreLieDifferenceStableQuotient (treeGen z)) := by
+    simpa using
+      (H.counit_add_mk (treeGen x + treeGen y) (treeGen z))
+  simpa [add_assoc, H.counit_treeGen_add] using hxy
+
+theorem CoproductSupportQuotientCoalgebra.comul_treeGen_sum_four
+    (H : CoproductSupportQuotientCoalgebra) (w x y z : PTree) :
+    H.comul (mkPreLieDifferenceStableQuotient (treeGen w + treeGen x + treeGen y + treeGen z)) =
+      H.comul (mkPreLieDifferenceStableQuotient (treeGen w)) +
+        H.comul (mkPreLieDifferenceStableQuotient (treeGen x)) +
+        H.comul (mkPreLieDifferenceStableQuotient (treeGen y)) +
+        H.comul (mkPreLieDifferenceStableQuotient (treeGen z)) := by
+  have h1 :
+      H.comul (mkPreLieDifferenceStableQuotient ((treeGen w + treeGen x) + (treeGen y + treeGen z))) =
+        H.comul (mkPreLieDifferenceStableQuotient (treeGen w + treeGen x)) +
+          H.comul (mkPreLieDifferenceStableQuotient (treeGen y + treeGen z)) := by
+    simpa using
+      (H.comul_add_mk (treeGen w + treeGen x) (treeGen y + treeGen z))
+  have h2 :
+      H.comul (mkPreLieDifferenceStableQuotient (treeGen w + treeGen x)) =
+        H.comul (mkPreLieDifferenceStableQuotient (treeGen w)) +
+          H.comul (mkPreLieDifferenceStableQuotient (treeGen x)) := by
+    simpa using
+      (H.comul_treeGen_add w x)
+  have h3 :
+      H.comul (mkPreLieDifferenceStableQuotient (treeGen y + treeGen z)) =
+        H.comul (mkPreLieDifferenceStableQuotient (treeGen y)) +
+          H.comul (mkPreLieDifferenceStableQuotient (treeGen z)) := by
+    simpa using
+      (H.comul_treeGen_add y z)
+  -- rearrange
+  simpa [add_assoc, add_left_comm, add_comm, h2, h3] using h1
+
+theorem CoproductSupportQuotientCoalgebra.counit_treeGen_sum_four
+    (H : CoproductSupportQuotientCoalgebra) (w x y z : PTree) :
+    H.counit (mkPreLieDifferenceStableQuotient (treeGen w + treeGen x + treeGen y + treeGen z)) =
+      H.counit (mkPreLieDifferenceStableQuotient (treeGen w)) +
+        H.counit (mkPreLieDifferenceStableQuotient (treeGen x)) +
+        H.counit (mkPreLieDifferenceStableQuotient (treeGen y)) +
+        H.counit (mkPreLieDifferenceStableQuotient (treeGen z)) := by
+  have h1 :
+      H.counit (mkPreLieDifferenceStableQuotient ((treeGen w + treeGen x) + (treeGen y + treeGen z))) =
+        H.counit (mkPreLieDifferenceStableQuotient (treeGen w + treeGen x)) +
+          H.counit (mkPreLieDifferenceStableQuotient (treeGen y + treeGen z)) := by
+    simpa using
+      (H.counit_add_mk (treeGen w + treeGen x) (treeGen y + treeGen z))
+  have h2 :
+      H.counit (mkPreLieDifferenceStableQuotient (treeGen w + treeGen x)) =
+        H.counit (mkPreLieDifferenceStableQuotient (treeGen w)) +
+          H.counit (mkPreLieDifferenceStableQuotient (treeGen x)) := by
+    simpa using
+      (H.counit_treeGen_add w x)
+  have h3 :
+      H.counit (mkPreLieDifferenceStableQuotient (treeGen y + treeGen z)) =
+        H.counit (mkPreLieDifferenceStableQuotient (treeGen y)) +
+          H.counit (mkPreLieDifferenceStableQuotient (treeGen z)) := by
+    simpa using
+      (H.counit_treeGen_add y z)
+  simpa [add_assoc, add_left_comm, add_comm, h2, h3] using h1
+
+theorem CoproductSupportQuotientCoalgebra.comul_treeGen_sum_two_tensor
+    (H : CoproductSupportQuotientCoalgebra) (x y : PTree) :
+    H.comul (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) =
+      mkPreLieDifferenceStableQuotient_tensor
+        (coproductSupportSummary_comul_linear (treeGen x)) +
+      mkPreLieDifferenceStableQuotient_tensor
+        (coproductSupportSummary_comul_linear (treeGen y)) := by
+  simp [H.comul_treeGen_add]
+
+theorem CoproductSupportQuotientCoalgebra.comul_treeGen_sum_three_tensor
+    (H : CoproductSupportQuotientCoalgebra) (x y z : PTree) :
+    H.comul (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y + treeGen z)) =
+      mkPreLieDifferenceStableQuotient_tensor
+        (coproductSupportSummary_comul_linear (treeGen x)) +
+      mkPreLieDifferenceStableQuotient_tensor
+        (coproductSupportSummary_comul_linear (treeGen y)) +
+      mkPreLieDifferenceStableQuotient_tensor
+        (coproductSupportSummary_comul_linear (treeGen z)) := by
+  simp [H.comul_treeGen_sum_three, H.comul_treeGen]
+
+theorem CoproductSupportQuotientCoalgebra.comul_treeGen_sum_four_tensor
+    (H : CoproductSupportQuotientCoalgebra) (w x y z : PTree) :
+    H.comul (mkPreLieDifferenceStableQuotient (treeGen w + treeGen x + treeGen y + treeGen z)) =
+      mkPreLieDifferenceStableQuotient_tensor
+        (coproductSupportSummary_comul_linear (treeGen w)) +
+      mkPreLieDifferenceStableQuotient_tensor
+        (coproductSupportSummary_comul_linear (treeGen x)) +
+      mkPreLieDifferenceStableQuotient_tensor
+        (coproductSupportSummary_comul_linear (treeGen y)) +
+      mkPreLieDifferenceStableQuotient_tensor
+        (coproductSupportSummary_comul_linear (treeGen z)) := by
+  simp [H.comul_treeGen_sum_four, H.comul_treeGen]
+
+noncomputable def coproductSupportSummary_comul_quot_left
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData) :
+    LinearMap (RingHom.id Int) PreLieDifferenceStableQuotient
+      (TensorProduct Int PreLieDifferenceStableQuotient
+        (TensorProduct Int PreLieDifferenceStableQuotient PreLieDifferenceStableQuotient)) :=
+  LinearMap.comp
+    (LinearMap.lTensor
+      PreLieDifferenceStableQuotient (coproductSupportSummary_comul_quot h))
+    (coproductSupportSummary_comul_quot h)
+
+noncomputable def coproductSupportSummary_comul_quot_right
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData) :
+    LinearMap (RingHom.id Int) PreLieDifferenceStableQuotient
+      (TensorProduct Int
+        (TensorProduct Int PreLieDifferenceStableQuotient PreLieDifferenceStableQuotient)
+        PreLieDifferenceStableQuotient) :=
+  LinearMap.comp
+    (LinearMap.rTensor
+      PreLieDifferenceStableQuotient (coproductSupportSummary_comul_quot h))
+    (coproductSupportSummary_comul_quot h)
+
+noncomputable def coproductSupportSummary_comul_quot_left_assoc
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData) :
+    LinearMap (RingHom.id Int) PreLieDifferenceStableQuotient
+      (TensorProduct Int PreLieDifferenceStableQuotient
+        (TensorProduct Int PreLieDifferenceStableQuotient PreLieDifferenceStableQuotient)) :=
+  LinearMap.comp
+    (TensorProduct.assoc Int
+      PreLieDifferenceStableQuotient
+      PreLieDifferenceStableQuotient
+      PreLieDifferenceStableQuotient).toLinearMap
+    (coproductSupportSummary_comul_quot_right h)
+
+@[simp] theorem coproductSupportSummary_comul_quot_left_apply
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (a : PreLieDifferenceStableQuotient) :
+    coproductSupportSummary_comul_quot_left h a =
+      (LinearMap.lTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (coproductSupportSummary_comul_quot h a) := by
+  rfl
+
+@[simp] theorem coproductSupportSummary_comul_quot_right_apply
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (a : PreLieDifferenceStableQuotient) :
+    coproductSupportSummary_comul_quot_right h a =
+      (LinearMap.rTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (coproductSupportSummary_comul_quot h a) := by
+  rfl
+
+@[simp] theorem coproductSupportSummary_comul_quot_left_assoc_apply
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (a : PreLieDifferenceStableQuotient) :
+    coproductSupportSummary_comul_quot_left_assoc h a =
+      (TensorProduct.assoc Int
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient).toLinearMap
+        (coproductSupportSummary_comul_quot_right h a) := by
+  rfl
+
+theorem CoproductSupportQuotientCoalgebra.coassoc_shorthand_apply
+    (H : CoproductSupportQuotientCoalgebra)
+    (a : PreLieDifferenceStableQuotient) :
+    coproductSupportSummary_comul_quot_left_assoc H.h a =
+      coproductSupportSummary_comul_quot_left H.h a := by
+  simpa [coproductSupportSummary_comul_quot_left_assoc,
+    coproductSupportSummary_comul_quot_left,
+    coproductSupportSummary_comul_quot_right,
+    LinearMap.comp_apply] using
+    (H.coassoc_apply a)
+
+theorem CoproductSupportQuotientCoalgebra.coassoc_shorthand
+    (H : CoproductSupportQuotientCoalgebra) :
+    coproductSupportSummary_comul_quot_left_assoc H.h =
+      coproductSupportSummary_comul_quot_left H.h := by
+  apply LinearMap.ext
+  intro a
+  simpa using H.coassoc_shorthand_apply a
+
+theorem CoproductSupportQuotientCoalgebra.coassoc_shorthand_treeGen
+    (H : CoproductSupportQuotientCoalgebra) (x : PTree) :
+    coproductSupportSummary_comul_quot_left_assoc H.h
+        (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      coproductSupportSummary_comul_quot_left H.h
+        (mkPreLieDifferenceStableQuotient (treeGen x)) := by
+  simpa using
+    (H.coassoc_shorthand_apply
+      (mkPreLieDifferenceStableQuotient (treeGen x)))
+
+-- This is the next reduction target: expand the left-associated comultiplication
+-- on a generator in terms of the raw tensor-level comul.
+theorem CoproductSupportQuotientCoalgebra.coassoc_left_expansion
+    (H : CoproductSupportQuotientCoalgebra) (x : PTree) :
+    coproductSupportSummary_comul_quot_left_assoc H.h
+        (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      (LinearMap.comp
+        (TensorProduct.assoc Int
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient).toLinearMap
+        (LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot H.h)))
+        (coproductSupportSummary_comul_quot H.h
+          (mkPreLieDifferenceStableQuotient (treeGen x))) := by
+  rfl
+
+theorem CoproductSupportQuotientCoalgebra.coassoc_right_expansion
+    (H : CoproductSupportQuotientCoalgebra) (x : PTree) :
+    coproductSupportSummary_comul_quot_left H.h
+        (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      (LinearMap.lTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot H.h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_comul_linear (treeGen x))) := by
+  rfl
+
+@[simp] theorem coproductSupportSummary_comul_quot_left_mk
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (a : linearProofTreeCarrier) :
+    coproductSupportSummary_comul_quot_left h (mkPreLieDifferenceStableQuotient a) =
+      (LinearMap.lTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_comul_linear a)) := by
+  dsimp [coproductSupportSummary_comul_quot_left, LinearMap.comp_apply]
+  exact congrArg
+    (LinearMap.lTensor
+      PreLieDifferenceStableQuotient
+      (coproductSupportSummary_comul_quot h))
+    (coproductSupportSummary_comul_quot_mk h a)
+
+@[simp] theorem coproductSupportSummary_comul_quot_right_mk
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (a : linearProofTreeCarrier) :
+    coproductSupportSummary_comul_quot_right h (mkPreLieDifferenceStableQuotient a) =
+      (LinearMap.rTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_comul_linear a)) := by
+  dsimp [coproductSupportSummary_comul_quot_right, LinearMap.comp_apply]
+  exact congrArg
+    (LinearMap.rTensor
+      PreLieDifferenceStableQuotient
+      (coproductSupportSummary_comul_quot h))
+    (coproductSupportSummary_comul_quot_mk h a)
+
+@[simp] theorem coproductSupportSummary_comul_quot_left_assoc_mk
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (a : linearProofTreeCarrier) :
+    coproductSupportSummary_comul_quot_left_assoc h (mkPreLieDifferenceStableQuotient a) =
+      (TensorProduct.assoc Int
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient).toLinearMap
+        (coproductSupportSummary_comul_quot_right h
+          (mkPreLieDifferenceStableQuotient a)) := by
+  rfl
+
+@[simp] theorem coproductSupportSummary_comul_quot_left_assoc_mk_tensor
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (a : linearProofTreeCarrier) :
+    coproductSupportSummary_comul_quot_left_assoc h (mkPreLieDifferenceStableQuotient a) =
+      (TensorProduct.assoc Int
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot h))
+          (mkPreLieDifferenceStableQuotient_tensor
+            (coproductSupportSummary_comul_linear a))) := by
+  simpa [coproductSupportSummary_comul_quot_right_mk] using
+    (coproductSupportSummary_comul_quot_left_assoc_mk h a)
+
+@[simp] theorem coproductSupportSummary_comul_quot_left_treeGen
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (x : PTree) :
+    coproductSupportSummary_comul_quot_left h
+        (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      (LinearMap.lTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_comul_linear (treeGen x))) := by
+  simpa using
+    (coproductSupportSummary_comul_quot_left_mk h (treeGen x))
+
+@[simp] theorem coproductSupportSummary_comul_quot_right_treeGen
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (x : PTree) :
+    coproductSupportSummary_comul_quot_right h
+        (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      (LinearMap.rTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_comul_linear (treeGen x))) := by
+  simpa using
+    (coproductSupportSummary_comul_quot_right_mk h (treeGen x))
+
+@[simp] theorem coproductSupportSummary_comul_quot_left_assoc_treeGen
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (x : PTree) :
+    coproductSupportSummary_comul_quot_left_assoc h
+        (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      (TensorProduct.assoc Int
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot h))
+          (mkPreLieDifferenceStableQuotient_tensor
+            (coproductSupportSummary_comul_linear (treeGen x)))) := by
+  simpa using
+    (coproductSupportSummary_comul_quot_left_assoc_mk_tensor h (treeGen x))
+
+@[simp] theorem coproductSupportSummary_comul_quot_left_treeGen_sum
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (x : PTree) :
+    coproductSupportSummary_comul_quot_left h
+        (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      (LinearMap.lTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum x
+            coproductSupportSummary_tensorGen)) := by
+  simpa [coproductSupportSummary_comul_linear_treeGen] using
+    (coproductSupportSummary_comul_quot_left_treeGen h x)
+
+@[simp] theorem coproductSupportSummary_comul_quot_right_treeGen_sum
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (x : PTree) :
+    coproductSupportSummary_comul_quot_right h
+        (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      (LinearMap.rTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum x
+            coproductSupportSummary_tensorGen)) := by
+  simpa [coproductSupportSummary_comul_linear_treeGen] using
+    (coproductSupportSummary_comul_quot_right_treeGen h x)
+
+@[simp] theorem coproductSupportSummary_comul_quot_left_assoc_treeGen_sum
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (x : PTree) :
+    coproductSupportSummary_comul_quot_left_assoc h
+        (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      (TensorProduct.assoc Int
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot h))
+          (mkPreLieDifferenceStableQuotient_tensor
+            (coproductSupportSummary_sum x
+              coproductSupportSummary_tensorGen))) := by
+  simpa [coproductSupportSummary_comul_linear_treeGen] using
+    (coproductSupportSummary_comul_quot_left_assoc_treeGen h x)
+
+@[simp] theorem coproductSupportSummary_comul_quot_left_add
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (a b : PreLieDifferenceStableQuotient) :
+    coproductSupportSummary_comul_quot_left h (a + b) =
+      coproductSupportSummary_comul_quot_left h a +
+        coproductSupportSummary_comul_quot_left h b := by
+  simpa using
+    (coproductSupportSummary_comul_quot_left h).map_add a b
+
+@[simp] theorem coproductSupportSummary_comul_quot_left_smul
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (z : Int) (a : PreLieDifferenceStableQuotient) :
+    coproductSupportSummary_comul_quot_left h (z • a) =
+      z • coproductSupportSummary_comul_quot_left h a := by
+  simpa using
+    (coproductSupportSummary_comul_quot_left h).map_smul z a
+
+@[simp] theorem coproductSupportSummary_comul_quot_right_add
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (a b : PreLieDifferenceStableQuotient) :
+    coproductSupportSummary_comul_quot_right h (a + b) =
+      coproductSupportSummary_comul_quot_right h a +
+        coproductSupportSummary_comul_quot_right h b := by
+  simpa using
+    (coproductSupportSummary_comul_quot_right h).map_add a b
+
+@[simp] theorem coproductSupportSummary_comul_quot_right_smul
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (z : Int) (a : PreLieDifferenceStableQuotient) :
+    coproductSupportSummary_comul_quot_right h (z • a) =
+      z • coproductSupportSummary_comul_quot_right h a := by
+  simpa using
+    (coproductSupportSummary_comul_quot_right h).map_smul z a
+
+@[simp] theorem coproductSupportSummary_comul_quot_left_assoc_add
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (a b : PreLieDifferenceStableQuotient) :
+    coproductSupportSummary_comul_quot_left_assoc h (a + b) =
+      coproductSupportSummary_comul_quot_left_assoc h a +
+        coproductSupportSummary_comul_quot_left_assoc h b := by
+  simpa using
+    (coproductSupportSummary_comul_quot_left_assoc h).map_add a b
+
+@[simp] theorem coproductSupportSummary_comul_quot_left_assoc_smul
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (z : Int) (a : PreLieDifferenceStableQuotient) :
+    coproductSupportSummary_comul_quot_left_assoc h (z • a) =
+      z • coproductSupportSummary_comul_quot_left_assoc h a := by
+  simpa using
+    (coproductSupportSummary_comul_quot_left_assoc h).map_smul z a
+
+@[simp] theorem mkPreLieDifferenceStableQuotient_add
+    (a b : linearProofTreeCarrier) :
+    mkPreLieDifferenceStableQuotient (a + b) =
+      mkPreLieDifferenceStableQuotient a +
+        mkPreLieDifferenceStableQuotient b := by
+  simpa using (mkPreLieDifferenceStableQuotient.map_add a b)
+
+theorem coproductSupportSummary_comul_quot_left_treeGen_add
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (x y : PTree) :
+    coproductSupportSummary_comul_quot_left h
+        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) =
+      coproductSupportSummary_comul_quot_left h
+        (mkPreLieDifferenceStableQuotient (treeGen x)) +
+      coproductSupportSummary_comul_quot_left h
+        (mkPreLieDifferenceStableQuotient (treeGen y)) := by
+  have hmk :
+      mkPreLieDifferenceStableQuotient (treeGen x + treeGen y) =
+        mkPreLieDifferenceStableQuotient (treeGen x) +
+          mkPreLieDifferenceStableQuotient (treeGen y) := by
+    simpa using
+      (mkPreLieDifferenceStableQuotient.map_add (treeGen x) (treeGen y))
+  simpa [hmk] using
+    (coproductSupportSummary_comul_quot_left_add h
+      (mkPreLieDifferenceStableQuotient (treeGen x))
+      (mkPreLieDifferenceStableQuotient (treeGen y)))
+
+theorem coproductSupportSummary_comul_quot_right_treeGen_add
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (x y : PTree) :
+    coproductSupportSummary_comul_quot_right h
+        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) =
+      coproductSupportSummary_comul_quot_right h
+        (mkPreLieDifferenceStableQuotient (treeGen x)) +
+      coproductSupportSummary_comul_quot_right h
+        (mkPreLieDifferenceStableQuotient (treeGen y)) := by
+  have hmk :
+      mkPreLieDifferenceStableQuotient (treeGen x + treeGen y) =
+        mkPreLieDifferenceStableQuotient (treeGen x) +
+          mkPreLieDifferenceStableQuotient (treeGen y) := by
+    simpa using
+      (mkPreLieDifferenceStableQuotient.map_add (treeGen x) (treeGen y))
+  simpa [hmk] using
+    (coproductSupportSummary_comul_quot_right_add h
+      (mkPreLieDifferenceStableQuotient (treeGen x))
+      (mkPreLieDifferenceStableQuotient (treeGen y)))
+
+theorem coproductSupportSummary_comul_quot_left_assoc_treeGen_add
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (x y : PTree) :
+    coproductSupportSummary_comul_quot_left_assoc h
+        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) =
+      coproductSupportSummary_comul_quot_left_assoc h
+        (mkPreLieDifferenceStableQuotient (treeGen x)) +
+      coproductSupportSummary_comul_quot_left_assoc h
+        (mkPreLieDifferenceStableQuotient (treeGen y)) := by
+  have hmk :
+      mkPreLieDifferenceStableQuotient (treeGen x + treeGen y) =
+        mkPreLieDifferenceStableQuotient (treeGen x) +
+          mkPreLieDifferenceStableQuotient (treeGen y) := by
+    simpa using
+      (mkPreLieDifferenceStableQuotient.map_add (treeGen x) (treeGen y))
+  simpa [hmk] using
+    (coproductSupportSummary_comul_quot_left_assoc_add h
+      (mkPreLieDifferenceStableQuotient (treeGen x))
+      (mkPreLieDifferenceStableQuotient (treeGen y)))
+
+theorem coproductSupportSummary_comul_quot_left_treeGen_sum_two
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (x y : PTree) :
+    coproductSupportSummary_comul_quot_left h
+        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) =
+      (LinearMap.lTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum x
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.lTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum y
+            coproductSupportSummary_tensorGen)) := by
+  simpa [coproductSupportSummary_comul_quot_left_treeGen_sum] using
+    (coproductSupportSummary_comul_quot_left_treeGen_add h x y)
+
+theorem coproductSupportSummary_comul_quot_right_treeGen_sum_two
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (x y : PTree) :
+    coproductSupportSummary_comul_quot_right h
+        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) =
+      (LinearMap.rTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum x
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.rTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum y
+            coproductSupportSummary_tensorGen)) := by
+  simpa [coproductSupportSummary_comul_quot_right_treeGen_sum] using
+    (coproductSupportSummary_comul_quot_right_treeGen_add h x y)
+
+theorem coproductSupportSummary_comul_quot_left_assoc_treeGen_sum_two
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (x y : PTree) :
+    coproductSupportSummary_comul_quot_left_assoc h
+        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) =
+      (TensorProduct.assoc Int
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot h))
+          (mkPreLieDifferenceStableQuotient_tensor
+            (coproductSupportSummary_sum x
+              coproductSupportSummary_tensorGen))) +
+      (TensorProduct.assoc Int
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot h))
+          (mkPreLieDifferenceStableQuotient_tensor
+            (coproductSupportSummary_sum y
+              coproductSupportSummary_tensorGen))) := by
+  simpa [coproductSupportSummary_comul_quot_left_assoc_treeGen_sum] using
+    (coproductSupportSummary_comul_quot_left_assoc_treeGen_add h x y)
+
+theorem coproductSupportSummary_comul_quot_left_treeGen_sum_three
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (x y z : PTree) :
+    coproductSupportSummary_comul_quot_left h
+        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y + treeGen z)) =
+      (LinearMap.lTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum x
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.lTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum y
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.lTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum z
+            coproductSupportSummary_tensorGen)) := by
+  have hxy :
+      coproductSupportSummary_comul_quot_left h
+          (mkPreLieDifferenceStableQuotient
+            ((treeGen x + treeGen y) + treeGen z)) =
+        coproductSupportSummary_comul_quot_left h
+          (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) +
+        coproductSupportSummary_comul_quot_left h
+          (mkPreLieDifferenceStableQuotient (treeGen z)) := by
+    simpa using
+      (coproductSupportSummary_comul_quot_left_treeGen_add h
+        (treeGen x + treeGen y) z)
+  simpa [add_assoc, coproductSupportSummary_comul_quot_left_treeGen_sum_two,
+    coproductSupportSummary_comul_quot_left_treeGen_sum] using hxy
+
+theorem coproductSupportSummary_comul_quot_right_treeGen_sum_three
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (x y z : PTree) :
+    coproductSupportSummary_comul_quot_right h
+        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y + treeGen z)) =
+      (LinearMap.rTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum x
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.rTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum y
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.rTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum z
+            coproductSupportSummary_tensorGen)) := by
+  have hxy :
+      coproductSupportSummary_comul_quot_right h
+          (mkPreLieDifferenceStableQuotient
+            ((treeGen x + treeGen y) + treeGen z)) =
+        coproductSupportSummary_comul_quot_right h
+          (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) +
+        coproductSupportSummary_comul_quot_right h
+          (mkPreLieDifferenceStableQuotient (treeGen z)) := by
+    simpa using
+      (coproductSupportSummary_comul_quot_right_treeGen_add h
+        (treeGen x + treeGen y) z)
+  simpa [add_assoc, coproductSupportSummary_comul_quot_right_treeGen_sum_two,
+    coproductSupportSummary_comul_quot_right_treeGen_sum] using hxy
+
+theorem coproductSupportSummary_comul_quot_left_assoc_treeGen_sum_three
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (x y z : PTree) :
+    coproductSupportSummary_comul_quot_left_assoc h
+        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y + treeGen z)) =
+      (TensorProduct.assoc Int
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot h))
+          (mkPreLieDifferenceStableQuotient_tensor
+            (coproductSupportSummary_sum x
+              coproductSupportSummary_tensorGen))) +
+      (TensorProduct.assoc Int
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot h))
+          (mkPreLieDifferenceStableQuotient_tensor
+            (coproductSupportSummary_sum y
+              coproductSupportSummary_tensorGen))) +
+      (TensorProduct.assoc Int
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot h))
+          (mkPreLieDifferenceStableQuotient_tensor
+            (coproductSupportSummary_sum z
+              coproductSupportSummary_tensorGen))) := by
+  have hxyz :
+      coproductSupportSummary_comul_quot_left_assoc h
+          (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y + treeGen z)) =
+        coproductSupportSummary_comul_quot_left_assoc h
+          (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) +
+        coproductSupportSummary_comul_quot_left_assoc h
+          (mkPreLieDifferenceStableQuotient (treeGen z)) := by
+    have hmk :
+        mkPreLieDifferenceStableQuotient (treeGen x + treeGen y + treeGen z) =
+          mkPreLieDifferenceStableQuotient (treeGen x + treeGen y) +
+            mkPreLieDifferenceStableQuotient (treeGen z) := by
+      simpa using
+        (mkPreLieDifferenceStableQuotient.map_add (treeGen x + treeGen y) (treeGen z))
+    simpa [hmk] using
+      (coproductSupportSummary_comul_quot_left_assoc_add h
+        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y))
+        (mkPreLieDifferenceStableQuotient (treeGen z)))
+  simp only [hxyz,
+    coproductSupportSummary_comul_quot_left_assoc_treeGen_sum_two,
+    coproductSupportSummary_comul_quot_left_assoc_treeGen_sum]
+  rfl
+
+theorem coproductSupportSummary_comul_quot_left_treeGen_sum_four
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (w x y z : PTree) :
+    coproductSupportSummary_comul_quot_left h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen w + treeGen x + treeGen y + treeGen z)) =
+      (LinearMap.lTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum w
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.lTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum x
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.lTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum y
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.lTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum z
+            coproductSupportSummary_tensorGen)) := by
+  have h1 :
+      coproductSupportSummary_comul_quot_left h
+          (mkPreLieDifferenceStableQuotient
+            ((treeGen w + treeGen x) + (treeGen y + treeGen z))) =
+        coproductSupportSummary_comul_quot_left h
+          (mkPreLieDifferenceStableQuotient (treeGen w + treeGen x)) +
+        coproductSupportSummary_comul_quot_left h
+          (mkPreLieDifferenceStableQuotient (treeGen y + treeGen z)) := by
+    simpa using
+      (coproductSupportSummary_comul_quot_left_treeGen_add h
+        (treeGen w + treeGen x) (treeGen y + treeGen z))
+  simpa [add_assoc, coproductSupportSummary_comul_quot_left_treeGen_sum_two,
+    add_left_comm, add_comm] using h1
+
+theorem coproductSupportSummary_comul_quot_right_treeGen_sum_four
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (w x y z : PTree) :
+    coproductSupportSummary_comul_quot_right h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen w + treeGen x + treeGen y + treeGen z)) =
+      (LinearMap.rTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum w
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.rTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum x
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.rTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum y
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.rTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum z
+            coproductSupportSummary_tensorGen)) := by
+  have h1 :
+      coproductSupportSummary_comul_quot_right h
+          (mkPreLieDifferenceStableQuotient
+            ((treeGen w + treeGen x) + (treeGen y + treeGen z))) =
+        coproductSupportSummary_comul_quot_right h
+          (mkPreLieDifferenceStableQuotient (treeGen w + treeGen x)) +
+        coproductSupportSummary_comul_quot_right h
+          (mkPreLieDifferenceStableQuotient (treeGen y + treeGen z)) := by
+    simpa using
+      (coproductSupportSummary_comul_quot_right_treeGen_add h
+        (treeGen w + treeGen x) (treeGen y + treeGen z))
+  simpa [add_assoc, coproductSupportSummary_comul_quot_right_treeGen_sum_two,
+    add_left_comm, add_comm] using h1
+
+theorem coproductSupportSummary_comul_quot_left_assoc_treeGen_sum_four
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (w x y z : PTree) :
+    coproductSupportSummary_comul_quot_left_assoc h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen w + treeGen x + treeGen y + treeGen z)) =
+      (TensorProduct.assoc Int
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot h))
+          (mkPreLieDifferenceStableQuotient_tensor
+            (coproductSupportSummary_sum w
+              coproductSupportSummary_tensorGen))) +
+      (TensorProduct.assoc Int
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot h))
+          (mkPreLieDifferenceStableQuotient_tensor
+            (coproductSupportSummary_sum x
+              coproductSupportSummary_tensorGen))) +
+      (TensorProduct.assoc Int
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot h))
+          (mkPreLieDifferenceStableQuotient_tensor
+            (coproductSupportSummary_sum y
+              coproductSupportSummary_tensorGen))) +
+      (TensorProduct.assoc Int
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot h))
+          (mkPreLieDifferenceStableQuotient_tensor
+            (coproductSupportSummary_sum z
+              coproductSupportSummary_tensorGen))) := by
+  have hwxyz :
+      coproductSupportSummary_comul_quot_left_assoc h
+          (mkPreLieDifferenceStableQuotient
+            (treeGen w + treeGen x + treeGen y + treeGen z)) =
+        coproductSupportSummary_comul_quot_left_assoc h
+          (mkPreLieDifferenceStableQuotient (treeGen w + treeGen x + treeGen y)) +
+        coproductSupportSummary_comul_quot_left_assoc h
+          (mkPreLieDifferenceStableQuotient (treeGen z)) := by
+    have hmk :
+        mkPreLieDifferenceStableQuotient
+            (treeGen w + treeGen x + treeGen y + treeGen z) =
+          mkPreLieDifferenceStableQuotient (treeGen w + treeGen x + treeGen y) +
+            mkPreLieDifferenceStableQuotient (treeGen z) := by
+      simpa using
+        (mkPreLieDifferenceStableQuotient.map_add
+          (treeGen w + treeGen x + treeGen y) (treeGen z))
+    simpa [hmk] using
+      (coproductSupportSummary_comul_quot_left_assoc_add h
+        (mkPreLieDifferenceStableQuotient (treeGen w + treeGen x + treeGen y))
+        (mkPreLieDifferenceStableQuotient (treeGen z)))
+  simp only [hwxyz,
+    coproductSupportSummary_comul_quot_left_assoc_treeGen_sum_three,
+    coproductSupportSummary_comul_quot_left_assoc_treeGen_sum]
+  rfl
+
+theorem coproductSupportSummary_comul_quot_left_treeGen_sum_five
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (v w x y z : PTree) :
+    coproductSupportSummary_comul_quot_left h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) =
+      (LinearMap.lTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum v
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.lTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum w
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.lTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum x
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.lTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum y
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.lTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum z
+            coproductSupportSummary_tensorGen)) := by
+  have hvwxyz :
+      coproductSupportSummary_comul_quot_left h
+          (mkPreLieDifferenceStableQuotient
+            (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) =
+        coproductSupportSummary_comul_quot_left h
+          (mkPreLieDifferenceStableQuotient
+            (treeGen v + treeGen w + treeGen x + treeGen y)) +
+        coproductSupportSummary_comul_quot_left h
+          (mkPreLieDifferenceStableQuotient (treeGen z)) := by
+    have hmk :
+        mkPreLieDifferenceStableQuotient
+            (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
+          mkPreLieDifferenceStableQuotient
+            (treeGen v + treeGen w + treeGen x + treeGen y) +
+            mkPreLieDifferenceStableQuotient (treeGen z) := by
+      simpa using
+        (mkPreLieDifferenceStableQuotient.map_add
+          (treeGen v + treeGen w + treeGen x + treeGen y) (treeGen z))
+    simpa [hmk] using
+      (coproductSupportSummary_comul_quot_left_add h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen v + treeGen w + treeGen x + treeGen y))
+        (mkPreLieDifferenceStableQuotient (treeGen z)))
+  calc
+    coproductSupportSummary_comul_quot_left h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) =
+      coproductSupportSummary_comul_quot_left h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen v + treeGen w + treeGen x + treeGen y)) +
+      coproductSupportSummary_comul_quot_left h
+        (mkPreLieDifferenceStableQuotient (treeGen z)) := by
+      simpa [add_assoc] using hvwxyz
+    _ = _ := by
+      simp [coproductSupportSummary_comul_quot_left_treeGen_sum_four,
+        coproductSupportSummary_comul_quot_left_treeGen_sum,
+        add_assoc, add_left_comm, add_comm]
+
+theorem coproductSupportSummary_comul_quot_right_treeGen_sum_five
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (v w x y z : PTree) :
+    coproductSupportSummary_comul_quot_right h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) =
+      (LinearMap.rTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum v
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.rTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum w
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.rTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum x
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.rTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum y
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.rTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum z
+            coproductSupportSummary_tensorGen)) := by
+  have hvwxyz :
+      coproductSupportSummary_comul_quot_right h
+          (mkPreLieDifferenceStableQuotient
+            (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) =
+        coproductSupportSummary_comul_quot_right h
+          (mkPreLieDifferenceStableQuotient
+            (treeGen v + treeGen w + treeGen x + treeGen y)) +
+        coproductSupportSummary_comul_quot_right h
+          (mkPreLieDifferenceStableQuotient (treeGen z)) := by
+    have hmk :
+        mkPreLieDifferenceStableQuotient
+            (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
+          mkPreLieDifferenceStableQuotient
+            (treeGen v + treeGen w + treeGen x + treeGen y) +
+            mkPreLieDifferenceStableQuotient (treeGen z) := by
+      simpa using
+        (mkPreLieDifferenceStableQuotient.map_add
+          (treeGen v + treeGen w + treeGen x + treeGen y) (treeGen z))
+    simpa [hmk] using
+      (coproductSupportSummary_comul_quot_right_add h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen v + treeGen w + treeGen x + treeGen y))
+        (mkPreLieDifferenceStableQuotient (treeGen z)))
+  calc
+    coproductSupportSummary_comul_quot_right h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) =
+      coproductSupportSummary_comul_quot_right h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen v + treeGen w + treeGen x + treeGen y)) +
+      coproductSupportSummary_comul_quot_right h
+        (mkPreLieDifferenceStableQuotient (treeGen z)) := by
+      simpa [add_assoc] using hvwxyz
+    _ = _ := by
+      simp [coproductSupportSummary_comul_quot_right_treeGen_sum_four,
+        coproductSupportSummary_comul_quot_right_treeGen_sum,
+        add_assoc, add_left_comm, add_comm]
+
+theorem coproductSupportSummary_comul_quot_left_assoc_treeGen_sum_five
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (v w x y z : PTree) :
+    coproductSupportSummary_comul_quot_left_assoc h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) =
+      (TensorProduct.assoc Int
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot h))
+          (mkPreLieDifferenceStableQuotient_tensor
+            (coproductSupportSummary_sum v
+              coproductSupportSummary_tensorGen))) +
+      (TensorProduct.assoc Int
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot h))
+          (mkPreLieDifferenceStableQuotient_tensor
+            (coproductSupportSummary_sum w
+              coproductSupportSummary_tensorGen))) +
+      (TensorProduct.assoc Int
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot h))
+          (mkPreLieDifferenceStableQuotient_tensor
+            (coproductSupportSummary_sum x
+              coproductSupportSummary_tensorGen))) +
+      (TensorProduct.assoc Int
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot h))
+          (mkPreLieDifferenceStableQuotient_tensor
+            (coproductSupportSummary_sum y
+              coproductSupportSummary_tensorGen))) +
+      (TensorProduct.assoc Int
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot h))
+          (mkPreLieDifferenceStableQuotient_tensor
+            (coproductSupportSummary_sum z
+              coproductSupportSummary_tensorGen))) := by
+  have hvwxyz :
+      coproductSupportSummary_comul_quot_left_assoc h
+          (mkPreLieDifferenceStableQuotient
+            (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) =
+        coproductSupportSummary_comul_quot_left_assoc h
+          (mkPreLieDifferenceStableQuotient
+            (treeGen v + treeGen w + treeGen x + treeGen y)) +
+        coproductSupportSummary_comul_quot_left_assoc h
+          (mkPreLieDifferenceStableQuotient (treeGen z)) := by
+    have hmk :
+        mkPreLieDifferenceStableQuotient
+            (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
+          mkPreLieDifferenceStableQuotient
+            (treeGen v + treeGen w + treeGen x + treeGen y) +
+            mkPreLieDifferenceStableQuotient (treeGen z) := by
+      simpa using
+        (mkPreLieDifferenceStableQuotient.map_add
+          (treeGen v + treeGen w + treeGen x + treeGen y) (treeGen z))
+    simpa [hmk] using
+      (coproductSupportSummary_comul_quot_left_assoc_add h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen v + treeGen w + treeGen x + treeGen y))
+        (mkPreLieDifferenceStableQuotient (treeGen z)))
+  simp only [hvwxyz,
+    coproductSupportSummary_comul_quot_left_assoc_treeGen_sum_four,
+    coproductSupportSummary_comul_quot_left_assoc_treeGen_sum]
+  rfl
+
+theorem coproductSupportSummary_comul_quot_left_treeGen_sum_six
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (u v w x y z : PTree) :
+    coproductSupportSummary_comul_quot_left h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) =
+      (LinearMap.lTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum u
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.lTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum v
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.lTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum w
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.lTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum x
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.lTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum y
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.lTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum z
+            coproductSupportSummary_tensorGen)) := by
+  have huvwyz :
+      coproductSupportSummary_comul_quot_left h
+          (mkPreLieDifferenceStableQuotient
+            (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) =
+        coproductSupportSummary_comul_quot_left h
+          (mkPreLieDifferenceStableQuotient
+            (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y)) +
+        coproductSupportSummary_comul_quot_left h
+          (mkPreLieDifferenceStableQuotient (treeGen z)) := by
+    have hmk :
+        mkPreLieDifferenceStableQuotient
+            (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
+          mkPreLieDifferenceStableQuotient
+            (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y) +
+            mkPreLieDifferenceStableQuotient (treeGen z) := by
+      simpa using
+        (mkPreLieDifferenceStableQuotient.map_add
+          (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y) (treeGen z))
+    simpa [hmk] using
+      (coproductSupportSummary_comul_quot_left_add h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y))
+        (mkPreLieDifferenceStableQuotient (treeGen z)))
+  calc
+    coproductSupportSummary_comul_quot_left h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) =
+      coproductSupportSummary_comul_quot_left h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y)) +
+      coproductSupportSummary_comul_quot_left h
+        (mkPreLieDifferenceStableQuotient (treeGen z)) := by
+      simpa [add_assoc] using huvwyz
+    _ = _ := by
+      rw [coproductSupportSummary_comul_quot_left_treeGen_sum_five,
+        coproductSupportSummary_comul_quot_left_treeGen_sum]
+      -- goal closed by rewriting
+
+theorem coproductSupportSummary_comul_quot_right_treeGen_sum_six
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (u v w x y z : PTree) :
+    coproductSupportSummary_comul_quot_right h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) =
+      (LinearMap.rTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum u
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.rTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum v
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.rTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum w
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.rTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum x
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.rTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum y
+            coproductSupportSummary_tensorGen)) +
+      (LinearMap.rTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum z
+            coproductSupportSummary_tensorGen)) := by
+  have huvwyz :
+      coproductSupportSummary_comul_quot_right h
+          (mkPreLieDifferenceStableQuotient
+            (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) =
+        coproductSupportSummary_comul_quot_right h
+          (mkPreLieDifferenceStableQuotient
+            (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y)) +
+        coproductSupportSummary_comul_quot_right h
+          (mkPreLieDifferenceStableQuotient (treeGen z)) := by
+    have hmk :
+        mkPreLieDifferenceStableQuotient
+            (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
+          mkPreLieDifferenceStableQuotient
+            (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y) +
+            mkPreLieDifferenceStableQuotient (treeGen z) := by
+      simpa using
+        (mkPreLieDifferenceStableQuotient.map_add
+          (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y) (treeGen z))
+    simpa [hmk] using
+      (coproductSupportSummary_comul_quot_right_add h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y))
+        (mkPreLieDifferenceStableQuotient (treeGen z)))
+  calc
+    coproductSupportSummary_comul_quot_right h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) =
+      coproductSupportSummary_comul_quot_right h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y)) +
+      coproductSupportSummary_comul_quot_right h
+        (mkPreLieDifferenceStableQuotient (treeGen z)) := by
+      simpa [add_assoc] using huvwyz
+    _ = _ := by
+      rw [coproductSupportSummary_comul_quot_right_treeGen_sum_five,
+        coproductSupportSummary_comul_quot_right_treeGen_sum]
+      -- goal closed by rewriting
+
+theorem coproductSupportSummary_comul_quot_left_assoc_treeGen_sum_six
+    (h : CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData)
+    (u v w x y z : PTree) :
+    coproductSupportSummary_comul_quot_left_assoc h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) =
+      (TensorProduct.assoc Int
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot h))
+          (mkPreLieDifferenceStableQuotient_tensor
+            (coproductSupportSummary_sum u
+              coproductSupportSummary_tensorGen))) +
+      (TensorProduct.assoc Int
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot h))
+          (mkPreLieDifferenceStableQuotient_tensor
+            (coproductSupportSummary_sum v
+              coproductSupportSummary_tensorGen))) +
+      (TensorProduct.assoc Int
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot h))
+          (mkPreLieDifferenceStableQuotient_tensor
+            (coproductSupportSummary_sum w
+              coproductSupportSummary_tensorGen))) +
+      (TensorProduct.assoc Int
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot h))
+          (mkPreLieDifferenceStableQuotient_tensor
+            (coproductSupportSummary_sum x
+              coproductSupportSummary_tensorGen))) +
+      (TensorProduct.assoc Int
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot h))
+          (mkPreLieDifferenceStableQuotient_tensor
+            (coproductSupportSummary_sum y
+              coproductSupportSummary_tensorGen))) +
+      (TensorProduct.assoc Int
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot h))
+          (mkPreLieDifferenceStableQuotient_tensor
+            (coproductSupportSummary_sum z
+              coproductSupportSummary_tensorGen))) := by
+  have huvwyz :
+      coproductSupportSummary_comul_quot_left_assoc h
+          (mkPreLieDifferenceStableQuotient
+            (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) =
+        coproductSupportSummary_comul_quot_left_assoc h
+          (mkPreLieDifferenceStableQuotient
+            (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y)) +
+        coproductSupportSummary_comul_quot_left_assoc h
+          (mkPreLieDifferenceStableQuotient (treeGen z)) := by
+    have hmk :
+        mkPreLieDifferenceStableQuotient
+            (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
+          mkPreLieDifferenceStableQuotient
+            (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y) +
+            mkPreLieDifferenceStableQuotient (treeGen z) := by
+      simpa using
+        (mkPreLieDifferenceStableQuotient.map_add
+          (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y) (treeGen z))
+    simpa [hmk] using
+      (coproductSupportSummary_comul_quot_left_assoc_add h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y))
+        (mkPreLieDifferenceStableQuotient (treeGen z)))
+  simp only [huvwyz,
+    coproductSupportSummary_comul_quot_left_assoc_treeGen_sum_five,
+    coproductSupportSummary_comul_quot_left_assoc_treeGen_sum]
+  rfl
+
+theorem CoproductSupportQuotientCoalgebra.coassoc_treeGen_explicit
+    (H : CoproductSupportQuotientCoalgebra) (x : PTree) :
+    (TensorProduct.assoc Int
+      PreLieDifferenceStableQuotient
+      PreLieDifferenceStableQuotient
+      PreLieDifferenceStableQuotient).toLinearMap
+      ((LinearMap.rTensor
+        PreLieDifferenceStableQuotient
+        (coproductSupportSummary_comul_quot H.h))
+        (mkPreLieDifferenceStableQuotient_tensor
+          (coproductSupportSummary_sum x
+            coproductSupportSummary_tensorGen))) =
+    (LinearMap.lTensor
+      PreLieDifferenceStableQuotient
+      (coproductSupportSummary_comul_quot H.h))
+      (mkPreLieDifferenceStableQuotient_tensor
+        (coproductSupportSummary_sum x
+          coproductSupportSummary_tensorGen)) := by
+  simpa [coproductSupportSummary_comul_quot_left_assoc_treeGen_sum,
+    coproductSupportSummary_comul_quot_left_treeGen_sum] using
+    (H.coassoc_shorthand_treeGen x)
+
+
+
+end CoproductSupportTensor
+
+end CoproductSupport
 end QuotientConnected
