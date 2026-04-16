@@ -31,6 +31,7 @@
 \newcommand{\PTree}{\mathit{PTree}}
 \newcommand{\Forest}{\mathit{Forest}}
 \newcommand{\Addr}{\mathit{Addr}}
+\newcommand{\Seq}{\mathit{Seq}}
 \newcommand{\Conc}{\mathrm{conc}}
 \newcommand{\Tree}{\mathit{Tree}}
 \newcommand{\Graft}{\mathit{Graft}}
@@ -44,7 +45,8 @@
 \newcommand{\Res}{\mathsf{Res}}
 \newcommand{\PureOut}{\mathsf{PureOut}}
 \newcommand{\PureIn}{\mathsf{PureIn}}
-\newcommand{\PT}{\mathsf{PT}}
+\newcommand{\PT}{\PTree}
+\newcommand{\graftat}[3]{\operatorname{gr}_{#2}(#3,#1)}
 
 \begin{document}
 
@@ -52,7 +54,7 @@
 
 \begin{abstract}
 We construct a pre-Lie algebra on proof trees for a multisuccedent sequent calculus equipped to a
-primitive base consequence relation which is assumed to be nonmonotonic. The sequent calculus naturally gives rise to decorated and labelled rooted trees, while the inadmissibility of the Weakening rule gives rise to a constrained grafting operation on trees. We define a proof-theoretically meaningful equivalence relation which identifies proof-trees differing
+primitive base consequence relation which is not assumed to be monotonic. The sequent calculus naturally gives rise to decorated and labelled rooted trees, while the inadmissibility of standard Weakening rules gives rise to a constrained grafting operation on trees. We define a proof-theoretically meaningful equivalence relation which identifies proof-trees differing
 only in inessential or bureaucratic scheduling or reassociation choices. Passing to the induced quotient we show that there is a clean separation between cancelling and genuinely asymmetric
 contributions to the associator, yielding a pre-Lie
 identity for proof-tree composition. This extends to a Hopf algebra by the Oudom-Guin construction. This suggests that Hopf-algebraic methods on proof trees are a potential tool for structural proof theory, in the sense that the presence or absence of
@@ -64,27 +66,31 @@ structural rules controls the existence and form of the algebraic structure.
 The aim of this paper is to describe a proof-theoretically meaningful algebraic setting in which monotonicity of consequence and the familiar structural rules are not built in
 from the outset. This allows structural rules to be analysed as constraints on algebraic structures.
 
-Our proof calculus is the Non-Monotonic Multi-Succedent sequent calculus NMMS introduced by Kaplan (2018). Non-monotonicity of consequence is represented proof-theoretically by the {failure} of Weakening. Structural rules such as Weakening and Contraction have of course been studied extensively in substructural logics such as linear logic, which controls duplication of hypotheses but also possesses the Cut Elimination property which is desirable from the point of view of computational content. NMMS is a very different setting -- here the sequent calculus is equipped on a primitive {base} consequence relation $\mszero$, which serves to encode non-logical patterns of defeasible \emph{material inference} of the sort studied by Brandom and collaborators in the \emph{inferentialist} analysis of meaning in natural language. 
+\vspace{0.2cm}
 
-Such non-monotonic consequence relations will generally fail to admit the Cut rule, and Girard has famously said that ``a logic without Cut Elimination is like a car without an engine''. This is reflected in the fact that NMMS does not admit a \emph{categorical semantics} such that Cut is represented in the composition of morphisms of some suitable category, as the case of linear logic (star autonomous or symmetric closed monoidal categories), intuitionistic logic (cartesian closed categories), or CLASSICAL LOGIC. Here we show that NMMS nonetheless admits a meaningful algebraic interpretation in terms of a Hopf algebra on labelled and decorated rooted trees, which are the proof trees of the sequent calculus.
+Our proof calculus is the Non-Monotonic Multi-Succedent sequent calculus NMMS introduced by Kaplan (2018). Nonmonotonicity of consequence here is represented proof-theoretically by the {failure} of Weakening:
 
-Hopf algebras on rooted trees are well-studied objects that have seen applications in areas ranging from renormalization for perturbative Quantum Field Theory (Connes and Kreimer) to syntactic trees in generative linguistics (Chomsky, Marcolli, Berwick). Hopf algebras on typed and decorated binary trees have been studied in the combinatorics literature, especially by Foissy. To the author's knowledge no Hopf algebra on proof trees has yet been discussed explicitly, but the idea is certainly not far removed from the recent work in generative linguistics. This naturally invites the question of whether there is sufficient novelty in the construction here. 
+\textcolor{red}{Include Weakening rules here}
 
-In fact, it is the non-monotonicity property that makes NMMS a ``non-starter" from the view of categorical semantics that makes the Hopf algebra construction interesting. The sequent calculus rules admit an interpretation as a \emph{grafting} operation on proof trees -- but the absence of Weakening means that the grafting operation is \emph{not} free to extend contexts arbitrarily by structural rules. This makes the combinatorics of proof tree grafting more constrained and more intricate than the Weakening-admissible setting. In order to define  
+Structural rules such as Weakening and Contraction have of course been studied extensively in substructural logics such as linear logic, which controls duplication of hypotheses but also possesses the Cut Elimination property which is desirable from the point of view of computational content. NMMS is a very different setting -- here the sequent calculus is equipped on a primitive {base} consequence relation $\mszero$, which serves to encode non-logical patterns of defeasible \emph{material inference} of the sort studied by Brandom and collaborators in the \emph{inferentialist} analysis of meaning in natural language. 
 
-and the associator analysis more subtle, than in a setting where structural rules are built in. 
+\vspace{0.2cm}
 
+In general, nonmonotonic consequence relations fail to admit the Cut rule:
 
-The key point is that the proof-theoretic structure itself determines the relevant rooted trees, the grafting operation, the quotient of bureaucratic symmetries, and ultimately the class-level associator comparison from which the pre-Lie identity emerges.
+This is reflected in the fact that NMMS does not admit a \emph{categorical semantics} where Cut is represented by composition of morphisms of some suitable category, as is the case of linear logic (*-autonomous or symmetric monoidal closed categories), intuitionistic logic (cartesian closed categories), or classical logic (control categories). Here we show that NMMS admits a non-trivial interpretation in a different algebraic structure, and specifically a Hopf algebra defined over the set of labelled and decorated rooted trees which are just the proof trees of the sequent calculus.
 
-Our aim here is different: rather than studying the algebraic consequences of controlling structural rules within an otherwise monotone proof system, we seek an algebraic account of proof composition for a consequence relation that is nonmonotonic in the meta-sense --- one where provability itself may be defeated by enlarging the premiss set. In this sense, the primitive consequence relation is meant to reflect patterns of defeasible inference whose validity is not necessarily preserved under addition of new information.
+\vspace{0.2cm}
 
+Hopf algebras on rooted trees are well-studied objects that have seen applications in areas ranging from renormalization for perturbative Quantum Field Theory (Connes and Kreimer) to syntactic trees in generative linguistics (Chomsky, Marcolli, Berwick). Hopf algebras for our specific setting of typed and decorated binary trees also have been studied in the combinatorics literature, especially by Foissy. To the author's knowledge no Hopf algebra for proof trees has yet been discussed explicitly. However the of the construction developed in this paper is 
 
-We begin with a primitive consequence relation on a
-pre-logical vocabulary and use it as the only nonlogical input for a sequent
-calculus. The resulting derivations are
-represented by finite rooted proof trees, and proof composition is defined by
-grafting one proof tree into another at a leaf with matching sequent interface.
+\vspace{0.2cm}
+
+In fact, it is the nonmonotonicity property that makes NMMS a ``non-starter" from the view of categorical semantics that makes the Hopf algebra construction interesting. The sequent calculus rules naturally admit an interpretation as a \emph{grafting} operation on proof trees -- but the absence of Weakening means that the grafting operation is \emph{not} free to extend (or indeed contract) contexts arbitrarily by structural rules. This makes the combinatorics of proof tree grafting more constrained and more intricate than the Weakening-admissible setting. In order to define a pre-Lie product directly from proof-tree grafting, we define a proof-theoretically meaningful equivalence relation on iterated graft compositions such that collections of proof trees that are pairwise distinguished only by artificial serialisation of logically concurrent inferences belong to the same equivalence class. Two graftings acting at non-interacting leaf positions may be performed in either order; the sequent calculus records this choice as part of the derivation witness, but neither ordering carries proof-theoretic priority. This is a similar sort of ``bureaucratic" redundancy to that which Girard removed in passing from sequent calculus to proof nets, and that Dosen placed at the centre of his analysis of identity of proofs. Without such a quotient, the associator comparison fails — the noise sector contributes asymmetrically across the two bracketings — and the pre-Lie identity cannot be established on raw proof trees, obstructing the Hopf algebra construction.  
+
+\vspace{0.2cm}
+
+The key point is that it is proof-theoretically meaningful quotient itself that determines the relevant rooted trees, the grafting operation, the quotient of bureaucratic symmetries, and ultimately the class-level associator comparison from which the pre-Lie identity emerges.
 
 Two distinct issues then arise. The first is combinatorial: how do iterated
 graftings decompose? The second is proof-theoretic: which apparent
@@ -104,12 +110,6 @@ symmetries of proof composition. This separates a quotient-trivial noise sector
 from a residual sector. Third, one proves that the mixed residual case is
 eliminated, so that the residual contribution classes become rigid enough to be
 matched across the two bracketings of the associator.
-
-The key point is therefore not that an external tree algebra is imposed on
-proofs, but that the proof-theoretic structure itself determines the relevant
-rooted trees, the grafting operation, the quotient of bureaucratic symmetries,
-and ultimately the class-level associator comparison from which the pre-Lie
-identity emerges.
 
 \medskip
 
@@ -220,6 +220,21 @@ where \(\MSet(L_B)\) denotes the finite multisets of formulas of the base
 fragment \(L_B\).
 \end{definition}
 
+\begin{remark}[Order-style notation for primitive consequence]
+When it is convenient to emphasize the interface aspect of primitive
+consequence, we may write
+\[
+\Gamma \leq_{0} \Theta
+\qquad\text{for}\qquad
+\Gamma \mszero \Theta.
+\]
+This is only a change of notation: no reflexivity, transitivity, antisymmetry,
+or monotonicity is assumed. Thus \(\leq_{0}\) is an order-like relation on base
+sequents, not necessarily a preorder. The point of this notation is simply to
+stress that the leaf labels of proof trees carry a primitive comparison
+relation which controls when one proof tree may be grafted into another.
+\end{remark}
+
 \begin{remark}
 This is the proof-theoretically intended setup: primitive consequence is given
 only on the pre-logical fragment, and the logical vocabulary is added above it
@@ -235,15 +250,22 @@ be monotone: from \(\Gamma \mszero \Theta\) one cannot in general infer either
 \subsection{Sequents}
 
 \begin{definition}
-A \emph{multi-succedent sequent} is an expression
+The set of \emph{multi-succedent sequents} over \(L\) is
+\[
+\Seq(L):=\MSet(L)\times \MSet(L).
+\]
+An element \((\Gamma,\Delta)\in \Seq(L)\) is written
 \[
 \Gamma \ms \Delta,
 \]
 where \(\Gamma,\Delta\in \MSet(L)\).
 \end{definition}
 
-We work with multisets in order not to presuppose structural features beyond
-those explicitly built into the proof system.
+\begin{remark}
+The use of multisets makes multiplicity part of the syntax of a sequent.
+Accordingly, no structural principle is built into the sequent object beyond
+what is already forced by multiset equality.
+\end{remark}
 
 \subsection{The calculus \texorpdfstring{\(\NMMS(\mszero)\)}{NMMS}}
 
@@ -251,7 +273,8 @@ We now define the nonmonotonic multi-succedent sequent calculus generated by
 \(\mszero\).
 
 \begin{definition}
-The derivations of \(\NMMS(\mszero)\) are generated by the following clauses.
+A \emph{derivation} in \(\NMMS(\mszero)\) is an element of the least class
+closed under the following formation clauses.
 \end{definition}
 
 \paragraph{Base axiom.}
@@ -382,15 +405,16 @@ premisses.
 \]
 
 \noindent Formally, this is the same proof object viewed as a finite rooted
-ordered tree \((V,E,r)\) together with a sequent-labeling map
-\(\sigma : V \to \mathsf{Seq}(L)\) and a partial rule-labeling map
-\(\rho\) defined on the internal vertices. If an internal vertex \(v\) has
-ordered children \(v_{1},\dots,v_{n}\), then the sequents
-\(\sigma(v_{1}),\dots,\sigma(v_{n})\) are exactly the premisses of an instance
-of the rule \(\rho(v)\) with conclusion \(\sigma(v)\). Thus the bottom sequent
-of an inference is the label of the vertex itself, while the top sequents are
-recovered from the labels of its children. Leaves corresponding to instances
-of the primitive base relation may be marked explicitly as \textsc{Base}-vertices.
+ordered tree \((V,E,r)\) together with a sequent-labelling map
+\(\sigma : V \to \Seq(L)\) and a rule-labelling map
+\[
+\rho:V\to\{\mathsf{Base},\Rightarrow L,\Rightarrow R,\wedge L,\wedge R,\vee L,\vee R,\neg L,\neg R\}.
+\]
+If \(v\) is an internal vertex with ordered children \(v_1,\dots,v_n\), then
+\(\sigma(v_1),\dots,\sigma(v_n)\) are exactly the premisses of an instance of
+the rule \(\rho(v)\) with conclusion \(\sigma(v)\). If \(v\) is a leaf, then
+\(\rho(v)=\mathsf{Base}\), and \(\sigma(v)\) is justified by a primitive
+consequence instance.
 
 \medskip
 
@@ -413,26 +437,59 @@ derivability relation \(\vdash_{\NMMS(\mszero)}\). In a nonmonotonic setting,
 that distinction is mathematically significant.
 \end{remark}
 
+\begin{remark}[Order-style notation for derivability]
+Likewise, one may write
+\[
+\Gamma \leq_{\NMMS(\mszero)} \Delta
+\qquad\text{for}\qquad
+\Gamma \vdash_{\NMMS(\mszero)} \Delta.
+\]
+In contrast with the primitive relation \(\leq_{0}\), this is the deductive
+closure generated by the rules of the calculus. The passage
+\[
+\leq_{0}
+\longmapsto
+\leq_{\NMMS(\mszero)}
+\]
+is therefore the proof-theoretic closure step from primitive material
+consequence to full derivability.
+\end{remark}
+
 \section{Proof trees}
 
 \subsection{Tree representation}
 
 \begin{definition}
-A \emph{proof tree} is a finite rooted ordered tree whose vertices are
-labelled by sequents, whose internal vertices are tagged by one of the rule
-symbols
+A \emph{proof tree} is a tuple
 \[
-\mathsf{Base},\ \Rightarrow L,\ \Rightarrow R,\ \wedge L,\ \wedge R,\ \vee L,\ \vee R,\ \neg L,\ \neg R,
+t=(V_t,E_t,r_t,\lambda_t,\sigma_t),
 \]
-and whose immediate subtrees record the premises of the inference at that
-vertex. The sequent at the root is called the \emph{conclusion} of the proof
-tree.
+where \((V_t,E_t,r_t)\) is a finite rooted ordered tree,
+\(\sigma_t:V_t\to \Seq(L)\) is a sequent-labelling, and
+\[
+\lambda_t:V_t\to
+\{\mathsf{Base},\Rightarrow L,\Rightarrow R,\wedge L,\wedge R,\vee L,\vee R,\neg L,\neg R\},
+\]
+such that:
+\begin{enumerate}[label=\textup{(\roman*)}]
+\item if \(v\) is a leaf, then \(\lambda_t(v)=\mathsf{Base}\);
+\item if \(v\) is an internal vertex, then \(\lambda_t(v)\neq \mathsf{Base}\),
+and the ordered immediate subtrees of \(v\) are exactly the premise trees of
+an instance of the rule \(\lambda_t(v)\) with conclusion equal to the sequent
+label of \(v\).
+\end{enumerate}
+The sequent at the root is called the \emph{conclusion} of the proof tree.
 \end{definition}
 
 \begin{remark}
 The order on immediate subtrees is part of the formal object. This is the only
 reason addresses are later coded by finite sequences of child indices.
-Conceptually, the objects are ordinary rooted proof trees.
+Formally, if \(v\) is an internal vertex of a proof tree \(t\), we may write
+\[
+\operatorname{ch}_t(v)=(v_0,\dots,v_{k(v)-1})
+\]
+for its ordered list of immediate successors. Conceptually, the objects are
+ordinary rooted proof trees.
 \end{remark}
 
 \begin{proposition}
@@ -441,14 +498,54 @@ Every derivation \(d\) in \(\NMMS(\mszero)\) determines a proof tree
 \end{proposition}
 
 \begin{proof}
-The proof is by induction on the derivation:
-\begin{itemize}
-\item a base axiom becomes a leaf;
-\item each logical rule becomes a node whose children are the proof trees of
-the premises;
-\item the root sequent is the conclusion of the inference.
-\end{itemize}
+We argue by induction on the height of the derivation \(d\).
+
+If \(d\) has height \(0\), then \(d\) is a base derivation
+\[
+\frac{\Gamma \mszero \Theta}{\Gamma \ms \Theta}.
+\]
+We assign to \(d\) the one-vertex rooted tree whose unique vertex is labelled
+by the sequent \(\Gamma \ms \Theta\) and tagged by \(\mathsf{Base}\). Its root
+label is therefore the conclusion sequent of \(d\).
+
+Suppose now that \(d\) ends with an application of one of the logical rules of
+\(\NMMS(\mszero)\), with immediate subderivations \(d_1,\dots,d_n\). By the
+induction hypothesis, each \(d_i\) determines a finite rooted ordered proof
+tree \(\Tree(d_i)\) whose root carries the conclusion sequent of \(d_i\). Form
+a new rooted ordered tree by adjoining a fresh root \(r\), declaring the trees
+\(\Tree(d_1),\dots,\Tree(d_n)\) to be the ordered immediate subtrees of \(r\),
+labelling \(r\) by the conclusion sequent of the last inference of \(d\), and
+tagging \(r\) by the rule symbol used in that inference.
+
+Because the premiss sequents of the last rule instance are exactly the
+conclusion sequents of the subderivations \(d_1,\dots,d_n\), the resulting
+rooted ordered tree satisfies the defining conditions of a proof tree. It is
+finite because it is obtained by adjoining one new root to finitely many finite
+trees. Its root sequent is, by construction, the conclusion sequent of \(d\).
+
+This completes the induction.
 \end{proof}
+
+\begin{definition}[The set of proof trees]
+We write \(\PTree\) for the set of all finite rooted ordered trees equipped
+with the rule labels and sequent labels induced by derivations of
+\(\NMMS(\mszero)\). Thus an element \(t\in\PTree\) may be written as
+\[
+t=(V_t,E_t,r_t,\lambda_t,\sigma_t),
+\]
+where \(V_t\) is the finite vertex set, \(E_t\subseteq V_t\times V_t\) is the
+edge relation directed away from the root \(r_t\), \(\lambda_t\) records the
+rule label at each vertex, and \(\sigma_t\) records the sequent label. When
+the labels play no explicit role we suppress them and write simply
+\(t=(V_t,E_t,r_t)\).
+\end{definition}
+
+\begin{remark}
+All trees occurring below are elements of \(\PTree\). In particular, the raw
+grafting product and its linearization are defined on \(\PTree\) itself; the
+quotient enters later at the level of \emph{two-step witnesses} for the
+associator, not at the level of the underlying one-step product.
+\end{remark}
 
 \subsection{Addresses}
 
@@ -458,9 +555,93 @@ indicating a path from the root by successive child indices. The empty address
 selects the whole tree.
 \end{definition}
 
+\begin{definition}[Address set and vertex map]
+If \(t=(V_t,E_t,r_t)\) is a rooted ordered proof tree, we write
+\[
+\Addr(t)\subseteq \mathbb N^{<\omega}
+\]
+for the set of all finite sequences \(a=(a_1,\dots,a_n)\) for which there
+exists a chain of vertices
+\[
+v_0=r_t,\ v_1,\dots,v_n\in V_t
+\]
+such that, for each \(i<n\), the vertex \(v_{i+1}\) is the \(a_{i+1}\)-th
+element of the ordered child list \(\operatorname{ch}_t(v_i)\). The empty
+sequence \(\langle\rangle\) belongs to \(\Addr(t)\) and names the root. We write
+\[
+v_t:\Addr(t)\to V_t
+\]
+for the induced vertex map, sending an address to the corresponding vertex.
+If \(a,c\in \mathbb N^{<\omega}\), we write \(a\cdot c\) for concatenation of
+addresses. For addresses \(a,b\), we write \(a\preceq b\) if \(a\) is an
+initial segment of \(b\), and \(a\prec b\) if \(a\preceq b\) and \(a\neq b\).
+Thus \(b\) \emph{extends} \(a\) exactly when \(a\preceq b\). Two addresses are
+\emph{incomparable} if neither \(a\preceq b\) nor \(b\preceq a\).
+\end{definition}
+
 \begin{remark}
 Addresses are not conceptually basic. They are simply a convenient way of
 coding vertices and rooted subtrees in the formal development.
+\end{remark}
+
+\begin{definition}[Address cones and rooted subtrees]
+Let \(t\in \PTree\) and \(a\in \Addr(t)\). The \emph{address cone below \(a\)}
+is the principal upset
+\[
+\Addr_t(a):=\{\,b\in \Addr(t)\mid a\preceq b\,\}.
+\]
+The \emph{rooted subtree of \(t\) at \(a\)} is denoted \(t\downarrow_a\). Its
+address set is
+\[
+\Addr(t\downarrow_a)
+:=
+\{\,c\in \mathbb N^{<\omega}\mid a\cdot c\in \Addr(t)\,\},
+\]
+and its rule and sequent labels are inherited from those of \(t\) along the
+translation \(c\mapsto a\cdot c\).
+\end{definition}
+
+\begin{proposition}[Disjointness of incomparable address cones]
+Let \(t\in\PTree\) and \(a,b\in \Addr(t)\). If \(a\) and \(b\) are
+incomparable, then
+\[
+\Addr_t(a)\cap \Addr_t(b)=\varnothing.
+\]
+\end{proposition}
+
+\begin{proof}
+Suppose \(d\in \Addr_t(a)\cap \Addr_t(b)\). Then \(a\preceq d\) and
+\(b\preceq d\). Since \(a\) and \(b\) are both initial segments of the same
+finite sequence \(d\), one of them must be an initial segment of the other.
+Hence \(a\preceq b\) or \(b\preceq a\), contradicting incomparability.
+\end{proof}
+
+\begin{remark}[Finiteness of address chains]
+For each fixed proof tree \(t\), the set \(\Addr(t)\) is finite, since the
+vertex set \(V_t\) is finite and the vertex map \(v_t:\Addr(t)\to V_t\) is
+bijection onto the vertices of \(t\). Hence \((\Addr(t),\preceq)\) is a finite
+partially ordered set. In particular, every chain
+\[
+a_0 \prec a_1 \prec \cdots \prec a_k
+\]
+of comparable addresses is finite. Thus for any fixed derivation, iterated
+nesting of graft sites may occur only finitely many times: one can move
+strictly downward in the tree only along a finite address chain.
+\end{remark}
+
+\begin{remark}[Use of cones in the two-step analysis]
+The notations \(\Addr_t(a)\) and \(t\downarrow_a\) are used later in the
+graft-pair decomposition. If
+\[
+\graftat{z}{a}{y}=z'
+\qquad\text{and}\qquad
+\graftat{z'}{b}{x}=w,
+\]
+then the \emph{inner} case is the condition \(b\in \Addr_{z'}(a)\), i.e.
+\(a\preceq b\), while the \emph{outer} case is the condition that \(a\) and
+\(b\) are incomparable in \((\Addr(z'),\preceq)\). Proposition~25 is exactly
+the set-theoretic statement that the rooted regions affected by two outer
+grafts are disjoint.
 \end{remark}
 
 % ---- Figure 1: proof tree with address labels ----
@@ -510,13 +691,77 @@ by replacing a graftable leaf of \(t\) by the tree \(u\).
 \end{definition}
 
 \begin{definition}
-We write \(\Graft(u,t)\) for the finite list of proof trees obtained by
-matching-leaf grafting of \(u\) into \(t\).
+For fixed proof trees \(u,t\in \PTree\), we write \(\Graft(u,t)\) for the
+\emph{finite family of one-step graft outputs} obtained by replacing a single
+graftable leaf of \(t\) by \(u\). Equivalently, \(\Graft(u,t)\) is indexed by
+the set of graftable addresses in \(t\).
 \end{definition}
+
+\begin{definition}[Partial graft map]
+For proof trees \(u,t\), let
+\[
+\operatorname{Leaf}_u(t):=
+\{\,a\in \Addr(t): \text{$a$ names a leaf of \(t\) labelled by the
+conclusion sequent of \(u\)}\,\}.
+\]
+The \emph{partial graft map}
+\[
+\gamma_{u,t}:\operatorname{Leaf}_u(t)\to \PTree
+\]
+is defined by \(\gamma_{u,t}(a)=\graftat{t}{a}{u}\), the proof tree obtained by
+grafting \(u\) into \(t\) at address \(a\). We therefore regard
+\(\Graft(u,t)\) as the finite indexed family
+\[
+\Graft(u,t)=\bigl(\gamma_{u,t}(a)\bigr)_{a\in \operatorname{Leaf}_u(t)}.
+\]
+Its set of distinct outputs is
+\[
+\operatorname{SuppGraft}(u,t):=\operatorname{im}(\gamma_{u,t}),
+\]
+and its multiplicity function is
+\[
+m_{u,t}(w):=
+\#\{\,a\in \operatorname{Leaf}_u(t)\mid \gamma_{u,t}(a)=w\,\}
+\qquad (w\in \PTree).
+\]
+\end{definition}
+
+\begin{definition}[Successful grafting]
+For fixed proof trees \(u,t\in \PTree\) and an address \(a\in \Addr(t)\), we
+say that the grafting of \(u\) into \(t\) at \(a\) is \emph{successful} if
+\(a\in \operatorname{Leaf}_u(t)\), equivalently if \(\gamma_{u,t}(a)\) is
+defined.
+\end{definition}
+
+\begin{proposition}[Finiteness of one-step graft outputs]
+For fixed \(u,t\in \PTree\), the indexing set \(\operatorname{Leaf}_u(t)\) is
+finite. Consequently the family \(\Graft(u,t)\) of one-step graft outputs is
+finite.
+\end{proposition}
+
+\begin{proof}
+The set \(\operatorname{Leaf}_u(t)\) is a subset of the finite address set
+\(\Addr(t)\). Hence it is finite. The family \(\Graft(u,t)\) is the image of
+\(\gamma_{u,t}\) on this finite indexing set, so it is a finite indexed family.
+Its support set \(\operatorname{SuppGraft}(u,t)\) is finite as the image of a
+finite set.
+\end{proof}
 
 \begin{remark}
 This operation is controlled by exact interface matching. It does not rely on
 extending contexts by structural rules.
+\end{remark}
+
+\begin{remark}
+For fixed \(u,t\in \PTree\),
+\[
+\operatorname{SuppGraft}(u,t)=\gamma_{u,t}\bigl(\operatorname{Leaf}_u(t)\bigr),
+\qquad
+|\operatorname{SuppGraft}(u,t)|\le |\operatorname{Leaf}_u(t)|\le |\Addr(t)|<\infty.
+\]
+Thus the one-step graft data is finite because it is indexed by the finite set
+\(\operatorname{Leaf}_u(t)\). It is not an iterated closure construction under
+the sequent rules.
 \end{remark}
 
 \noindent Matching-leaf grafting is substitution of one proof tree into a leaf
@@ -634,9 +879,37 @@ tree is again the proof tree of a derivation in \(\NMMS(\mszero)\).
 \end{proposition}
 
 \begin{proof}
-The proof is by induction on the outer derivation. Replacing a premise leaf by
-another derivation with the same conclusion preserves the validity of the last
-rule, and hence of the whole derivation.
+We argue by induction on the height of \(d_{\mathrm{out}}\).
+
+If \(d_{\mathrm{out}}\) has height \(0\), then \(t\) consists of a single leaf.
+Since \(a\) is graftable for \(u\), the conclusion sequent at that leaf is the
+conclusion of \(d_{\mathrm{in}}\). Therefore the grafted tree is exactly
+\(u=\Tree(d_{\mathrm{in}})\), and hence is the proof tree of a derivation.
+
+Now suppose \(d_{\mathrm{out}}\) has positive height, and write its last
+inference as a rule instance
+\[
+\rho(d_1,\dots,d_k),
+\]
+where \(d_1,\dots,d_k\) are the immediate subderivations and \(\rho\) is the
+final rule. Since \(a\) names a leaf of \(t=\Tree(d_{\mathrm{out}})\), there is
+a unique index \(i\in\{1,\dots,k\}\) such that \(a\) lies in the address set of
+the \(i\)-th premise subtree \(\Tree(d_i)\); write the corresponding local
+address as \(a_i\in \Addr(\Tree(d_i))\). By the inductive hypothesis, replacing
+the leaf of \(\Tree(d_i)\) at \(a_i\) by \(u=\Tree(d_{\mathrm{in}})\) yields a
+proof tree \(\Tree(d_i')\) of some derivation \(d_i'\) having the same
+conclusion sequent as \(d_i\), because graftability means that the replaced
+leaf and the root of \(u\) carry the same sequent label.
+
+Now reapply the same final rule \(\rho\) to the tuple of premises
+\[
+d_1,\dots,d_{i-1},d_i',d_{i+1},\dots,d_k.
+\]
+The conclusions of the premises are unchanged, so the same rule instance is
+again valid and yields a derivation \(d'\) in \(\NMMS(\mszero)\). By
+construction, \(\Tree(d')\) is precisely the tree obtained from
+\(\Tree(d_{\mathrm{out}})\) by grafting \(u\) at the leaf \(a\). Hence the
+grafted tree is again the proof tree of a derivation.
 \end{proof}
 
 \begin{corollary}
@@ -650,15 +923,73 @@ Apply the previous proposition to each graftable leaf.
 
 \section{The raw grafting product and graft-pair decomposition}
 
-Let \(\ZZ\langle \PT \rangle\) be the free abelian group on proof trees.
+Let \(\ZZ\langle \PTree \rangle\) be the free abelian group on proof trees.
+
+\begin{definition}[Linear proof-tree carrier]
+Equivalently,
+\[
+\ZZ\langle \PTree \rangle
+=
+\{\,f:\PTree\to \ZZ \mid \operatorname{supp}(f)\text{ is finite}\,\},
+\]
+with pointwise addition and scalar multiplication. For each tree \(t\in\PTree\) we
+write \(e_t\) for the characteristic function of \(\{t\}\), so that every
+element of \(\ZZ\langle \PTree \rangle\) has a unique expression
+\[
+\sum_{t\in \PTree} n_t e_t
+\]
+with only finitely many nonzero coefficients \(n_t\in \ZZ\).
+\end{definition}
 
 \begin{definition}
 For proof trees \(u,t\), define
 \[
-u \triangleright t := \sum_{w\in \Graft(u,t)} w
+u \triangleright t := \sum_{a\in \operatorname{Leaf}_u(t)} e_{\gamma_{u,t}(a)}
 \]
-and extend this bilinearly to \(\ZZ\langle \PT \rangle\).
+and extend this bilinearly to \(\ZZ\langle \PTree \rangle\).
 \end{definition}
+
+\begin{definition}[Raw grafting operator]
+Equivalently, the raw product is the bilinear operator
+\[
+m_{\mathrm{raw}} :
+\ZZ\langle \PTree\rangle \otimes_{\ZZ} \ZZ\langle \PTree\rangle
+\longrightarrow
+\ZZ\langle \PTree\rangle
+\]
+determined on basis elements by
+\[
+m_{\mathrm{raw}}(e_u\otimes e_t)
+=
+\sum_{a\in \operatorname{Leaf}_u(t)} e_{\gamma_{u,t}(a)}.
+\]
+Thus \(u\triangleright t\) is simply \(m_{\mathrm{raw}}(e_u\otimes e_t)\),
+written in the proof-tree basis.
+\end{definition}
+
+\begin{proposition}[Multiplicity formula]
+For every \(u,t,w\in \PTree\), the coefficient of \(e_w\) in
+\(u\triangleright t\) is exactly \(m_{u,t}(w)\). Equivalently,
+\[
+u\triangleright t
+=
+\sum_{w\in \operatorname{SuppGraft}(u,t)} m_{u,t}(w)\,e_w.
+\]
+\end{proposition}
+
+\begin{proof}
+By definition,
+\[
+u\triangleright t=\sum_{a\in \operatorname{Leaf}_u(t)} e_{\gamma_{u,t}(a)}.
+\]
+For fixed \(w\in \PTree\), the basis vector \(e_w\) occurs once for each
+address \(a\in \operatorname{Leaf}_u(t)\) such that \(\gamma_{u,t}(a)=w\).
+Hence its coefficient is exactly
+\[
+\#\{\,a\in \operatorname{Leaf}_u(t)\mid \gamma_{u,t}(a)=w\,\}=m_{u,t}(w).
+\]
+Collecting equal basis terms yields the second displayed formula.
+\end{proof}
 
 \begin{remark}
 This is the proof-tree analogue of Grossman--Larson grafting: one inserts the
@@ -667,22 +998,49 @@ sequent interface matches exactly. The operation therefore depends on proof
 structure, not merely on the underlying combinatorics of rooted trees.
 \end{remark}
 
-\begin{proposition}
-The coefficient of a proof tree \(w\) in \(u\triangleright t\) is the number
-of matching-leaf graftings of \(u\) into \(t\) yielding \(w\).
-\end{proposition}
+\begin{remark}
+The operation \(\triangleright\) just defined is the \emph{raw pre-quotient
+grafting product} on the free abelian group \(\ZZ\langle\PTree\rangle\). In
+the formal development one proves that this bilinear operation satisfies the
+right pre-Lie identity. What is mathematically important for the present paper
+is that the proof strategy analysed below does not proceed by a direct
+cardinality comparison of raw address witnesses. Instead, one studies the set
+of \emph{two-step witnesses} for the associator, partitions that set by a
+proof-theoretically meaningful equivalence relation, and compares the
+resulting quotient classes. The quotient therefore does not define the raw
+product; it organizes the proof of the pre-Lie identity for that product.
+\end{remark}
+
+\begin{theorem}[Raw right pre-Lie identity]
+The bilinear product \(\triangleright\) on \(\ZZ\langle\PTree\rangle\)
+satisfies the right pre-Lie identity
+\[
+(a\triangleright b)\triangleright c-a\triangleright (b\triangleright c)
+=
+(a\triangleright c)\triangleright b-a\triangleright (c\triangleright b)
+\]
+for all \(a,b,c\in \ZZ\langle\PTree\rangle\).
+\end{theorem}
+
+\begin{proof}
+By bilinearity, it suffices to prove the identity on basis elements
+\(e_x,e_y,e_z\), i.e. on proof trees \(x,y,z\in \PTree\). For fixed output
+tree \(w\), the coefficient of \(e_w\) in each side is computed by counting the
+appropriate two-step witness classes contributing to the corresponding
+associator term. The quotient analysis developed below proves that these class
+contributions match output-by-output: the noise sector is quotient-trivial, the
+mixed residual sector is empty, and the pure residual sectors transport
+uniquely across the swapped bracketing. This is exactly the class-level pre-Lie
+comparison theorem formalized in the Lean development. Hence the coefficients
+of \(e_w\) agree for every \(w\), so the two sides are equal in
+\(\ZZ\langle\PTree\rangle\). Bilinearity then yields the stated identity for
+arbitrary \(a,b,c\).
+\end{proof}
 
 \begin{remark}
-The raw product satisfies the pre-Lie identity as a theorem of the formal
-development. However, the direct proof of this identity at the raw counting
-level --- by showing that the number of graft-pair witnesses balances on both
-sides --- turns out to be hard to close without additional structure. The
-quotient analysis developed in Sections~7--9 is not merely an explanation of
-an identity that holds for simpler reasons; it is the proof strategy that
-actually works. The equivalence relation on graft-pair codes identifies
-precisely which witness overcounting cancels and which contributions are
-genuinely matched across the two bracketings, reducing an opaque counting
-problem to a typed bijection between pure residual classes.
+The quotient fibres \(\Qclass(x,y,z;w)\) introduced below are not the carrier of
+this algebra. They are finite output-indexed witness quotients used to prove the
+preceding theorem by organizing the two-step associator comparison class-by-class.
 \end{remark}
 
 \subsection{Ordered pairs of grafts}
@@ -692,11 +1050,19 @@ to \(w\)} consists of a first graft of \(y\) into \(z\) at a matching leaf
 yielding an intermediate tree \(z'\), followed by a second graft of \(x\) into
 \(z'\) yielding \(w\).
 
-\begin{definition}
-Such a graft pair is called \emph{outer} if the second graft occurs
-independently of the first, and \emph{inner} if the second graft occurs inside
-the subtree introduced by the first. In address terms, these are the
-incomparable and comparable cases.
+\begin{definition}[Outer and inner two-step witnesses]
+Let \(a\in \Addr(z)\) be the address of the first graft and let
+\(z'=\graftat{z}{a}{y}\). Since the same address \(a\) names the root of the
+inserted copy of \(y\) inside \(z'\), a second graft at address
+\(b\in \Addr(z')\) is called:
+\begin{itemize}
+\item \emph{inner} if \(a\preceq b\), equivalently if there exists
+\(c\in \Addr(y)\) with \(b=a\cdot c\);
+\item \emph{outer} if \(a\) and \(b\) are incomparable in the prefix order on
+\(\Addr(z')\).
+\end{itemize}
+Thus outer and inner are defined entirely by the partial order
+\((\Addr(z'),\preceq)\) on addresses.
 \end{definition}
 
 \begin{lemma}[Address classification after grafting]
@@ -704,7 +1070,7 @@ incomparable and comparable cases.
 Let $y$ be grafted into $z$ at address $a$, yielding $z'$. Let $x$ be
 successfully grafted into $z'$ at address $b$. Then either
 \begin{enumerate}[label=\textup{(\roman*)}]
-\item $b = a\mathbin{+\!\!+} c$ for some non-empty extension $c$, so the second
+\item $b = a\cdot c$ for some non-empty extension $c$, so the second
 graft site lies inside the subtree introduced by the first; or
 \item $a$ and $b$ are incomparable, so the two graft sites refer to disjoint
 parts of the tree.
@@ -780,48 +1146,110 @@ Blue marks the pair of graft addresses under comparison.
 Left: \texttt{[0,1]} extends \texttt{[0]}, so the second graft site lies
 \emph{inside} the subtree rooted at the first site --- the inner (nested) case.
 Right: \texttt{[0]} and \texttt{[1]} are on disjoint branches --- the outer
-(independent) case, where the order of insertion can be reversed.
+(incomparable-address) case, where the order of insertion can be reversed.
 
 \begin{theorem}[Graft-pair decomposition]
-Every ordered pair of grafts is either nested or independent.
-More precisely, if
+Let \(a\in \operatorname{Leaf}_y(z)\) and \(b\in \operatorname{Leaf}_x(z')\)
+and suppose
 \[
-y \text{ grafts into } z \text{ to yield } z'
-\qquad\text{and}\qquad
-x \text{ grafts into } z' \text{ to yield } w,
+\graftat{z}{a}{y}=z',
+\qquad
+\graftat{z'}{b}{x}=w.
 \]
-then exactly one of the following geometric descriptions applies:
+Then exactly one of the following holds:
 \begin{enumerate}[label=\textup{(\roman*)}]
-\item \emph{Inner case:} the second address extends the first, so the second
-graft occurs inside the subtree inserted by the first;
-\item \emph{Outer case:} the two addresses are incomparable, and the two
-insertions can be performed in the opposite order.
+\item \emph{Inner case:} there exists a nonempty address
+\(c\in \Addr(y)\setminus\{\langle\rangle\}\) such that
+\[
+b=a\cdot c.
+\]
+Equivalently,
+\[
+b\in \Addr_{z'}(a)\setminus\{a\}.
+\]
+If \(y'=\graftat{y}{c}{x}\), then
+\[
+\graftat{z'}{a\cdot c}{x}
+=
+\graftat{z}{a}{y'}.
+\]
+\item \emph{Outer case:} \(a\) and \(b\) are incomparable in the partially
+ordered set \((\Addr(z'),\preceq)\), and there exists \(z_3\in \PTree\) such
+that
+\[
+\graftat{z}{b}{x}=z_3
+\qquad\text{and}\qquad
+\graftat{z_3}{a}{y}=w.
+\]
 \end{enumerate}
 \end{theorem}
 
-\begin{proof}[Proof sketch]
-This is the content of the full address analysis formalized in the Lean
-theorem `two\_step\_graft\_decomposition\_full'. If the second address begins
-with the first, one is in the nested case. Otherwise the addresses are
-incomparable, and the incomparable-address commutation theorem shows that the
-order of insertion can be reversed.
+\begin{proof}
+Let \(a\) be the address at which \(y\) is grafted into \(z\), and let \(b\)
+be the address at which \(x\) is grafted into the resulting tree \(z'\). By
+the address-classification theorem formalized in
+\texttt{two\_step\_graft\_decomposition\_full}, exactly one of two things can
+happen.
+
+Either \(a\prec b\). By definition of the prefix order there is a nonempty
+sequence \(c\) such that \(b=a\cdot c\). Equivalently,
+\[
+b\in \Addr_{z'}(a)\setminus\{a\}.
+\]
+Thus the second graft address lies in the address cone below the root of the
+inserted copy of \(y\), so the second graft is inner. If \(y'\) is obtained
+from \(y\) by grafting \(x\) at \(c\), then locality of replacement at a
+subtree gives
+\[
+\graftat{(\graftat{z}{a}{y})}{a\cdot c}{x}
+=
+\graftat{z}{a}{(\graftat{y}{c}{x})}.
+\]
+So the same output \(w\) may be read as arising from an inner graft of \(x\)
+into \(y\), followed by insertion of the result into \(z\). This is the inner
+case.
+
+Or else \(a\not\preceq b\). Since the second graft is successful, the address
+classification lemma excludes the possibility that \(b\prec a\). Therefore \(a\)
+and \(b\) are incomparable in the partial order \((\Addr(z'),\preceq)\). By
+the preceding proposition,
+\[
+\Addr_{z'}(a)\cap \Addr_{z'}(b)=\varnothing.
+\]
+Hence the two local replacements are supported on disjoint rooted subtrees of
+\(z'\), and so the order of the two graft operations may be reversed without
+changing the resulting proof tree. This is the outer case.
+
+The two cases are mutually exclusive because a pair of addresses in a partial
+order cannot be simultaneously comparable and incomparable.
 \end{proof}
 
 \begin{remark}
 This theorem is the geometric heart of the associator analysis. It shows that
-the only essential distinction among graft pairs is between
-independent and nested insertion.
+the only essential distinction among graft pairs is between the
+prefix-comparable and prefix-incomparable regimes for the two graft addresses.
 \end{remark}
 
-\begin{theorem}[Commutation of independent graftings]
+\begin{theorem}[Commutation at incomparable addresses]
 If two successful graftings occur at incomparable addresses, then performing
 them in either order yields the same final proof tree.
 \end{theorem}
 
-\begin{proof}[Proof sketch]
-Incomparable addresses refer to disjoint subtrees. Replacing the subtree at one
-address does not affect the subtree at the other, so the corresponding local
-modifications commute.
+\begin{proof}
+If addresses \(a\) and \(b\) are incomparable, then neither extends the
+other. Hence the subtree rooted at \(a\) and the subtree rooted at \(b\) are
+disjoint. Grafting at \(a\) replaces only the subtree at \(a\), so it leaves
+the subtree at \(b\) unchanged; similarly, grafting at \(b\) leaves the
+subtree at \(a\) unchanged.
+
+Therefore the two local replacement operations commute:
+\[
+\graftat{(\graftat{z}{a}{y})}{b}{x}
+=
+\graftat{(\graftat{z}{b}{x})}{a}{y}.
+\]
+Whenever both successive graftings are defined, they yield the same final proof
+tree.
 \end{proof}
 
 
@@ -881,6 +1309,20 @@ Without the quotient, the witness sets on the two sides of the equation
 are not equal as sets of address records, only equal in cardinality
 after noise removal; the quotient is what supplies the required
 bijection.
+
+For fixed \(x,y,z,w\), let \(\mathcal W_L(x,y,z;w)\) be the set of successful
+ordered pairs of graftings contributing to the coefficient of \(w\) in
+\((x\triangleright y)\triangleright z - x\triangleright(y\triangleright z)\),
+and let \(\mathcal W_R(x,y,z;w)\) be the analogous set for the swapped
+expression
+\((y\triangleright x)\triangleright z - y\triangleright(x\triangleright z)\).
+Then the raw pre-Lie identity would amount to a sign-preserving bijection
+between \(\mathcal W_L(x,y,z;w)\) and \(\mathcal W_R(x,y,z;w)\) for every
+output tree \(w\). What the formal development shows is subtler: there is in
+general no canonical bijection at raw witness level, but there is a canonical
+comparison after passing to quotient classes of witnesses. On those quotient
+classes, the noise sector cancels and the residual sector is matched
+bijectionally.
 \end{remark}
 
 
@@ -891,34 +1333,274 @@ At raw address level, graft-pair configurations still contain too much
 presentation data. The next step is to isolate their genuine dependency
 geometry.
 
-\subsection{Graft-pair classes}
+\subsection{Associator witnesses as ordered graft pairs}
 
 \begin{definition}
-A \emph{graft-pair code} (formalized as \texttt{TwoStepCode} in the Lean
-development) records a successful ordered pair of grafts together with its
-geometric type: left outer, right outer, left inner, or right inner. Here
-``left'' and ``right'' refer to the two bracketings
-\[
-x\triangleright (y\triangleright z)
-\qquad\text{and}\qquad
-y\triangleright (x\triangleright z),
-\]
-while ``outer'' and ``inner'' refer to the independent and nested cases of the
-graft-pair decomposition.
-\end{definition}
-
-\begin{definition}
-The \emph{bureaucratic equivalence} on graft-pair codes is the least equivalence
-relation generated by:
+Fix proof trees \(x,y,z,w\). A \emph{left witness for \(w\)} is a successful
+ordered pair of grafting operations contributing to the left-bracketed
+associator. Concretely, it is one of the following two kinds of data.
 \begin{enumerate}[label=\textup{(\roman*)}]
-\item commutation of independent outer insertions;
-\item transport of outer left presentations to the corresponding swapped outer
-presentations;
-\item transport of nested left presentations to the corresponding swapped inner
-presentations;
-\item the inverse transports from the swapped side.
+\item \emph{Outer witness:} addresses \(a,b\) and an intermediate tree \(z'\)
+such that grafting \(y\) into \(z\) at address \(a\) yields \(z'\), and then
+grafting \(x\) into \(z'\) at address \(b\) yields \(w\):
+\[
+\graftat{z}{a}{y}=z',
+\qquad
+\graftat{z'}{b}{x}=w.
+\]
+\item \emph{Inner witness:} an internal address \(c\) in \(x\), an address
+\(a\) in \(z\), and an intermediate tree \(u\) such that grafting \(y\) into
+\(x\) at address \(c\) yields \(u\), and then grafting \(u\) into \(z\) at
+address \(a\) yields \(w\):
+\[
+\graftat{x}{c}{y}=u,
+\qquad
+\graftat{z}{a}{u}=w.
+\]
+\end{enumerate}
+\noindent
+A \emph{swapped-right witness for \(w\)} is defined analogously:
+\begin{enumerate}[label=\textup{(\roman*)}]
+\item \emph{Outer witness:} addresses \(a,b\) and an intermediate tree \(z'\)
+such that
+\[
+\graftat{z}{a}{x}=z',
+\qquad
+\graftat{z'}{b}{y}=w.
+\]
+\item \emph{Inner witness:} an internal address \(c\) in \(y\), an address
+\(a\) in \(z\), and an intermediate tree \(u\) such that
+\[
+\graftat{y}{c}{x}=u,
+\qquad
+\graftat{z}{a}{u}=w.
+\]
 \end{enumerate}
 \end{definition}
+
+\begin{definition}[Witness sets]
+For fixed \(x,y,z,w\), let \(W^{\mathrm{out}}_L(x,y,z;w)\) be the set of all
+triples \((a,b,z')\in \mathbb N^{<\omega}\times \mathbb N^{<\omega}\times \PTree\)
+such that \(a\in \Addr(z)\), \(b\in \Addr(z')\), and
+\[
+\graftat{z}{a}{y}=z',
+\qquad
+\graftat{z'}{b}{x}=w.
+\]
+Let \(W^{\mathrm{in}}_L(x,y,z;w)\) be the set of all tuples
+\((c,a,u)\in \mathbb N^{<\omega}\times \mathbb N^{<\omega}\times \PTree\) such
+that \(c\in \Addr(x)\), \(a\in \Addr(z)\), and
+\[
+\graftat{x}{c}{y}=u,
+\qquad
+\graftat{z}{a}{u}=w.
+\]
+\[
+W^{\mathrm{out}}_R(x,y,z;w):=
+\{(a,b,z')\in \mathbb N^{<\omega}\times \mathbb N^{<\omega}\times \PTree
+ \mid a\in \Addr(z),\ b\in \Addr(z'),\
+ \graftat{z}{a}{x}=z',\ \graftat{z'}{b}{y}=w\},
+\]
+\[
+W^{\mathrm{in}}_R(x,y,z;w):=
+\{(c,a,u)\in \mathbb N^{<\omega}\times \mathbb N^{<\omega}\times \PTree
+ \mid c\in \Addr(y),\ a\in \Addr(z),\
+ \graftat{y}{c}{x}=u,\ \graftat{z}{a}{u}=w\}.
+\]
+The full left and swapped-right witness fibres are
+\[
+W_L(x,y,z;w):=W^{\mathrm{out}}_L(x,y,z;w)\cup W^{\mathrm{in}}_L(x,y,z;w).
+\]
+\[
+W_R(x,y,z;w):=W^{\mathrm{out}}_R(x,y,z;w)\cup W^{\mathrm{in}}_R(x,y,z;w).
+\]
+\end{definition}
+
+\begin{remark}[Set-theoretic form of the two-step dichotomy]
+The graft-pair decomposition theorem proved earlier implies that every
+successful ordered pair of grafts contributing to the left bracketing belongs
+to exactly one of the two fibres \(W^{\mathrm{out}}_L(x,y,z;w)\) or
+\(W^{\mathrm{in}}_L(x,y,z;w)\); likewise, every successful ordered pair
+contributing to the swapped-right bracketing belongs to exactly one of
+\(W^{\mathrm{out}}_R(x,y,z;w)\) or \(W^{\mathrm{in}}_R(x,y,z;w)\). Thus the
+outer/inner distinction is defined before quotienting; the quotient is used
+only to identify different presentations of the same two-step geometry.
+\end{remark}
+
+\subsection{Graft-pair classes}
+
+\begin{definition}[Tagged raw code fibres]
+For fixed \(x,y,z,w\), define
+\[
+\mathrm{Code}(x,y,z;w):=
+\bigl(\{\mathsf{Lout}\}\times W^{\mathrm{out}}_L(x,y,z;w)\bigr)
+\sqcup
+\bigl(\{\mathsf{Lin}\}\times W^{\mathrm{in}}_L(x,y,z;w)\bigr)
+\]
+\[
+\sqcup
+\bigl(\{\mathsf{Rout}\}\times W^{\mathrm{out}}_R(x,y,z;w)\bigr)
+\sqcup
+\bigl(\{\mathsf{Rin}\}\times W^{\mathrm{in}}_R(x,y,z;w)\bigr).
+\]
+We write the corresponding tagged elements as
+\[
+\mathsf{Lout}(a,b,z'),\qquad
+\mathsf{Lin}(c,a,u),\qquad
+\mathsf{Rout}(a,b,z'),\qquad
+\mathsf{Rin}(c,a,u).
+\]
+\end{definition}
+
+\begin{definition}[Generator relations]
+Fix \(x,y,z,w\). The four basic comparison relations on
+\(\mathrm{Code}(x,y,z;w)\) are the following subsets of
+\(\mathrm{Code}(x,y,z;w)\times \mathrm{Code}(x,y,z;w)\).
+\begin{enumerate}[label=\textup{(\roman*)}]
+\item \(R_{\mathrm{oo}}\) consists of all pairs
+\[
+\bigl(\mathsf{Lout}(a,b,z'),\mathsf{Rout}(b,a,z_3)\bigr)
+\]
+such that \((a,b,z')\in W^{\mathrm{out}}_L(x,y,z;w)\), both \(a\) and \(b\)
+belong to \(\Addr(z)\), \(a\) and \(b\) are incomparable in
+\((\Addr(z),\preceq)\), \(z_3=\graftat{z}{b}{x}\), and
+\[
+\graftat{z_3}{a}{y}=w.
+\]
+\item \(R_{\mathrm{oi}}\) consists of all pairs
+\[
+\bigl(\mathsf{Lout}(a,a\cdot c,z'),\mathsf{Rin}(c,a,u)\bigr)
+\]
+such that \((a,a\cdot c,z')\in W^{\mathrm{out}}_L(x,y,z;w)\),
+\(c\neq \langle\rangle\),
+\[
+u=\graftat{y}{c}{x},
+\qquad
+\graftat{z}{a}{u}=w.
+\]
+\item \(R_{\mathrm{bo}}\) consists of all pairs
+\[
+\bigl(\mathsf{Rout}(a,b,z'),\mathsf{Lout}(b,a,z_3)\bigr)
+\]
+such that \((a,b,z')\in W^{\mathrm{out}}_R(x,y,z;w)\), both \(a\) and \(b\)
+belong to \(\Addr(z)\), \(a\) and \(b\) are incomparable in
+\((\Addr(z),\preceq)\), \(z_3=\graftat{z}{b}{y}\), and
+\[
+\graftat{z_3}{a}{x}=w.
+\]
+\item \(R_{\mathrm{bi}}\) consists of all pairs
+\[
+\bigl(\mathsf{Rout}(a,a\cdot c,z'),\mathsf{Lin}(c,a,u)\bigr)
+\]
+such that \((a,a\cdot c,z')\in W^{\mathrm{out}}_R(x,y,z;w)\),
+\(c\neq \langle\rangle\),
+\[
+u=\graftat{x}{c}{y},
+\qquad
+\graftat{z}{a}{u}=w.
+\]
+\end{enumerate}
+\end{definition}
+
+\begin{definition}[Bureaucratic equivalence]
+The \emph{bureaucratic equivalence relation}
+\[
+\sim_{\mathrm b}\ \subseteq\ \mathrm{Code}(x,y,z;w)\times \mathrm{Code}(x,y,z;w)
+\]
+is the least equivalence relation containing the four generator relations
+\[
+R_{\mathrm{oo}},\qquad
+R_{\mathrm{oi}},\qquad
+R_{\mathrm{bo}},\qquad
+R_{\mathrm{bi}}.
+\]
+\end{definition}
+
+\begin{proposition}[Bureaucratic equivalence preserves the composite tree]
+Let \(\xi,\eta\in \mathrm{Code}(x,y,z;w)\).
+\begin{enumerate}[label=\textup{(\roman*)}]
+\item If \((\xi,\eta)\in R_{\mathrm{oo}}\cup R_{\mathrm{oi}}\cup
+R_{\mathrm{bo}}\cup R_{\mathrm{bi}}\), then \(\xi\) and \(\eta\) determine the
+same terminal proof tree \(w\).
+\item If \(\xi\sim_{\mathrm b}\eta\), then \(\xi\) and \(\eta\) represent the
+same class in the quotient \(\mathrm{Code}(x,y,z;w)/{\sim_{\mathrm b}}\).
+\end{enumerate}
+\end{proposition}
+
+\begin{proof}
+For \textup{(i)}, suppose first that
+\[
+\bigl(\mathsf{Lout}(a,b,z'),\mathsf{Rout}(b,a,z_3)\bigr)\in R_{\mathrm{oo}}.
+\]
+Then
+\[
+\graftat{z}{a}{y}=z',
+\qquad
+\graftat{z'}{b}{x}=w,
+\qquad
+\graftat{z}{b}{x}=z_3,
+\]
+and \(a,b\in \Addr(z)\) are incomparable. By the commutation theorem for
+graftings at incomparable addresses,
+\[
+\graftat{z_3}{a}{y}=w.
+\]
+Hence the two tagged codes lie in the same fibre and have the same output.
+
+Suppose next that
+\[
+\bigl(\mathsf{Lout}(a,a\cdot c,z'),\mathsf{Rin}(c,a,u)\bigr)\in R_{\mathrm{oi}}.
+\]
+Then
+\[
+\graftat{z}{a}{y}=z',
+\qquad
+\graftat{z'}{a\cdot c}{x}=w,
+\qquad
+u=\graftat{y}{c}{x},
+\qquad
+\graftat{z}{a}{u}=w.
+\]
+Moreover,
+\[
+\graftat{z'}{a\cdot c}{x}
+\;=\;
+\graftat{\graftat{z}{a}{y}}{a\cdot c}{x}
+\;=\;
+\graftat{z}{a}{\graftat{y}{c}{x}}
+\;=\;
+\graftat{z}{a}{u},
+\]
+which is exactly the locality-of-replacement identity on the rooted subtree
+inserted at address \(a\). Thus the two tagged codes again have the same
+terminal tree \(w\).
+
+The cases of \(R_{\mathrm{bo}}\) and \(R_{\mathrm{bi}}\) are the same two
+arguments with \(x\) and \(y\) interchanged.
+
+For \textup{(ii)}, equality of quotient classes is by definition the
+equivalence relation \(\sim_{\mathrm b}\). Thus \(\xi\sim_{\mathrm b}\eta\)
+implies
+\[
+[\,\xi\,]=[\,\eta\,]
+\qquad\text{in}\qquad
+\mathrm{Code}(x,y,z;w)/{\sim_{\mathrm b}}.
+\]
+\end{proof}
+
+\begin{remark}
+The quotient by \(\sim_{\mathrm b}\) is therefore a quotient of the tagged raw
+code fibre \(\mathrm{Code}(x,y,z;w)\), not of the set of trees with terminal
+label \(w\). Equality in the quotient is equality of equivalence classes of
+two-step presentations:
+\[
+[\,\xi\,]=[\,\eta\,]
+\quad\Longleftrightarrow\quad
+\xi\sim_{\mathrm b}\eta.
+\]
+What is forgotten is the particular address presentation of the two-step
+composite; what is retained is the quotient class of that presentation.
+\end{remark}
 
 % ---- Figure 4: the four two-step codes ----
 \begin{center}
@@ -985,58 +1667,126 @@ presentations;
 \end{tikzpicture}
 \end{center}
 \noindent\small
-The receiver tree $z$ is shown in grey; black nodes are graft sites.
-Numbered labels (1), (2) indicate the order of the two
-grafting steps. \textbf{Top row} (outer): both insertions act on $z$ or its
-modification; the two sites are at incomparable addresses.
-\textbf{Bottom row} (inner): step~1 composes two input trees, step~2 places
-the result into $z$.
-The top dashed arrow is outer commutation (leftOuter $\sim$ rightOuter for
-incomparable addresses). The bottom dashed arrow is the
-\texttt{outer\_comm\_inner} identification: when graft addresses are
-\emph{comparable}, a leftOuter code and the corresponding rightInner code
-record the same proof-composition history viewed from two perspectives.
+This figure is schematic. Its four labelled positions represent the four tagged
+components \(\mathsf{Lout}\), \(\mathsf{Lin}\), \(\mathsf{Rout}\),
+\(\mathsf{Rin}\) of the fibre \(\mathrm{Code}(x,y,z;w)\). The upper dashed
+arrow represents the relation \(R_{\mathrm{oo}}\subseteq
+\mathsf{Lout}\times\mathsf{Rout}\), defined on incomparable address pairs in
+\(\Addr(z)\). The comparable-address transport is the relation
+\(R_{\mathrm{oi}}\subseteq \mathsf{Lout}\times\mathsf{Rin}\), defined on tuples
+of the form \((a,a\cdot c,z')\). The converse relations are
+\(R_{\mathrm{bo}}\subseteq \mathsf{Rout}\times\mathsf{Lout}\) and
+\(R_{\mathrm{bi}}\subseteq \mathsf{Rout}\times\mathsf{Lin}\). Grey vertices
+belong to the receiver tree \(z\); black vertices indicate the address
+components occurring in the corresponding raw code tuples.
 
-\begin{remark}
-Case~(ii) above is the \emph{outer commutation}: two independent graftings
-(at incomparable addresses) can be performed in either order and produce the
-same final proof tree, so the two derivation histories are identified.
-This is a scheduling equivalence, analogous to the commutativity of independent
-rule applications in proof nets, but operating at the level of proof
-composition rather than within a single proof.
+\begin{proposition}[Comparable-address criterion for the mixed generator]
+Let
+\[
+\xi=\mathsf{Lout}(a,b,z')\in \mathrm{Code}(x,y,z;w).
+\]
+Then there exists \(\eta\in \mathrm{Code}(x,y,z;w)\) such that
+\[
+(\xi,\eta)\in R_{\mathrm{oi}}
+\]
+if and only if there exists an address \(c\in \mathbb N^{<\omega}\) with
+\[
+b=a\cdot c.
+\]
+Whenever this holds, every such \(\eta\) has the form
+\[
+\eta=\mathsf{Rin}(c,a,u)
+\]
+for a tree \(u\) satisfying
+\[
+u=\graftat{y}{c}{x},
+\qquad
+\graftat{z}{a}{u}=w.
+\]
+\end{proposition}
 
-Case~(iii) is more subtle and is the engine of the noise/residual separation
-proved in Section~8. It identifies a \emph{left-outer} code --- where $x$
-is inserted into $z'$ at an address independent of the address $a$ at which
-$y$ was first inserted --- with a \emph{right-inner} code, in which $x$ is
-first composed with $y$ and the result is then placed into $z$. This
-identification is possible exactly when the two graft addresses are
-\emph{comparable}: comparability means the second address lies on or above
-the boundary of the subtree introduced by the first, creating a dependency
-geometry that admits both readings simultaneously. In the Lean development
-this case appears as the \texttt{outer\_comm\_inner} constructor of
-\texttt{TwoStepEquiv}. It is the proof-theoretically distinctive case: in
-abstract rooted-tree grafting without sequent labels, there is no constraint
-that forces comparable addresses to interact in this way, and the equivalence
-would be defined differently or not at all.
-\end{remark}
+\begin{proof}
+If \((\xi,\eta)\in R_{\mathrm{oi}}\), then by definition of \(R_{\mathrm{oi}}\)
+\(\xi\) must be of the form \(\mathsf{Lout}(a,a\cdot c,z')\) for some
+\(c\in \mathbb N^{<\omega}\). Thus \(b=a\cdot c\).
 
-\begin{remark}
-The bureaucratic equivalence connects to the classical problem of proof
-identity. The question of when two derivations should count as the same proof
---- studied in the traditions of proof nets, typed $\lambda$-calculus, and
-categorical proof theory --- here receives a specific answer calibrated to
-proof composition: two graft-pair histories are the same if and only if they
-are related by the scheduling and dependency equivalences above. The noise
-sector, defined in Section~8, is precisely the set of classes where this
-equivalence collapses the distinction between outer and inner bracketings
-entirely.
-\end{remark}
+Conversely, suppose \(b=a\cdot c\). If
+\[
+\xi=\mathsf{Lout}(a,a\cdot c,z')
+\]
+lies in \(\mathrm{Code}(x,y,z;w)\), then
+\[
+\graftat{z}{a}{y}=z',
+\qquad
+\graftat{z'}{a\cdot c}{x}=w.
+\]
+Set \(u:=\graftat{y}{c}{x}\). By locality of replacement on the rooted subtree
+inserted at \(a\),
+\[
+\graftat{z}{a}{u}
+\;=\;
+\graftat{z}{a}{\graftat{y}{c}{x}}
+\;=\;
+\graftat{\graftat{z}{a}{y}}{a\cdot c}{x}
+\;=\;
+\graftat{z'}{a\cdot c}{x}
+\;=\;
+w.
+\]
+Therefore
+\[
+\eta:=\mathsf{Rin}(c,a,u)
+\]
+satisfies \((\xi,\eta)\in R_{\mathrm{oi}}\). The final statement is again just
+the defining form of \(R_{\mathrm{oi}}\).
+\end{proof}
+
+\begin{proposition}[Identity of two-step proof compositions]
+For \(c,d\in \mathrm{Code}(x,y,z;w)\),
+\[
+[c]=[d]\ \text{in}\ \mathrm{Code}(x,y,z;w)/{\sim_{\mathrm b}}
+\]
+if and only if there exists a finite chain
+\[
+c=c_0,\ c_1,\ \dots,\ c_n=d
+\]
+of raw graft-pair codes in \(\mathrm{Code}(x,y,z;w)\) such that, for each
+\(i<n\), the pair \((c_i,c_{i+1})\) is related by one generating move of the
+bureaucratic equivalence relation, that is, belongs to
+\[
+R_{\mathrm{oo}}\cup R_{\mathrm{oi}}\cup R_{\mathrm{bo}}\cup R_{\mathrm{bi}}
+\]
+or to the converse of one of these four relations.
+\end{proposition}
+
+\begin{proof}
+By definition, \(\Qclass(x,y,z;w)\) is the quotient of
+\(\mathrm{Code}(x,y,z;w)\) by the equivalence relation \(\sim_{\mathrm b}\)
+generated by the four relations
+\[
+R_{\mathrm{oo}},\qquad
+R_{\mathrm{oi}},\qquad
+R_{\mathrm{bo}},\qquad
+R_{\mathrm{bi}}.
+\]
+Hence
+\([c]=[d]\) is equivalent to \(c\sim_{\mathrm b} d\). Since
+\(\sim_{\mathrm b}\) is the least equivalence relation containing those
+four relations, the statement \(c\sim_{\mathrm b} d\) is in turn equivalent
+to the existence of a finite zig-zag from \(c\) to \(d\) built from generators
+and their converses. This is exactly the required chain description.
+\end{proof}
 
 \begin{definition}
 The quotient set of graft-pair codes is denoted
 \[
 \Qclass(x,y,z;w).
+\]
+More formally, if \(\mathrm{Code}(x,y,z;w)\) denotes the set of all raw
+graft-pair codes with output \(w\), and if \(\sim_{\mathrm{b}}\) is the
+bureaucratic equivalence relation, then
+\[
+\Qclass(x,y,z;w):=\mathrm{Code}(x,y,z;w)/{\sim_{\mathrm{b}}}.
 \]
 Inside it we distinguish the left contribution classes
 \[
@@ -1049,11 +1799,128 @@ and the swapped-right contribution classes
 the latter being associated with the swapped bracketing \((y,x,z)\).
 \end{definition}
 
+\begin{definition}[Quotient projection]
+The quotient map
+\[
+\pi_{x,y,z;w} :
+\mathrm{Code}(x,y,z;w)
+\twoheadrightarrow
+\Qclass(x,y,z;w)
+\]
+sends a raw graft-pair code \(c\) to its bureaucratic equivalence class
+\([c]\). In particular, the left and swapped-right contribution classes are
+images under \(\pi_{x,y,z;w}\) of the corresponding subsets of raw left and raw
+swapped-right witnesses.
+\end{definition}
+
+\begin{definition}[Classwise comparison relation]
+The relation
+\[
+\Swap_{x,y,z;w}\subseteq \Qclass(x,y,z;w)\times \Qclass(y,x,z;w)
+\]
+is defined by declaring \(([c],[d])\in \Swap_{x,y,z;w}\) when there exist raw
+representatives
+\[
+\xi\in \mathrm{Code}(x,y,z;w),
+\qquad
+\eta\in \mathrm{Code}(y,x,z;w)
+\]
+with
+\[
+\pi_{x,y,z;w}(\xi)=[c],
+\qquad
+\pi_{y,x,z;w}(\eta)=[d],
+\]
+such that the ordered pair \((\xi,\eta)\) lies in the graph of one of the four
+generator relations after swapping the parameters \((x,y)\leftrightarrow(y,x)\).
+Equivalently, \(\Swap_{x,y,z;w}\) is the quotient image of the union of the
+four generator relations under the two quotient maps. Because these relations
+are compatible with \(\sim_{\mathrm b}\), \(\Swap_{x,y,z;w}\) is well-defined.
+\end{definition}
+
 \begin{remark}
-The quotient is meant to identify proof presentations that differ only by
-bureaucratic scheduling or by equivalent ways of viewing the same nested
-composition. This is the formal counterpart of the proof-theoretic idea that
-identity of proof should ignore inessential order of independent operations.
+An element of \(\CL(x,y,z;w)\) or \(\CR(x,y,z;w)\) should therefore be read as
+an equivalence class of \emph{pairs of grafting operations} with output \(w\),
+not as a single derivation history. The quotient identifies histories that
+differ only by bureaucratic scheduling, or by two equivalent descriptions of
+the same nested dependency. This is the formal counterpart of the
+proof-theoretic principle that identity of proof should ignore inessential
+orderings of operations supported at incomparable addresses while retaining
+genuine dependency.
+\end{remark}
+
+\begin{definition}[Support predicates and sector decomposition on the left carrier]
+Fix \(x,y,z,w\), and let \(q\in \CL(x,y,z;w)\).
+\begin{enumerate}[label=\textup{(\roman*)}]
+\item \(q\) has \emph{left outer support} if it admits a representative in
+\(W^{\mathrm{out}}_L(x,y,z;w)\).
+\item \(q\) has \emph{left inner support} if it admits a representative in
+\(W^{\mathrm{in}}_L(x,y,z;w)\).
+\item \(q\) has \emph{right outer support} if there exists
+\(q'\in \CR(x,y,z;w)\) such that \((q,q')\in \Swap_{x,y,z;w}\) and \(q'\) admits
+a representative in \(W^{\mathrm{out}}_R(x,y,z;w)\).
+\item \(q\) has \emph{right inner support} if there exists
+\(q'\in \CR(x,y,z;w)\) such that \((q,q')\in \Swap_{x,y,z;w}\) and \(q'\) admits
+a representative in \(W^{\mathrm{in}}_R(x,y,z;w)\).
+\end{enumerate}
+The two quotient-trivial noise sectors on the left carrier are then
+\[
+\Noise_{L\to R}(x,y,z;w)
+:=
+\{\,q\in \CL(x,y,z;w)\mid
+\text{$q$ has left outer support and right inner support}\,\},
+\]
+\[
+\Noise_{R\to L}(x,y,z;w)
+:=
+\{\,q\in \CL(x,y,z;w)\mid
+\text{$q$ has right outer support and left inner support}\,\}.
+\]
+The \emph{residual left sector} is
+\[
+\Res_L(x,y,z;w)
+:=
+\CL(x,y,z;w)\setminus
+\bigl(\Noise_{L\to R}(x,y,z;w)\cup \Noise_{R\to L}(x,y,z;w)\bigr).
+\]
+Finally, for \(q\in \Res_L(x,y,z;w)\), define
+\[
+q\in \PureOut_L(x,y,z;w)
+\iff
+\text{$q$ has left outer support and not left inner support},
+\]
+\[
+q\in \PureIn_L(x,y,z;w)
+\iff
+\text{$q$ has left inner support and not left outer support},
+\]
+\[
+q\in \mathsf{Mixed}_L(x,y,z;w)
+\iff
+\text{$q$ has both left outer and left inner support}.
+\]
+\end{definition}
+
+\begin{remark}[Mathematical form of the quotient-level comparison]
+For fixed \(x,y,z,w\), the class-level pre-Lie comparison problem is the
+comparison of the two quotient carriers \(\CL(x,y,z;w)\) and
+\(\CR(x,y,z;w)\) through the transport relation \(\Swap_{x,y,z;w}\). On the
+left carrier, the quotient-trivial part is exactly
+\[
+\Noise_{L\to R}(x,y,z;w)\cup \Noise_{R\to L}(x,y,z;w),
+\]
+while the nontrivial part is the residual set \(\Res_L(x,y,z;w)\). The later
+theorems prove:
+\begin{enumerate}[label=\textup{(\roman*)}]
+\item every residual left class belongs to exactly one of the three sectors
+\(\PureOut_L(x,y,z;w)\), \(\PureIn_L(x,y,z;w)\), \(\mathsf{Mixed}_L(x,y,z;w)\);
+\item the mixed residual sector \(\mathsf{Mixed}_L(x,y,z;w)\) is empty;
+\item the outer and inner transport maps induce unique partners for classes in
+\(\PureOut_L(x,y,z;w)\) and \(\PureIn_L(x,y,z;w)\), respectively.
+\end{enumerate}
+Thus the class-level associator comparison reduces to equality on the
+quotient-trivial noise sector and to unique transport on the two pure residual
+sectors.
 \end{remark}
 
 \subsection{Canonical transport theorems}
@@ -1063,11 +1930,31 @@ For every \(x,y,z,w\), outer left contribution classes are canonically in
 bijection with outer contribution classes on the swapped right side.
 \end{theorem}
 
-\begin{proof}[Proof sketch]
-If the two insertions are independent, they occur at incomparable addresses.
-The incomparable-address commutation theorem reverses their order without
-changing the final proof tree. This witness-level transport descends to the
-graft-pair quotient and yields a bijection of outer classes.
+\begin{proof}
+Take an outer left witness represented by a pair of successful grafts
+\[
+\graftat{z}{a}{y}=z',
+\qquad
+\graftat{z'}{b}{x}=w,
+\]
+with \(a\) and \(b\) incomparable. By commutation at incomparable addresses,
+there is a unique tree \(z''\) such that
+\[
+\graftat{z}{b}{x}=z'',
+\qquad
+\graftat{z''}{a}{y}=w.
+\]
+This defines a swapped right-outer witness with the same output \(w\).
+
+Because this construction is obtained by commuting the same two local
+operations, it depends only on the dependency geometry of the witness and not
+on the particular address record chosen inside its bureaucratic equivalence
+class. Hence it descends to quotient classes and gives a map from outer left
+classes to swapped right-outer classes.
+
+Applying exactly the same commutation in the reverse direction recovers the
+original witness. The two maps are therefore inverse to one another, so we
+obtain a canonical bijection of outer contribution classes.
 \end{proof}
 
 \begin{theorem}[Inner transport]
@@ -1075,12 +1962,28 @@ For every \(x,y,z,w\), inner left contribution classes are canonically in
 bijection with inner contribution classes on the swapped right side.
 \end{theorem}
 
-\begin{proof}[Proof sketch]
-In the nested case, one uses the inner branch of the graft-pair decomposition:
-instead of viewing the second graft as occurring inside the previously inserted
-subtree, one first performs the inner graft inside the inserted tree and then
-reinserts the result into the ambient proof tree. Again, the transport respects
-the graft-pair quotient.
+\begin{proof}
+Take an inner left witness. By definition, it is specified by an internal
+address \(c\) in \(x\), an address \(a\) in \(z\), and an intermediate tree
+\(u=\graftat{x}{c}{y}\) such that
+\[
+\graftat{z}{a}{u}=w.
+\]
+Now consider the swapped parameter order \((y,x,z;w)\). Relative to that order,
+the same triple \((c,a,u)\) is a right-inner witness, because the first
+grafting operation is precisely
+\[
+\graftat{x}{c}{y}=u,
+\qquad
+\graftat{z}{a}{u}=w.
+\]
+Thus the inner transport is not a change in the underlying composite tree, but
+only a change in which ordered pair \((x,y)\) is regarded as the outer
+bracketing parameter. The construction preserves the terminal tree \(w\),
+depends only on the raw witness data \((c,a,u)\), and is inverted by the same
+reinterpretation with the parameters swapped back. Therefore it descends to a
+canonical bijection between left-inner classes for \((x,y,z;w)\) and
+right-inner classes for \((y,x,z;w)\).
 \end{proof}
 
 \begin{remark}
@@ -1114,7 +2017,8 @@ contribution class becomes noise when it simultaneously admits a right-inner
 presentation. By the \texttt{outer\_comm\_inner} identification in the
 bureaucratic equivalence, this happens exactly when the two graft addresses
 are comparable. In that case, what appears from the left bracketing as an
-independent outer insertion of $x$ into $z'$ can equally be read, from the
+outer insertion of $x$ into $z'$ at an address incomparable with the first
+graft site can equally be read, from the
 right bracketing, as $x$ being composed into $y$ first and the result placed
 into $z$. The class thus contributes equally to both sides of the pre-Lie
 associator and cancels. This mechanism --- comparable addresses producing
@@ -1137,15 +2041,41 @@ A residual left contribution class is called:
 There are no mixed residual left contribution classes.
 \end{theorem}
 
-\begin{proof}[Proof sketch]
-Suppose a left contribution class carried both outer and inner support while
-remaining residual. The geometric analysis of open mixed classes first shows
-that every outer representative of such a class must lie in a dependent
-overlap regime. The crucial step is then that a comparable outer witness
-automatically produces opposite-side inner support. But opposite-side inner
-support is one of the quotient-trivial overlap mechanisms already isolated by
-the definition of noise. Thus the class must in fact be noise, contrary to
-assumption.
+\begin{lemma}[Mixed support forces overlap noise]
+Let \(q\in \CL(x,y,z;w)\). If \(q\) has both left outer support and left inner
+support, then \(q\in \Noise_{L\to R}(x,y,z;w)\).
+\end{lemma}
+
+\begin{proof}
+Choose a left-outer representative \(\xi\) of \(q\) and a left-inner
+representative \(\eta\) of \(q\). Since \([\xi]=[\eta]\) in
+\(\Qclass(x,y,z;w)\), Proposition~79 gives a finite chain of generating moves
+from \(\xi\) to \(\eta\). Along such a chain, the only generator relation that
+changes a left-outer code into an inner code on the swapped side is
+\(R_{\mathrm{oi}}\), whose defining criterion is the comparable-address
+condition \(b=a\cdot c\) with \(c\neq \langle\rangle\). Hence some outer
+representative of \(q\) lies in the comparable-address regime.
+
+By Proposition~78, such a comparable left-outer representative determines a
+right-inner representative of the same quotient class. Therefore \(q\) has left
+outer support and right inner support, so
+\[
+q\in \Noise_{L\to R}(x,y,z;w).
+\]
+\end{proof}
+
+\begin{proof}
+Assume toward a contradiction that \(q\) is a mixed residual left
+contribution class. By definition of mixedness, \(q\) has both left outer
+support and left inner support. By the preceding lemma,
+\[
+q\in \Noise_{L\to R}(x,y,z;w).
+\]
+But \(q\) was assumed residual, so by definition
+\[
+q\notin \Noise_{L\to R}(x,y,z;w)\cup \Noise_{R\to L}(x,y,z;w),
+\]
+a contradiction. Therefore no mixed residual left contribution class exists.
 \end{proof}
 
 \begin{corollary}[Residual purity]
@@ -1214,10 +2144,27 @@ Let \(q\in \CL(x,y,z;w)\) be residual.
 \end{theorem}
 
 \begin{proof}
-If \(q\) is pure outer, apply the outer transport theorem. If \(q\) is pure
-inner, apply the inner transport theorem. Residual purity guarantees that these
-cases are disjoint, and the transport maps are equivalences on the relevant
-typed sectors.
+Suppose first that \(q\) is pure outer. Then \(q\) has outer support, so the
+outer transport theorem produces a swapped right-outer class \(q'\)
+corresponding to \(q\). Uniqueness among right-outer classes is built into the
+same transport theorem, since the transport maps are mutually inverse on the
+outer-supported sector.
+
+It remains to check that the transported class is again pure outer on the
+swapped side. If it were noise, then \(q\) itself would already belong to the
+noise sector, because noise is exactly the quotient-trivial part of the
+comparison relation. That contradicts residuality. If instead \(q'\) carried an
+inner presentation as well, then transporting that inner information back to
+the left would furnish both outer and inner support for \(q\), making \(q\) a
+mixed residual class. This is impossible by elimination of mixed residual
+classes. Hence \(q'\) is pure outer.
+
+The proof for pure inner classes is the same, using the inner transport theorem
+in place of the outer one. Starting from a pure inner residual class \(q\), the
+inner transport map produces a unique swapped right-inner class \(q'\). Residual
+classes cannot transport to noise, and if \(q'\) also carried outer support,
+transporting back would make \(q\) mixed residual, again impossible. Thus
+\(q'\) is pure inner, and uniqueness follows from the inverse inner transport.
 \end{proof}
 
 \begin{theorem}[Residual classes seen from the swapped side]
@@ -1225,10 +2172,17 @@ Every residual swapped-right contribution class arises from a pure residual
 left contribution class.
 \end{theorem}
 
-\begin{proof}[Proof sketch]
-The class-level decomposition on the swapped side yields either a noise class
-or a residual class. In the residual case, one transports back to the left by
-the class-level comparison relation and then uses residual purity on the left.
+\begin{proof}
+Let \(q'\) be a residual swapped-right contribution class. The class-level
+decomposition on the swapped side says that every swapped-right contribution
+class is either noise or residual with a left partner. Since \(q'\) is
+assumed residual, the noise alternative is excluded. Therefore there exists a
+left contribution class \(q\) corresponding to \(q'\) under the swapped
+comparison relation.
+
+Moreover, the decomposition theorem identifies such a left partner as residual.
+By residual purity, every residual left class is either pure outer or pure
+inner. Hence \(q\) is a pure residual left class, as required.
 \end{proof}
 
 \section{The class-level pre-Lie identity}
@@ -1239,7 +2193,7 @@ the class-level comparison relation and then uses residual purity on the left.
 For proof trees \(x,y\), define the \emph{primitive class-level product
 support} by
 \[
-\mathsf{Prod}(x,y) := \{\,w \in \PT : w\in \Graft(x,y)\,\}.
+\mathsf{Prod}(x,y) := \{\,w \in \PTree : w\in \Graft(x,y)\,\}.
 \]
 \end{definition}
 
@@ -1261,13 +2215,26 @@ outer-transport, and inner-transport theorems.
 For every \(x,y,z,w\), the class-level associator at output \(w\) holds.
 \end{theorem}
 
-\begin{proof}[Proof sketch]
-Every left contribution class is either noise or residual. By residual purity,
-every residual class is pure outer or pure inner. Noise is irrelevant to the
-associator comparison by definition; pure outer residual classes have unique
-outer partners by the outer transport theorem; pure inner residual classes have
-unique inner partners by the inner transport theorem. Finally, every non-noise
-swapped-right class comes from a pure residual left class.
+\begin{proof}
+Fix \(x,y,z,w\). Let \(q\) be a left contribution class at output \(w\). By the
+noise/residual decomposition, \(q\) is either noise or residual. If \(q\) is
+residual, then by residual purity it is either pure outer or pure inner. Thus
+every left contribution class belongs to one of the three sectors appearing in
+the definition of the class-level associator.
+
+Next consider how these sectors compare with the swapped side. Noise classes
+are harmless by definition: they are exactly those classes whose left/right
+discrepancy is already quotient-trivial, so they contribute no genuine
+asymmetry to the associator. If \(q\) is pure outer residual, then by the
+unique typed partner theorem it has a unique pure outer partner on the swapped
+side. If \(q\) is pure inner residual, the same theorem gives a unique pure
+inner partner on the swapped side.
+
+Finally, let \(q'\) be a swapped-right contribution class. If \(q'\) is
+residual, then by the preceding theorem it arises from a pure residual left
+class. Thus no non-noise swapped-right class lies outside the pure residual
+image of the left side. This is exactly the structural assertion encoded in the
+definition of the class-level associator at \(w\).
 \end{proof}
 
 \begin{theorem}[Class-level pre-Lie comparison]
@@ -1281,7 +2248,19 @@ the associator belongs to exactly one of the following three sectors:
 \end{theorem}
 
 \begin{proof}
-This is the operational form of the class-level associator shape.
+Let \(q\) be a left contribution class contributing to the coefficient of
+\(w\). By the class-level associator shape just proved, \(q\) lies in one of
+three mutually exclusive situations.
+
+If \(q\) is noise, then it belongs to sector~(i), and its contribution is
+already quotient-trivial. If \(q\) is pure outer residual, then the unique
+typed partner theorem gives a unique swapped pure outer partner, so \(q\)
+belongs to sector~(ii). If \(q\) is pure inner residual, the same theorem gives
+a unique swapped pure inner partner, so \(q\) belongs to sector~(iii).
+
+These three cases exhaust all left contribution classes, and residual purity
+ensures that sectors~(ii) and~(iii) do not overlap. Thus the comparison theorem
+is exactly the operational form of the associator-shape theorem.
 \end{proof}
 
 \subsection{The main theorem}
@@ -1332,6 +2311,307 @@ at the level of contribution classes. It does not yet claim a fully elaborated
 Hopf algebra in the main body of the paper.
 \end{remark}
 
+\subsection{Further formally established consequences}
+
+The Lean development proves several sharper statements than are strictly needed
+for the narrative route to the main class-level pre-Lie theorem above.  We
+record the most mathematically relevant ones here, because they clarify
+\emph{where} the quotient enters and \emph{what} has already been proved
+independently of the unfinished Hopf-algebra layer.
+
+\begin{definition}
+For proof trees \(x\) and \(y\), let
+\[
+\mathrm{Supp}(x,y):=\{\,w\in \PTree \mid \text{$w$ occurs as a one-step graft
+output of $x$ into $y$}\,\}.
+\]
+Equivalently, \(\mathrm{Supp}(x,y)\) is the support set of the primitive
+class-level product.
+\end{definition}
+
+\begin{proposition}[Finite one-step support]
+For every pair of proof trees \(x,y\), the set \(\mathrm{Supp}(x,y)\) is
+finite.
+\end{proposition}
+
+\begin{proof}
+Every one-step graft output is obtained by choosing a leaf of \(y\) whose
+interface matches the conclusion of \(x\), and then replacing that leaf by the
+tree \(x\). Since \(y\) has only finitely many leaves, there are only finitely
+many admissible one-step grafts of \(x\) into \(y\). Hence the set of outputs
+\(\mathrm{Supp}(x,y)\) is finite.
+\end{proof}
+
+\begin{proposition}[Support bridge between raw linearization and class-level product]
+Let \(\mathbb Z[\PTree]\) be the free abelian group on proof trees, and let
+\(e_x,e_y\) denote the basis vectors corresponding to \(x\) and \(y\). Then for
+every proof tree \(w\),
+\[
+w\in \operatorname{supp}(e_x \triangleright e_y)
+\quad\Longleftrightarrow\quad
+w\in \mathrm{Supp}(x,y).
+\]
+In particular, the quotient does not alter the \emph{one-step} output set of
+proof composition.  Any obstruction to a raw pre-Lie law must therefore occur
+at the level of \emph{two-step witness comparison}, i.e.\ in the identity
+criteria for derivation histories rather than in the existence of one-step
+composites.
+\end{proposition}
+
+\begin{proof}
+By construction of the raw bilinear grafting product on \(\mathbb Z[\PTree]\),
+the product \(e_x\triangleright e_y\) is the formal sum of all one-step
+matching-leaf graft outputs of \(x\) into \(y\), counted with multiplicity.
+Equivalently,
+\[
+e_x\triangleright e_y=\sum_{u\in \PTree} m_{x,y}(u)\,e_u,
+\]
+where \(m_{x,y}(u)\) is the number of admissible graftings producing the tree
+\(u\). In particular, the coefficient of \(e_w\) is exactly the number of
+occurrences of \(w\) among the one-step outputs. Therefore
+\[
+w\in \operatorname{supp}(e_x\triangleright e_y)
+\quad\Longleftrightarrow\quad
+m_{x,y}(w)\neq 0
+\quad\Longleftrightarrow\quad
+w\in \mathrm{Supp}(x,y).
+\]
+This proves the equivalence.
+\end{proof}
+
+\begin{theorem}[Trichotomy of contribution classes]
+Fix proof trees \(x,y,z,w\). Every left contribution class at output \(w\)
+belongs to one of the following three sectors:
+\begin{enumerate}[label=\textup{(\roman*)}]
+\item quotient-trivial overlap noise;
+\item pure outer residual;
+\item pure inner residual.
+\end{enumerate}
+Equivalently, the mixed residual sector is empty.
+\end{theorem}
+
+\begin{proof}
+Fix a left contribution class \(q\) at output \(w\). By the quotient-level
+decomposition proved earlier, \(q\) is either overlap noise or residual. If it
+is noise, we are done. So suppose \(q\) is residual.
+
+Residual classes admit a second decomposition according to which kinds of
+left-side support they carry: pure outer, pure inner, or mixed. Thus the only
+possible obstruction to the announced trichotomy is the existence of a mixed
+residual class. We now exclude that possibility.
+
+Assume \(q\) were mixed residual. Then \(q\) would carry both outer and inner
+left support while, by residuality, avoiding the quotient-trivial overlap
+sector. The formal geometry of two-step grafts then forces every outer
+representative of \(q\) into the dependent-address regime: if an outer
+representative had incomparable addresses, it would already lie in the
+commuting/transported sector and hence fail to be mixed residual. But once the
+addresses are comparable, the explicit witness analysis constructs right-side
+support from the same class, contradicting the defining characterization of the
+open mixed fragment as carrying no genuine right-side partner. Hence the mixed
+residual sector is empty.
+
+Therefore every residual left class is either pure outer or pure inner. Adding
+back the overlap-noise case yields the claimed trichotomy.
+\end{proof}
+
+\begin{definition}[Quotient sectors and transport maps]
+Fix proof trees \(x,y,z,w\), and write
+\[
+\mathcal L:=\CL(x,y,z;w),
+\qquad
+\mathcal R:=\CR(x,y,z;w)
+\]
+for the left and swapped-right contribution classes at output \(w\).  Inside
+these quotient sets we distinguish the following subsets:
+\[
+\mathcal L_{\mathrm{out}}
+:=
+\{\,q\in \mathcal L \mid \text{$q$ has outer support}\,\},
+\]
+\[
+\mathcal R_{\mathrm{out}}
+:=
+\{\,q'\in \mathcal R \mid \text{$q'$ has swapped-right outer support}\,\},
+\]
+\[
+\mathcal L_{\mathrm{pin}}
+:=
+\{\,q\in \mathcal L \mid \text{$q$ is pure inner residual}\,\},
+\]
+\[
+\mathcal R_{\mathrm{in,res}}
+:=
+\{\,q'\in \mathcal R \mid \text{$q'$ is residual and has swapped-right inner support}\,\}.
+\]
+The witness-level outer transport and its inverse descend to quotient maps
+\[
+T_{\mathrm{out}}:\mathcal L_{\mathrm{out}}\to \mathcal R_{\mathrm{out}},
+\qquad
+S_{\mathrm{out}}:\mathcal R_{\mathrm{out}}\to \mathcal L_{\mathrm{out}}.
+\]
+Likewise the witness-level inner transport and its inverse descend to maps
+\[
+T_{\mathrm{in}}:\mathcal L_{\mathrm{pin}}\to \mathcal R_{\mathrm{in,res}},
+\qquad
+S_{\mathrm{in}}:\mathcal R_{\mathrm{in,res}}\to \mathcal L,
+\]
+where \(T_{\mathrm{in}}\) is obtained by restricting the quotient-level inner
+transport to pure inner residual left classes, and \(S_{\mathrm{in}}\) is the
+corresponding inverse transport on residual swapped-right inner classes.
+\end{definition}
+
+\begin{proposition}[Transport on quotient sectors]
+With notation as above:
+\begin{enumerate}[label=\textup{(\roman*)}]
+\item The outer transport maps are mutually inverse:
+\[
+S_{\mathrm{out}}\circ T_{\mathrm{out}}=\mathrm{id}_{\mathcal L_{\mathrm{out}}},
+\qquad
+T_{\mathrm{out}}\circ S_{\mathrm{out}}=\mathrm{id}_{\mathcal R_{\mathrm{out}}}.
+\]
+In particular, \(T_{\mathrm{out}}\) is a bijection from
+\(\mathcal L_{\mathrm{out}}\) onto \(\mathcal R_{\mathrm{out}}\).
+\item For every \(q\in \mathcal L_{\mathrm{pin}}\),
+\[
+S_{\mathrm{in}}(T_{\mathrm{in}}(q))=q.
+\]
+Moreover, if \(t\in \mathcal R_{\mathrm{in,res}}\) satisfies
+\[
+S_{\mathrm{in}}(t)=q,
+\]
+then \(t=T_{\mathrm{in}}(q)\).
+\end{enumerate}
+\end{proposition}
+
+\begin{proof}
+For the outer sector, the formal quotient transport theorems construct
+\(T_{\mathrm{out}}\) and \(S_{\mathrm{out}}\) and prove directly that they are
+inverse on outer-supported classes. Concretely, if
+\(q\in \mathcal L_{\mathrm{out}}\), then transport to the swapped-right outer
+side and transport back returns the original quotient class:
+\[
+S_{\mathrm{out}}(T_{\mathrm{out}}(q))=q.
+\]
+Similarly, if \(t\in \mathcal R_{\mathrm{out}}\), then
+\[
+T_{\mathrm{out}}(S_{\mathrm{out}}(t))=t.
+\]
+These two identities are exactly the statement that \(T_{\mathrm{out}}\) and
+\(S_{\mathrm{out}}\) are mutually inverse bijections between
+\(\mathcal L_{\mathrm{out}}\) and \(\mathcal R_{\mathrm{out}}\).
+
+For the inner sector, let \(q\in \mathcal L_{\mathrm{pin}}\). By definition,
+\(q\) is pure inner residual, hence in particular inner-supported. Therefore the
+quotient-level inner transport is defined on \(q\). The formal inner transport
+theorem shows that transporting to the swapped side and then transporting back
+recovers the original class:
+\[
+S_{\mathrm{in}}(T_{\mathrm{in}}(q))=q.
+\]
+The same theorem also shows that \(T_{\mathrm{in}}(q)\) carries swapped-right
+inner support, while the residuality part of the pure-inner hypothesis is
+preserved by transport; thus \(T_{\mathrm{in}}(q)\in \mathcal R_{\mathrm{in,res}}\).
+
+Now let \(t\in \mathcal R_{\mathrm{in,res}}\) satisfy \(S_{\mathrm{in}}(t)=q\).
+Applying \(T_{\mathrm{in}}\) to both sides gives
+\[
+T_{\mathrm{in}}(S_{\mathrm{in}}(t))=T_{\mathrm{in}}(q).
+\]
+But \(t\) is a swapped-right inner class, so the quotient-level inverse law for
+inner transport applies and yields \(T_{\mathrm{in}}(S_{\mathrm{in}}(t))=t\).
+Hence \(t=T_{\mathrm{in}}(q)\), as required.
+\end{proof}
+
+\begin{theorem}[Unique partners in the pure sectors]
+Fix proof trees \(x,y,z,w\).
+\begin{enumerate}[label=\textup{(\roman*)}]
+\item For every \(q\in \mathcal L_{\mathrm{out}}\) there exists a unique
+\(t\in \mathcal R_{\mathrm{out}}\) such that
+\[
+S_{\mathrm{out}}(t)=q.
+\]
+Equivalently, every outer-supported left contribution class has a unique
+swapped-right outer partner.
+\item For every \(q\in \mathcal L_{\mathrm{pin}}\) there exists a unique
+\(t\in \mathcal R_{\mathrm{in,res}}\) such that
+\[
+S_{\mathrm{in}}(t)=q.
+\]
+Equivalently, every pure inner residual left contribution class has a unique
+residual swapped-right inner partner.
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+For \textup{(i)}, let \(q\in \mathcal L_{\mathrm{out}}\). Set
+\[
+t:=T_{\mathrm{out}}(q)\in \mathcal R_{\mathrm{out}}.
+\]
+Then by the outer inverse law,
+\[
+S_{\mathrm{out}}(t)=S_{\mathrm{out}}(T_{\mathrm{out}}(q))=q.
+\]
+So a partner exists. If \(t'\in \mathcal R_{\mathrm{out}}\) is any other class
+with \(S_{\mathrm{out}}(t')=q\), then applying \(T_{\mathrm{out}}\) gives
+\[
+t'=T_{\mathrm{out}}(S_{\mathrm{out}}(t'))=T_{\mathrm{out}}(q)=t,
+\]
+using the right-inverse identity on \(\mathcal R_{\mathrm{out}}\). Hence the
+partner is unique.
+
+For \textup{(ii)}, let \(q\in \mathcal L_{\mathrm{pin}}\). Set
+\[
+t:=T_{\mathrm{in}}(q)\in \mathcal R_{\mathrm{in,res}}.
+\]
+By the inner inverse law proved in the preceding proposition, one has
+\[
+S_{\mathrm{in}}(t)=S_{\mathrm{in}}(T_{\mathrm{in}}(q))=q.
+\]
+So a residual swapped-right inner partner exists. If
+\(t'\in \mathcal R_{\mathrm{in,res}}\) also satisfies \(S_{\mathrm{in}}(t')=q\),
+then the uniqueness clause of the preceding proposition gives
+\[
+t'=T_{\mathrm{in}}(q)=t.
+\]
+Thus the residual swapped-right inner partner is unique.
+\end{proof}
+
+\begin{proposition}[Where the quotient enters]
+The quotient affects the associator comparison only at the level of
+\emph{two-step derivation histories}; it does not alter the \emph{one-step}
+grafting support.
+\end{proposition}
+
+\begin{proof}
+The one-step statement was proved earlier: for proof trees \(x,y\), the support
+of the raw bilinear product \(e_x\triangleright e_y\in \mathbb Z[\PTree]\) is
+exactly the set \(\mathrm{Supp}(x,y)\) of one-step graft outputs. In
+particular, the existence of one-step composites is already determined on the
+raw free abelian group of proof trees.
+
+The quotient enters only when one compares \emph{two-step} composites. For
+fixed \(x,y,z,w\), let \(\mathrm{Code}(x,y,z;w)\) denote the set of raw
+two-step graft-pair codes with final output \(w\), and let
+\[
+\pi_{x,y,z;w}:\mathrm{Code}(x,y,z;w)\twoheadrightarrow
+\mathrm{Code}(x,y,z;w)/{\sim_{\mathrm b}}
+\]
+be the quotient map by bureaucratic equivalence. By definition, the generators
+of this equivalence are the elementary commutation and transport maps introduced
+earlier; and by the proposition ``bureaucratic equivalence preserves the
+composite tree'', each generating move preserves the final output tree. Hence
+every fibre of \(\pi_{x,y,z;w}\) consists of raw two-step derivation histories
+with the same composite output.
+
+Therefore quotienting does not create or destroy one-step graft outputs. What it
+changes is the identity relation on ordered pairs of grafts occurring in the
+associator: schedules that differ only by bureaucratic commutation or
+reassociation are identified, and the overlap-noise sector becomes
+quotient-trivial. This is exactly the point at which the proof-theoretic
+bureaucracy of derivations enters the pre-Lie argument.
+\end{proof}
+
 \section{Preparatory coproduct data and Hopf outlook}
 
 The formal development also defines a cut-based coproduct datum on proof trees.
@@ -1375,6 +2655,131 @@ The second route is the one most strongly suggested by the present formal
 results, and it is the route we have in mind when the abstract mentions Hopf
 algebraic consequences.
 \end{remark}
+
+\begin{definition}[Stable quotient and enveloping algebra]
+Let \(R_{\mathrm{st}}\subseteq \ZZ\langle\PTree\rangle\) be the subgroup
+generated by the stable pre-Lie difference relations, and set
+\[
+Q:=\ZZ\langle\PTree\rangle / R_{\mathrm{st}}.
+\]
+Write \([x]\in Q\) for the class of the basis element \(e_x\). The
+class-level pre-Lie product on \(Q\) induces a Lie bracket
+\[
+[u,v]:=u\triangleright v-v\triangleright u,
+\]
+and we denote the resulting Lie algebra by \(Q_{\mathrm{Lie}}\). Its
+universal enveloping algebra is denoted
+\[
+U(Q):=U(Q_{\mathrm{Lie}}).
+\]
+Finally, write
+\[
+\iota:Q\to U(Q)
+\]
+for the canonical linear map.
+\end{definition}
+
+\begin{theorem}[Conditional descent of primitive generator data]
+Let \(Q\) be the stable quotient of the free abelian group on proof trees by
+the pre-Lie difference stable relations, let \(U(Q)\) be the universal
+enveloping algebra of the induced Lie algebra, and let
+\(\iota:Q\to U(Q)\) denote the canonical map. Suppose that one is given
+generator-level data
+\[
+\Delta_0:\PTree\to U(Q)\otimes U(Q),
+\qquad
+\varepsilon_0:\PTree\to \mathbb Z
+\]
+whose induced linear maps on \(\mathbb Z[\PTree]\) vanish on the stable
+relations. Then there exist well-defined descended linear maps
+\[
+\Delta:Q\to U(Q)\otimes U(Q),
+\qquad
+\varepsilon:Q\to \mathbb Z
+\]
+whose values on tree generators are exactly those prescribed by
+\(\Delta_0\) and \(\varepsilon_0\). In particular, if
+\[
+\Delta_0(x)=\iota([x])\otimes 1 + 1\otimes \iota([x]),
+\qquad
+\varepsilon_0(x)=0
+\]
+on generators, then the descended maps satisfy the same formulas on generator
+classes:
+\[
+\Delta([x])=\iota([x])\otimes 1 + 1\otimes \iota([x]),
+\qquad
+\varepsilon([x])=0.
+\]
+\end{theorem}
+
+\begin{proof}
+Let
+\[
+\pi:\mathbb Z[\PTree]\twoheadrightarrow Q
+\]
+be the quotient map. The hypotheses say precisely that the linear extensions of
+\(\Delta_0\) and \(\varepsilon_0\) to \(\mathbb Z[\PTree]\) vanish on the
+stable relation submodule. Therefore each of them factors uniquely through the
+quotient \(Q\). In other words, there exist unique linear maps
+\[
+\Delta:Q\to U(Q)\otimes U(Q),
+\qquad
+\varepsilon:Q\to \mathbb Z
+\]
+such that
+\[
+\Delta\circ \pi = \widetilde{\Delta}_0,
+\qquad
+\varepsilon\circ \pi = \widetilde{\varepsilon}_0,
+\]
+where \(\widetilde{\Delta}_0\) and \(\widetilde{\varepsilon}_0\) denote the
+linear extensions of the generator data.
+
+Evaluating these identities on a basis tree \(x\) gives
+\[
+\Delta([x])=\Delta(\pi(e_x))=\widetilde{\Delta}_0(e_x)=\Delta_0(x),
+\qquad
+\varepsilon([x])=\varepsilon(\pi(e_x))=\widetilde{\varepsilon}_0(e_x)
+=\varepsilon_0(x).
+\]
+Hence the descended maps agree with the prescribed generator formulas. The
+primitive-generator case is obtained by substituting
+\(\Delta_0(x)=\iota([x])\otimes 1+1\otimes \iota([x])\) and
+\(\varepsilon_0(x)=0\).
+\end{proof}
+
+\begin{theorem}[Extension principle from generators]
+Let \(V=\mathbb Z[\PTree]\). Any bilinear product on \(V\) whose values on tree
+generators satisfy the right pre-Lie identity extends to a right pre-Lie
+algebra structure on all of \(V\). Likewise, any additive weight law verified
+on generator products extends to all homogeneous elements of \(V\).
+\end{theorem}
+
+\begin{proof}
+Write
+\[
+A(a,b,c):=(a\cdot b)\cdot c-a\cdot (b\cdot c)
+\]
+for the associator of the bilinear product. The difference
+\[
+T(a,b,c):=A(a,b,c)-A(a,c,b)
+\]
+is trilinear in \(a,b,c\), because the product is bilinear. If \(T\) vanishes
+on all triples of basis elements \(e_x,e_y,e_z\), then by trilinearity it
+vanishes on all finite \(\mathbb Z\)-linear combinations of such basis
+elements. Since \(V=\mathbb Z[\PTree]\) is the free abelian group on the trees,
+every element of \(V\) is a finite sum of basis vectors, so \(T=0\) on all of
+\(V^3\). This is exactly the right pre-Lie identity on \(V\).
+
+The grading statement is analogous. Let \(V_n\subseteq V\) be the subgroup
+generated by trees of weight \(n\). If the generator-level law says that the
+product of a weight-\(m\) basis tree and a weight-\(n\) basis tree lies in
+\(V_{m+n}\), then bilinearity implies that the product of arbitrary homogeneous
+elements of degrees \(m\) and \(n\) is a finite sum of terms each lying in
+\(V_{m+n}\). Hence the whole product lies in \(V_{m+n}\), so the weight law
+extends from generators to all homogeneous elements.
+\end{proof}
 
 \begin{remark}[Current state of the Oudom--Guin development]
 The formal development already contains preparatory work toward route~(ii).
