@@ -72,13 +72,11 @@ Our proof calculus is the Non-Monotonic Multi-Succedent sequent calculus NMMS in
 
 \textcolor{red}{Include Weakening rules here}
 
-Structural rules such as Weakening and Contraction have of course been studied extensively in substructural logics such as linear logic, which controls duplication of hypotheses but also possesses the Cut Elimination property which is desirable from the point of view of computational content. NMMS is a very different setting -- here the sequent calculus is equipped on a primitive {base} consequence relation $\mszero$, which serves to encode non-logical patterns of defeasible \emph{material inference} of the sort studied by Brandom and collaborators in the \emph{inferentialist} analysis of meaning in natural language. 
-
+Structural rules such as Weakening have of course been studied extensively in the context of substructural logics. Linear logic in particular controls extensions of contexts and multiplicity of hypotheses via constraints on the Weakening and Contraction. Linear logic also possesses the Cut Elimination property which is most desirable from the point of view of computational content. 
 \vspace{0.2cm}
+NMMS is a very different setting -- here the sequent calculus is equipped on a primitive {base} consequence relation $\mszero$, which serves to encode non-logical patterns of defeasible \emph{material inference} of the sort studied by Brandom and collaborators in the \emph{inferentialist} analysis of meaning in natural language. Monmonotonic consequence relations of this sort fail in general to admit the Cut rule:
 
-In general, nonmonotonic consequence relations fail to admit the Cut rule:
-
-This is reflected in the fact that NMMS does not admit a \emph{categorical semantics} where Cut is represented by composition of morphisms of some suitable category, as is the case of linear logic (*-autonomous or symmetric monoidal closed categories), intuitionistic logic (cartesian closed categories), or classical logic (control categories). Here we show that NMMS admits a non-trivial interpretation in a different algebraic structure, and specifically a Hopf algebra defined over the set of labelled and decorated rooted trees which are just the proof trees of the sequent calculus.
+The inadmissibility of Cut entails that NMMS does not admit a \emph{categorical semantics} such that Cut is represented by composition of morphisms of some suitable category, as is the case for linear logic (*-autonomous or symmetric monoidal closed categories), intuitionistic logic (cartesian closed categories), and classical logic (control categories). Here we show that NMMS admits a non-trivial interpretation in a different algebraic structure, and specifically a Hopf algebra defined over a quotient set of labelled and decorated rooted trees which are just the proof trees of the sequent calculus.
 
 \vspace{0.2cm}
 

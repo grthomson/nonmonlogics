@@ -3723,8 +3723,22 @@ carries a verified Lie ring structure.
 noncomputable section UniversalEnvelopingStable
 
 noncomputable def preLieDifferenceStableQuotientLieRing :
-    LieRing PreLieDifferenceStableQuotient :=
-  Classical.choose preLieDifferenceStableQuotient_admitsMathlibLieRing
+    LieRing PreLieDifferenceStableQuotient := by
+  letI : Mul PreLieDifferenceStableQuotient :=
+    ⟨preLieDifferenceStableQuotientOppMul⟩
+  letI : RightPreLieRing PreLieDifferenceStableQuotient := {
+    toNonUnitalNonAssocRing := {
+      toAddCommGroup := Submodule.Quotient.addCommGroup
+        preLieDifferenceStableSubmodule
+      mul := preLieDifferenceStableQuotientOppMul
+      left_distrib := preLieDifferenceStableQuotientOppMul_left_distrib
+      right_distrib := preLieDifferenceStableQuotientOppMul_right_distrib
+      zero_mul := preLieDifferenceStableQuotientOppMul_zero_left
+      mul_zero := preLieDifferenceStableQuotientOppMul_zero_right
+    }
+    assoc_symm' := preLieDifferenceStableQuotientOppMul_assoc_symm
+  }
+  exact LieAdmissibleRing.instLieRing
 
 local instance : LieRing PreLieDifferenceStableQuotient :=
   preLieDifferenceStableQuotientLieRing
@@ -3738,11 +3752,54 @@ noncomputable abbrev preLieDifferenceStableQuotientUEA_ι :
     PreLieDifferenceStableQuotient →ₗ⁅ℤ⁆ preLieDifferenceStableQuotientUEA :=
   UniversalEnvelopingAlgebra.ι ℤ (L := PreLieDifferenceStableQuotient)
 
+/-- The underlying linear map of the stable quotient UEA insertion. -/
+noncomputable abbrev preLieDifferenceStableQuotientUEA_ι_linear :
+    PreLieDifferenceStableQuotient →ₗ[ℤ] preLieDifferenceStableQuotientUEA :=
+  preLieDifferenceStableQuotientUEA_ι.toLinearMap
+
 /-- The composite map from the raw linear carrier to the stable UEA. -/
 noncomputable def preLieDifferenceStableQuotientToUEA
     (a : linearProofTreeCarrier) :
     preLieDifferenceStableQuotientUEA :=
   preLieDifferenceStableQuotientUEA_ι (mkPreLieDifferenceStableQuotient a)
+
+@[simp] theorem preLieDifferenceStableQuotientToUEA_zero :
+    preLieDifferenceStableQuotientToUEA 0 = 0 := by
+  let f : PreLieDifferenceStableQuotient →+ preLieDifferenceStableQuotientUEA :=
+    preLieDifferenceStableQuotientUEA_ι.toLinearMap.toAddMonoidHom
+  change f (mkPreLieDifferenceStableQuotient 0) = 0
+  rw [show mkPreLieDifferenceStableQuotient (0 : linearProofTreeCarrier) = 0 by simp]
+  exact f.map_zero
+
+@[simp] theorem preLieDifferenceStableQuotientToUEA_add
+    (a b : linearProofTreeCarrier) :
+    preLieDifferenceStableQuotientToUEA (a + b) =
+      preLieDifferenceStableQuotientToUEA a +
+        preLieDifferenceStableQuotientToUEA b := by
+  let f : PreLieDifferenceStableQuotient →+ preLieDifferenceStableQuotientUEA :=
+    preLieDifferenceStableQuotientUEA_ι.toLinearMap.toAddMonoidHom
+  change f (mkPreLieDifferenceStableQuotient (a + b)) =
+      f (mkPreLieDifferenceStableQuotient a) +
+        f (mkPreLieDifferenceStableQuotient b)
+  rw [show mkPreLieDifferenceStableQuotient (a + b) =
+      mkPreLieDifferenceStableQuotient a + mkPreLieDifferenceStableQuotient b by
+        simpa using (mkPreLieDifferenceStableQuotient.map_add a b)]
+  exact f.map_add _ _
+
+@[simp] theorem preLieDifferenceStableQuotientToUEA_smul
+    (n : Int) (a : linearProofTreeCarrier) :
+    preLieDifferenceStableQuotientToUEA (n • a) =
+      n • preLieDifferenceStableQuotientToUEA a := by
+  let f : PreLieDifferenceStableQuotient →+ preLieDifferenceStableQuotientUEA :=
+    preLieDifferenceStableQuotientUEA_ι.toLinearMap.toAddMonoidHom
+  change f (mkPreLieDifferenceStableQuotient (n • a)) =
+      n • f (mkPreLieDifferenceStableQuotient a)
+  rw [show mkPreLieDifferenceStableQuotient (n • a) =
+      n • mkPreLieDifferenceStableQuotient a by
+        simpa using
+          (AddMonoidHom.map_zsmul
+            (mkPreLieDifferenceStableQuotient.toAddMonoidHom) a n)]
+  exact f.map_zsmul (mkPreLieDifferenceStableQuotient a) n
 
 -- Note: the linear map packaging is postponed because the module structure
 -- induced by the `LieRing` instance is not definitionally equal to the
@@ -3799,8 +3856,21 @@ variable (hL : GraftPreLiePreservesPreLieDifferenceLeftOnTreeGenerators)
 variable (hR : GraftPreLiePreservesPreLieDifferenceRightOnTreeGenerators)
 
 noncomputable def preLieDifferenceQuotientLieRing :
-    LieRing PreLieDifferenceQuotient :=
-  Classical.choose (preLieDifferenceQuotient_admitsMathlibLieRing hL hR)
+    LieRing PreLieDifferenceQuotient := by
+  letI : Mul PreLieDifferenceQuotient :=
+    ⟨preLieDifferenceQuotientOppMul hL hR⟩
+  letI : RightPreLieRing PreLieDifferenceQuotient := {
+    toNonUnitalNonAssocRing := {
+      toAddCommGroup := Submodule.Quotient.addCommGroup preLieDifferenceSubmodule
+      mul := preLieDifferenceQuotientOppMul hL hR
+      left_distrib := preLieDifferenceQuotientOppMul_left_distrib hL hR
+      right_distrib := preLieDifferenceQuotientOppMul_right_distrib hL hR
+      zero_mul := preLieDifferenceQuotientOppMul_zero_left hL hR
+      mul_zero := preLieDifferenceQuotientOppMul_zero_right hL hR
+    }
+    assoc_symm' := preLieDifferenceQuotientOppMul_assoc_symm hL hR
+  }
+  exact LieAdmissibleRing.instLieRing
 
 -- Note: the conditional defect quotient UEA interface is postponed for now.
 -- The stable UEA is available unconditionally and supports the downstream
@@ -8437,6 +8507,65 @@ theorem CoproductSupportQuotientCoalgebra.coassoc_treeGen_explicit
   simpa [coproductSupportSummary_comul_quot_left_assoc_treeGen_sum,
     coproductSupportSummary_comul_quot_left_treeGen_sum] using
     (H.coassoc_shorthand_treeGen x)
+
+theorem CoproductSupportQuotientCoalgebra.coassoc_treeGen_sum_two_explicit
+    (H : CoproductSupportQuotientCoalgebra) (x y : PTree) :
+    coproductSupportSummary_comul_quot_left_assoc H.h
+        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) =
+      coproductSupportSummary_comul_quot_left H.h
+        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) := by
+  simpa using
+    (H.coassoc_shorthand_apply
+      (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)))
+
+theorem CoproductSupportQuotientCoalgebra.coassoc_treeGen_sum_three_explicit
+    (H : CoproductSupportQuotientCoalgebra) (x y z : PTree) :
+    coproductSupportSummary_comul_quot_left_assoc H.h
+        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y + treeGen z)) =
+      coproductSupportSummary_comul_quot_left H.h
+        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y + treeGen z)) := by
+  simpa using
+    (H.coassoc_shorthand_apply
+      (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y + treeGen z)))
+
+theorem CoproductSupportQuotientCoalgebra.coassoc_treeGen_sum_four_explicit
+    (H : CoproductSupportQuotientCoalgebra) (w x y z : PTree) :
+    coproductSupportSummary_comul_quot_left_assoc H.h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen w + treeGen x + treeGen y + treeGen z)) =
+      coproductSupportSummary_comul_quot_left H.h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen w + treeGen x + treeGen y + treeGen z)) := by
+  simpa using
+    (H.coassoc_shorthand_apply
+      (mkPreLieDifferenceStableQuotient
+        (treeGen w + treeGen x + treeGen y + treeGen z)))
+
+theorem CoproductSupportQuotientCoalgebra.coassoc_treeGen_sum_five_explicit
+    (H : CoproductSupportQuotientCoalgebra) (v w x y z : PTree) :
+    coproductSupportSummary_comul_quot_left_assoc H.h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) =
+      coproductSupportSummary_comul_quot_left H.h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) := by
+  simpa using
+    (H.coassoc_shorthand_apply
+      (mkPreLieDifferenceStableQuotient
+        (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)))
+
+theorem CoproductSupportQuotientCoalgebra.coassoc_treeGen_sum_six_explicit
+    (H : CoproductSupportQuotientCoalgebra) (u v w x y z : PTree) :
+    coproductSupportSummary_comul_quot_left_assoc H.h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) =
+      coproductSupportSummary_comul_quot_left H.h
+        (mkPreLieDifferenceStableQuotient
+          (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) := by
+  simpa using
+    (H.coassoc_shorthand_apply
+      (mkPreLieDifferenceStableQuotient
+        (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)))
 
 
 

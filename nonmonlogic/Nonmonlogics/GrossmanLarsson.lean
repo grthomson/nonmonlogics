@@ -1,6 +1,9 @@
 import Mathlib.Data.Multiset.Basic
 import Mathlib.Data.Multiset.ZeroCons
 import Mathlib.Data.List.Basic
+import Mathlib.Data.List.Count
+import Mathlib.Data.List.Perm.Basic
+import Mathlib.Data.List.Perm.Subperm
 import Mathlib.Algebra.MonoidAlgebra.Basic
 import Mathlib.Algebra.FreeMonoid.Basic
 import Mathlib.LinearAlgebra.TensorProduct.Basic
@@ -3898,6 +3901,30 @@ def twoStepAddrWitnessesRight (x y z : PTree) : List ((Address × Address) × PT
   rw [h2]
   simp
 
+theorem twoStepAddrWitnessesLeft_length
+    (x y z : PTree) :
+    (twoStepAddrWitnessesLeft x y z).length =
+      (((PTree.matchingLeafGraftings y z).flatMap
+          (fun z' => PTree.matchingLeafGraftings x z')).length
+        +
+        ((PTree.matchingLeafGraftings y x).flatMap
+          (fun y' => PTree.matchingLeafGraftings y' z)).length) := by
+  rw [← List.length_map (f := Prod.snd) (as := twoStepAddrWitnessesLeft x y z)]
+  rw [map_snd_twoStepAddrWitnessesLeft]
+  simp [List.length_flatMap]
+
+theorem twoStepAddrWitnessesRight_length
+    (x y z : PTree) :
+    (twoStepAddrWitnessesRight x y z).length =
+      (((PTree.matchingLeafGraftings x z).flatMap
+          (fun z' => PTree.matchingLeafGraftings y z')).length
+        +
+        ((PTree.matchingLeafGraftings x y).flatMap
+          (fun y' => PTree.matchingLeafGraftings y' z)).length) := by
+  rw [← List.length_map (f := Prod.snd) (as := twoStepAddrWitnessesRight x y z)]
+  rw [map_snd_twoStepAddrWitnessesRight]
+  simp [List.length_flatMap]
+
 theorem mem_twoStepAddrWitnessesLeft_iff
     (x y z : PTree) (a b : Address) (w : PTree) :
     (((a, b), w) ∈ twoStepAddrWitnessesLeft x y z) ↔
@@ -4113,6 +4140,60 @@ lemma count_map_snd_twoStepAddrWitnessesRight
         (PTree.matchingLeafGraftings x y).flatMap
           (fun y' => PTree.matchingLeafGraftings y' z)).count w : ℤ) := by
   simp
+
+/--
+If the output multiplicities agree pointwise, then the two raw address-witness
+output lists are permutations of each other.
+-/
+theorem twoStepAddrWitnesses_map_snd_perm_of_count_balance
+    (x y z : PTree)
+    (hcount : ∀ w : PTree,
+      (((twoStepAddrWitnessesLeft x y z).map Prod.snd).count w : ℤ) =
+        (((twoStepAddrWitnessesRight x y z).map Prod.snd).count w : ℤ)) :
+    List.Perm
+      ((twoStepAddrWitnessesLeft x y z).map Prod.snd)
+      ((twoStepAddrWitnessesRight x y z).map Prod.snd) := by
+  have hsub :
+      List.Subperm
+        ((twoStepAddrWitnessesLeft x y z).map Prod.snd)
+        ((twoStepAddrWitnessesRight x y z).map Prod.snd) := by
+    rw [List.subperm_iff_count]
+    intro w
+    exact le_of_eq (Int.ofNat.inj (hcount w))
+  have hsub' :
+      List.Subperm
+        ((twoStepAddrWitnessesRight x y z).map Prod.snd)
+        ((twoStepAddrWitnessesLeft x y z).map Prod.snd) := by
+    rw [List.subperm_iff_count]
+    intro w
+    exact le_of_eq (Int.ofNat.inj (hcount w).symm)
+  exact hsub.antisymm hsub'
+
+/--
+Pointwise equality of output multiplicities already forces equality of the total
+numbers of raw address witnesses on the two sides.
+-/
+theorem twoStepAddrWitnesses_length_eq_of_count_balance
+    (x y z : PTree)
+    (hcount : ∀ w : PTree,
+      (((twoStepAddrWitnessesLeft x y z).map Prod.snd).count w : ℤ) =
+        (((twoStepAddrWitnessesRight x y z).map Prod.snd).count w : ℤ)) :
+    (twoStepAddrWitnessesLeft x y z).length =
+      (twoStepAddrWitnessesRight x y z).length := by
+  have hperm :=
+    twoStepAddrWitnesses_map_snd_perm_of_count_balance x y z hcount
+  calc
+    (twoStepAddrWitnessesLeft x y z).length
+        = ((twoStepAddrWitnessesLeft x y z).map Prod.snd).length := by
+            simpa using
+              (List.length_map (f := Prod.snd)
+                (as := twoStepAddrWitnessesLeft x y z)).symm
+    _ = ((twoStepAddrWitnessesRight x y z).map Prod.snd).length := by
+          exact hperm.length_eq
+    _ = (twoStepAddrWitnessesRight x y z).length := by
+          simpa using
+            (List.length_map (f := Prod.snd)
+              (as := twoStepAddrWitnessesRight x y z))
 
 theorem mem_twoStepFlatmapsLeft_iff
     (x y z w : PTree) :
@@ -4425,6 +4506,161 @@ theorem outer_right_gives_left_witness
   | inr h =>
       rcases h with ⟨y', hay', hbw''⟩
       exact ⟨TwoStepWitnessLeft.inner a' b' y' hay' hbw''⟩
+
+/--
+An inner left witness can be converted into an outer right witness by first
+regrafting the intermediate tree into `z` and then using inner-exchange.
+-/
+theorem inner_left_gives_right_witness
+    (x y z w : PTree) :
+    (∃ a b y',
+      (a, y') ∈ matchingLeafGraftWitnesses y x ∧
+      (b, w) ∈ matchingLeafGraftWitnesses y' z) →
+    Nonempty (TwoStepWitnessRight x y z w) := by
+  intro h
+  rcases h with ⟨a, b, y', hay, hbw⟩
+  rw [mem_matchingLeafGraftWitnesses_iff] at hay hbw
+  rcases hay with ⟨haAddr, hyx⟩
+  rcases hbw with ⟨hbAddr, hy'z⟩
+  have hconc : y'.conclusion = x.conclusion := by
+    exact graftMatchingLeafAt_preserves_conclusion y x y' a hyx
+  have hgx : PTree.IsGraftableLeafAt x z b := by
+    rw [PTree.IsGraftableLeafAt_iff]
+    have hs : PTree.subtreeAt z b = some (PTree.leaf y'.conclusion) := by
+      exact (PTree.IsGraftableLeafAt_iff y' z b).mp
+        (PTree.isGraftableLeafAt_of_graftMatchingLeafAt_eq_some y' z b w hy'z)
+    simpa [hconc] using hs
+  obtain ⟨z', hxz⟩ := PTree.graftMatchingLeafAt_spec x z b hgx
+  have hyz' : PTree.graftMatchingLeafAt y z' (b ++ a) = some w := by
+    rw [graftMatchingLeafAt_inner_exchange y x z b a z' y' hxz hyx]
+    exact hy'z
+  have haz : (b, z') ∈ matchingLeafGraftWitnesses x z := by
+    rw [mem_matchingLeafGraftWitnesses_iff]
+    exact ⟨hbAddr, hxz⟩
+  have hbw' : (b ++ a, w) ∈ matchingLeafGraftWitnesses y z' := by
+    rw [mem_matchingLeafGraftWitnesses_iff]
+    refine ⟨?_, hyz'⟩
+    have hg :=
+      PTree.isGraftableLeafAt_of_graftMatchingLeafAt_eq_some y z' (b ++ a) w hyz'
+    exact
+      PTree.subtreeAt_some_implies_mem_allAddresses
+        z' (PTree.leaf y.conclusion) (b ++ a)
+        ((PTree.IsGraftableLeafAt_iff y z' (b ++ a)).mp hg)
+  exact ⟨TwoStepWitnessRight.outer b (b ++ a) z' haz hbw'⟩
+
+/--
+An inner right witness can be converted into an outer left witness by the same
+inner-exchange argument with `x` and `y` swapped.
+-/
+theorem inner_right_gives_left_witness
+    (x y z w : PTree) :
+    (∃ a b y',
+      (a, y') ∈ matchingLeafGraftWitnesses x y ∧
+      (b, w) ∈ matchingLeafGraftWitnesses y' z) →
+    Nonempty (TwoStepWitnessLeft x y z w) := by
+  intro h
+  rcases h with ⟨a, b, y', hay, hbw⟩
+  rw [mem_matchingLeafGraftWitnesses_iff] at hay hbw
+  rcases hay with ⟨haAddr, hxy⟩
+  rcases hbw with ⟨hbAddr, hy'z⟩
+  have hconc : y'.conclusion = y.conclusion := by
+    exact graftMatchingLeafAt_preserves_conclusion x y y' a hxy
+  have hgy : PTree.IsGraftableLeafAt y z b := by
+    rw [PTree.IsGraftableLeafAt_iff]
+    have hs : PTree.subtreeAt z b = some (PTree.leaf y'.conclusion) := by
+      exact (PTree.IsGraftableLeafAt_iff y' z b).mp
+        (PTree.isGraftableLeafAt_of_graftMatchingLeafAt_eq_some y' z b w hy'z)
+    simpa [hconc] using hs
+  obtain ⟨z', hyz⟩ := PTree.graftMatchingLeafAt_spec y z b hgy
+  have hxz' : PTree.graftMatchingLeafAt x z' (b ++ a) = some w := by
+    rw [graftMatchingLeafAt_inner_exchange x y z b a z' y' hyz hxy]
+    exact hy'z
+  have haz : (b, z') ∈ matchingLeafGraftWitnesses y z := by
+    rw [mem_matchingLeafGraftWitnesses_iff]
+    exact ⟨hbAddr, hyz⟩
+  have hbw' : (b ++ a, w) ∈ matchingLeafGraftWitnesses x z' := by
+    rw [mem_matchingLeafGraftWitnesses_iff]
+    refine ⟨?_, hxz'⟩
+    have hg :=
+      PTree.isGraftableLeafAt_of_graftMatchingLeafAt_eq_some x z' (b ++ a) w hxz'
+    exact
+      PTree.subtreeAt_some_implies_mem_allAddresses
+        z' (PTree.leaf x.conclusion) (b ++ a)
+        ((PTree.IsGraftableLeafAt_iff x z' (b ++ a)).mp hg)
+  exact ⟨TwoStepWitnessLeft.outer b (b ++ a) z' haz hbw'⟩
+
+/--
+Deterministic transport of a left two-step witness to a right-hand witness.
+This packages the existing outer/inner exchange lemmas as an actual function.
+-/
+noncomputable def twoStepWitnessLeftToRight
+    (x y z w : PTree) :
+    TwoStepWitnessLeft x y z w → TwoStepWitnessRight x y z w
+  | .outer a b z' haz hbw =>
+      Classical.choice <|
+        outer_left_gives_right_witness x y z w ⟨a, b, z', haz, hbw⟩
+  | .inner a b y' hay hbw =>
+      Classical.choice <|
+        inner_left_gives_right_witness x y z w ⟨a, b, y', hay, hbw⟩
+
+/--
+Deterministic transport of a right two-step witness to a left-hand witness.
+This is the symmetric companion to `twoStepWitnessLeftToRight`.
+-/
+noncomputable def twoStepWitnessRightToLeft
+    (x y z w : PTree) :
+    TwoStepWitnessRight x y z w → TwoStepWitnessLeft x y z w
+  | .outer a b z' haz hbw =>
+      Classical.choice <|
+        outer_right_gives_left_witness x y z w ⟨a, b, z', haz, hbw⟩
+  | .inner a b y' hay hbw =>
+      Classical.choice <|
+        inner_right_gives_left_witness x y z w ⟨a, b, y', hay, hbw⟩
+
+/--
+The two witness presentations for a two-step graft landing at `w` have the same
+nonemptiness behaviour.
+-/
+theorem twoStepWitness_balance
+    (x y z w : PTree) :
+    Nonempty (TwoStepWitnessLeft x y z w) ↔
+    Nonempty (TwoStepWitnessRight x y z w) := by
+  constructor
+  · intro h
+    rcases h with ⟨hw⟩
+    cases hw with
+    | outer a b z' haz hbw =>
+        exact outer_left_gives_right_witness x y z w ⟨a, b, z', haz, hbw⟩
+    | inner a b y' hay hbw =>
+        exact inner_left_gives_right_witness x y z w ⟨a, b, y', hay, hbw⟩
+  · intro h
+    rcases h with ⟨hw⟩
+    cases hw with
+    | outer a b z' haz hbw =>
+        exact outer_right_gives_left_witness x y z w ⟨a, b, z', haz, hbw⟩
+    | inner a b y' hay hbw =>
+        exact inner_right_gives_left_witness x y z w ⟨a, b, y', hay, hbw⟩
+
+/--
+Support-level balance between the two concrete two-step flatmap presentations.
+-/
+theorem twoStepFlatmaps_balance
+    (x y z w : PTree) :
+    w ∈
+      (((PTree.matchingLeafGraftings y z).flatMap
+          (fun z' => PTree.matchingLeafGraftings x z'))
+        ++
+        ((PTree.matchingLeafGraftings y x).flatMap
+          (fun y' => PTree.matchingLeafGraftings y' z)))
+    ↔
+    w ∈
+      (((PTree.matchingLeafGraftings x z).flatMap
+          (fun z' => PTree.matchingLeafGraftings y z'))
+        ++
+        ((PTree.matchingLeafGraftings x y).flatMap
+          (fun y' => PTree.matchingLeafGraftings y' z))) := by
+  rw [← twoStepWitnessLeft_iff, ← twoStepWitnessRight_iff]
+  exact twoStepWitness_balance x y z w
 
 inductive OuterLeftWitness (x y z w : PTree) : Type where
 | mk
