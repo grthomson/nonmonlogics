@@ -239,6 +239,56 @@ theorem comul_linear_ker_stable_right (u : PTree)
 -/
 
 /--
+Abstract witness packaging the three genuinely non-trivial inputs needed to
+show that the raw Grossman-Larsson coproduct descends to the stable quotient.
+
+This isolates the remaining hard combinatorics from the later quotient-level
+infrastructure.
+-/
+structure ComulLinearStableKernelWitness where
+  kills_preLieDifferenceGenerators :
+    ∀ x y z : PTree,
+      coproductSupportSummary_comul_linear (preLieDifferenceGenerators x y z) = 0
+  stable_left :
+    ∀ u : PTree, ∀ {a : linearProofTreeCarrier},
+      coproductSupportSummary_comul_linear a = 0 →
+        coproductSupportSummary_comul_linear (graftPreLie (treeGen u) a) = 0
+  stable_right :
+    ∀ u : PTree, ∀ {a : linearProofTreeCarrier},
+      coproductSupportSummary_comul_linear a = 0 →
+        coproductSupportSummary_comul_linear (graftPreLie a (treeGen u)) = 0
+
+/--
+The current theorem-level API supplies a `ComulLinearStableKernelWitness`.
+
+This is just a packaging lemma; the mathematical difficulty still sits in the
+three component theorems above.
+-/
+def comulLinearStableKernelWitnessCurrent :
+    ComulLinearStableKernelWitness where
+  kills_preLieDifferenceGenerators :=
+    coproductSupportSummary_comul_linear_preLieDifferenceGenerators
+  stable_left := comul_linear_ker_stable_left
+  stable_right := comul_linear_ker_stable_right
+
+/--
+If the three deep generator/stability inputs are available, then the kernel of
+`coproductSupportSummary_comul_linear` belongs to
+`preLieDifferenceStableSubmoduleFamily`.
+-/
+theorem comul_linear_ker_mem_stableFamily_of_witness
+    (hw : ComulLinearStableKernelWitness) :
+    (coproductSupportSummary_comul_linear).ker ∈ preLieDifferenceStableSubmoduleFamily := by
+  refine ⟨?_, ?_, ?_⟩
+  · apply Submodule.span_le.mpr
+    rintro a ⟨x, y, z, rfl⟩
+    exact LinearMap.mem_ker.mpr (hw.kills_preLieDifferenceGenerators x y z)
+  · intro u a ha
+    exact LinearMap.mem_ker.mpr (hw.stable_left u (LinearMap.mem_ker.mp ha))
+  · intro u a ha
+    exact LinearMap.mem_ker.mpr (hw.stable_right u (LinearMap.mem_ker.mp ha))
+
+/--
 The kernel of `coproductSupportSummary_comul_linear` is a member of
 `preLieDifferenceStableSubmoduleFamily`:
 * it contains `preLieDifferenceSubmodule` (by (2a)), and
@@ -246,20 +296,23 @@ The kernel of `coproductSupportSummary_comul_linear` is a member of
 -/
 theorem comul_linear_ker_mem_stableFamily :
     (coproductSupportSummary_comul_linear).ker ∈ preLieDifferenceStableSubmoduleFamily := by
-  refine ⟨?_, ?_, ?_⟩
-  · -- preLieDifferenceSubmodule ≤ ker(comul_linear)
-    apply Submodule.span_le.mpr
-    rintro a ⟨x, y, z, rfl⟩
-    exact LinearMap.mem_ker.mpr
-      (coproductSupportSummary_comul_linear_preLieDifferenceGenerators x y z)
-  · -- stable under left grafting
-    intro u a ha
-    exact LinearMap.mem_ker.mpr
-      (comul_linear_ker_stable_left u (LinearMap.mem_ker.mp ha))
-  · -- stable under right grafting
-    intro u a ha
-    exact LinearMap.mem_ker.mpr
-      (comul_linear_ker_stable_right u (LinearMap.mem_ker.mp ha))
+  exact comul_linear_ker_mem_stableFamily_of_witness
+    comulLinearStableKernelWitnessCurrent
+
+/--
+Assumption-driven form of `comul_linear_kills_stableSubmodule`.
+
+This is the exact descent argument needed later; only the witness `hw` carries
+the genuinely difficult mathematics.
+-/
+theorem comul_linear_kills_stableSubmodule_of_witness
+    (hw : ComulLinearStableKernelWitness)
+    {a : linearProofTreeCarrier}
+    (ha : a ∈ preLieDifferenceStableSubmodule) :
+    coproductSupportSummary_comul_linear a = 0 := by
+  have hmem : a ∈ (coproductSupportSummary_comul_linear).ker :=
+    Submodule.mem_sInf.mp ha _ (comul_linear_ker_mem_stableFamily_of_witness hw)
+  exact LinearMap.mem_ker.mp hmem
 
 /--
 `comul_linear` kills every element of `preLieDifferenceStableSubmodule`.
@@ -272,9 +325,8 @@ theorem comul_linear_kills_stableSubmodule
     {a : linearProofTreeCarrier}
     (ha : a ∈ preLieDifferenceStableSubmodule) :
     coproductSupportSummary_comul_linear a = 0 := by
-  have hmem : a ∈ (coproductSupportSummary_comul_linear).ker :=
-    Submodule.mem_sInf.mp ha _ comul_linear_ker_mem_stableFamily
-  exact LinearMap.mem_ker.mp hmem
+  exact comul_linear_kills_stableSubmodule_of_witness
+    comulLinearStableKernelWitnessCurrent ha
 
 end ComulKillsStable
 
@@ -298,6 +350,21 @@ theorem coproductSupportSummary_respectsStableQuotient :
     simpa using comul_linear_kills_stableSubmodule ha
   · -- counit kills a (counit is zero)
     have : coproductSupportSummary_coalgebraData.counit =
+           coproductSupportSummary_counit_linear := rfl
+    simp [this, coproductSupportSummary_counit_linear_eq_zero]
+
+/--
+Assumption-driven descent theorem: once the raw coproduct kills the stable
+submodule, the packaged coalgebra data respects the stable quotient.
+-/
+theorem coproductSupportSummary_respectsStableQuotient_of_witness
+    (hw : ComulLinearStableKernelWitness) :
+    CoproductSupportCoalgebraRespectsStableQuotient
+      coproductSupportSummary_coalgebraData := by
+  intro a ha
+  refine ⟨?_, ?_⟩
+  · simpa using comul_linear_kills_stableSubmodule_of_witness hw ha
+  · have : coproductSupportSummary_coalgebraData.counit =
            coproductSupportSummary_counit_linear := rfl
     simp [this, coproductSupportSummary_counit_linear_eq_zero]
 
@@ -358,6 +425,360 @@ of whether we cut the remainder or the forest first.  The formal proof is
 section Coassociativity
 
 /--
+Applying a linear map after a support-summary sum is the same as summing the
+pointwise images.
+-/
+theorem linearMap_coproductSupportSummary_sum
+    {α β : Type*} [AddCommMonoid α] [Module Int α]
+    [AddCommMonoid β] [Module Int β]
+    (L : α →ₗ[Int] β)
+    (t : PTree)
+    (f : Forest × PTree → α) :
+    L (coproductSupportSummary_sum t f) =
+      coproductSupportSummary_sum t (fun p => L (f p)) := by
+  classical
+  unfold coproductSupportSummary_sum
+  simpa using map_sum L f (coproductSupportSummary_supportFinset t)
+
+/--
+Pointwise cut-tensor coassociativity for the descended quotient coproduct.
+
+This is the actual remaining cut-bijection theorem.  The higher tree-level and
+global coassociativity statements are routine consequences of this definition.
+-/
+def CutTensorCoassociative : Prop :=
+  ∀ f : Forest, ∀ r : PTree,
+    (LinearMap.lTensor PreLieDifferenceStableQuotient Δ_quot)
+        (mkPreLieDifferenceStableQuotient_tensor
+          (TensorProduct.tmul ℤ (forestGen f) (treeGen r))) =
+      (TensorProduct.assoc ℤ
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor PreLieDifferenceStableQuotient Δ_quot)
+          (mkPreLieDifferenceStableQuotient_tensor
+            (TensorProduct.tmul ℤ (forestGen f) (treeGen r))))
+
+/--
+The named pointwise cut-tensor coassociativity proposition is exactly the
+statement of `comul_quot_coassoc_tensor`.
+-/
+theorem cutTensorCoassociative_iff :
+    CutTensorCoassociative ↔
+      ∀ f : Forest, ∀ r : PTree,
+        (LinearMap.lTensor PreLieDifferenceStableQuotient Δ_quot)
+            (mkPreLieDifferenceStableQuotient_tensor
+              (TensorProduct.tmul ℤ (forestGen f) (treeGen r))) =
+          (TensorProduct.assoc ℤ
+              PreLieDifferenceStableQuotient
+              PreLieDifferenceStableQuotient
+              PreLieDifferenceStableQuotient).toLinearMap
+            ((LinearMap.rTensor PreLieDifferenceStableQuotient Δ_quot)
+              (mkPreLieDifferenceStableQuotient_tensor
+                (TensorProduct.tmul ℤ (forestGen f) (treeGen r)))) := by
+  rfl
+
+/--
+Singleton-forest form of the cut-tensor coassociativity statement.
+
+This is the genuinely local reduction target: once it is known on singleton
+forests, linearity in the forest variable upgrades it to arbitrary forests.
+-/
+def SingleTreeCutTensorCoassociative : Prop :=
+  ∀ t r : PTree,
+    (LinearMap.lTensor PreLieDifferenceStableQuotient Δ_quot)
+        (mkPreLieDifferenceStableQuotient_tensor
+          (TensorProduct.tmul ℤ (forestGen [t]) (treeGen r))) =
+      (TensorProduct.assoc ℤ
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor PreLieDifferenceStableQuotient Δ_quot)
+          (mkPreLieDifferenceStableQuotient_tensor
+            (TensorProduct.tmul ℤ (forestGen [t]) (treeGen r))))
+
+/--
+Pointwise cut-tensor coassociativity immediately implies its singleton-forest
+specialisation.
+-/
+theorem singleTreeCutTensorCoassociative_of_cutTensorCoassociative
+    (hcut : CutTensorCoassociative) :
+    SingleTreeCutTensorCoassociative := by
+  intro t r
+  simpa using hcut [t] r
+
+/--
+The cut-tensor coassociativity statement is trivial on the empty forest.
+-/
+theorem comul_quot_coassoc_tensor_nil (r : PTree) :
+    (LinearMap.lTensor PreLieDifferenceStableQuotient Δ_quot)
+        (mkPreLieDifferenceStableQuotient_tensor
+          (TensorProduct.tmul ℤ (forestGen ([] : Forest)) (treeGen r))) =
+      (TensorProduct.assoc ℤ
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor PreLieDifferenceStableQuotient Δ_quot)
+          (mkPreLieDifferenceStableQuotient_tensor
+            (TensorProduct.tmul ℤ (forestGen ([] : Forest)) (treeGen r)))) := by
+  rw [show forestGen ([] : Forest) = 0 by simp]
+  have hmk :
+      mkPreLieDifferenceStableQuotient_tensor
+          (TensorProduct.tmul ℤ 0 (treeGen r)) = 0 := by
+    simp
+  rw [hmk]
+  simp [LinearMap.map_zero]
+
+/--
+Linearity in the forest variable: if cut-tensor coassociativity holds for the
+head singleton forest and for the tail forest, then it also holds for their
+cons-combination.
+-/
+theorem comul_quot_coassoc_tensor_cons_of_singleton_and_tail
+    (t : PTree) (ts : Forest) (r : PTree)
+    (hhead :
+      (LinearMap.lTensor PreLieDifferenceStableQuotient Δ_quot)
+          (mkPreLieDifferenceStableQuotient_tensor
+            (TensorProduct.tmul ℤ (forestGen [t]) (treeGen r))) =
+        (TensorProduct.assoc ℤ
+            PreLieDifferenceStableQuotient
+            PreLieDifferenceStableQuotient
+            PreLieDifferenceStableQuotient).toLinearMap
+          ((LinearMap.rTensor PreLieDifferenceStableQuotient Δ_quot)
+            (mkPreLieDifferenceStableQuotient_tensor
+              (TensorProduct.tmul ℤ (forestGen [t]) (treeGen r)))))
+    (htail :
+      (LinearMap.lTensor PreLieDifferenceStableQuotient Δ_quot)
+          (mkPreLieDifferenceStableQuotient_tensor
+            (TensorProduct.tmul ℤ (forestGen ts) (treeGen r))) =
+        (TensorProduct.assoc ℤ
+            PreLieDifferenceStableQuotient
+            PreLieDifferenceStableQuotient
+            PreLieDifferenceStableQuotient).toLinearMap
+          ((LinearMap.rTensor PreLieDifferenceStableQuotient Δ_quot)
+            (mkPreLieDifferenceStableQuotient_tensor
+              (TensorProduct.tmul ℤ (forestGen ts) (treeGen r))))) :
+    (LinearMap.lTensor PreLieDifferenceStableQuotient Δ_quot)
+        (mkPreLieDifferenceStableQuotient_tensor
+          (TensorProduct.tmul ℤ (forestGen (t :: ts)) (treeGen r))) =
+      (TensorProduct.assoc ℤ
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor PreLieDifferenceStableQuotient Δ_quot)
+          (mkPreLieDifferenceStableQuotient_tensor
+            (TensorProduct.tmul ℤ (forestGen (t :: ts)) (treeGen r)))) := by
+  calc
+    (LinearMap.lTensor PreLieDifferenceStableQuotient Δ_quot)
+        (mkPreLieDifferenceStableQuotient_tensor
+          (TensorProduct.tmul ℤ (forestGen (t :: ts)) (treeGen r))) =
+      (LinearMap.lTensor PreLieDifferenceStableQuotient Δ_quot)
+          (mkPreLieDifferenceStableQuotient_tensor
+            (TensorProduct.tmul ℤ (forestGen [t]) (treeGen r))) +
+        (LinearMap.lTensor PreLieDifferenceStableQuotient Δ_quot)
+          (mkPreLieDifferenceStableQuotient_tensor
+            (TensorProduct.tmul ℤ (forestGen ts) (treeGen r))) := by
+      simp [forestGen_cons, TensorProduct.add_tmul]
+    _ =
+      (TensorProduct.assoc ℤ
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient).toLinearMap
+          ((LinearMap.rTensor PreLieDifferenceStableQuotient Δ_quot)
+            (mkPreLieDifferenceStableQuotient_tensor
+              (TensorProduct.tmul ℤ (forestGen [t]) (treeGen r)))) +
+        (TensorProduct.assoc ℤ
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient).toLinearMap
+          ((LinearMap.rTensor PreLieDifferenceStableQuotient Δ_quot)
+            (mkPreLieDifferenceStableQuotient_tensor
+              (TensorProduct.tmul ℤ (forestGen ts) (treeGen r)))) := by
+      rw [hhead, htail]
+      rfl
+    _ =
+      (TensorProduct.assoc ℤ
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient).toLinearMap
+        (((LinearMap.rTensor PreLieDifferenceStableQuotient Δ_quot)
+            (mkPreLieDifferenceStableQuotient_tensor
+              (TensorProduct.tmul ℤ (forestGen [t]) (treeGen r)))) +
+          ((LinearMap.rTensor PreLieDifferenceStableQuotient Δ_quot)
+            (mkPreLieDifferenceStableQuotient_tensor
+              (TensorProduct.tmul ℤ (forestGen ts) (treeGen r))))) := by
+      exact (LinearMap.map_add
+        (TensorProduct.assoc ℤ
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient).toLinearMap
+        _ _).symm
+    _ =
+      (TensorProduct.assoc ℤ
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor PreLieDifferenceStableQuotient Δ_quot)
+          (mkPreLieDifferenceStableQuotient_tensor
+            (TensorProduct.tmul ℤ (forestGen (t :: ts)) (treeGen r)))) := by
+      simp [forestGen_cons, TensorProduct.add_tmul]
+
+/--
+Equivalent append-style linearity in the forest variable.
+-/
+theorem comul_quot_coassoc_tensor_append_of_parts
+    (xs ys : Forest) (r : PTree)
+    (hxs :
+      (LinearMap.lTensor PreLieDifferenceStableQuotient Δ_quot)
+          (mkPreLieDifferenceStableQuotient_tensor
+            (TensorProduct.tmul ℤ (forestGen xs) (treeGen r))) =
+        (TensorProduct.assoc ℤ
+            PreLieDifferenceStableQuotient
+            PreLieDifferenceStableQuotient
+            PreLieDifferenceStableQuotient).toLinearMap
+          ((LinearMap.rTensor PreLieDifferenceStableQuotient Δ_quot)
+            (mkPreLieDifferenceStableQuotient_tensor
+              (TensorProduct.tmul ℤ (forestGen xs) (treeGen r)))))
+    (hys :
+      (LinearMap.lTensor PreLieDifferenceStableQuotient Δ_quot)
+          (mkPreLieDifferenceStableQuotient_tensor
+            (TensorProduct.tmul ℤ (forestGen ys) (treeGen r))) =
+        (TensorProduct.assoc ℤ
+            PreLieDifferenceStableQuotient
+            PreLieDifferenceStableQuotient
+            PreLieDifferenceStableQuotient).toLinearMap
+          ((LinearMap.rTensor PreLieDifferenceStableQuotient Δ_quot)
+            (mkPreLieDifferenceStableQuotient_tensor
+              (TensorProduct.tmul ℤ (forestGen ys) (treeGen r))))) :
+    (LinearMap.lTensor PreLieDifferenceStableQuotient Δ_quot)
+        (mkPreLieDifferenceStableQuotient_tensor
+          (TensorProduct.tmul ℤ (forestGen (xs ++ ys)) (treeGen r))) =
+      (TensorProduct.assoc ℤ
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor PreLieDifferenceStableQuotient Δ_quot)
+          (mkPreLieDifferenceStableQuotient_tensor
+            (TensorProduct.tmul ℤ (forestGen (xs ++ ys)) (treeGen r)))) := by
+  calc
+    (LinearMap.lTensor PreLieDifferenceStableQuotient Δ_quot)
+        (mkPreLieDifferenceStableQuotient_tensor
+          (TensorProduct.tmul ℤ (forestGen (xs ++ ys)) (treeGen r))) =
+      (LinearMap.lTensor PreLieDifferenceStableQuotient Δ_quot)
+          (mkPreLieDifferenceStableQuotient_tensor
+            (TensorProduct.tmul ℤ (forestGen xs) (treeGen r))) +
+        (LinearMap.lTensor PreLieDifferenceStableQuotient Δ_quot)
+          (mkPreLieDifferenceStableQuotient_tensor
+            (TensorProduct.tmul ℤ (forestGen ys) (treeGen r))) := by
+      simp [forestGen_append, TensorProduct.add_tmul]
+    _ =
+      (TensorProduct.assoc ℤ
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient).toLinearMap
+          ((LinearMap.rTensor PreLieDifferenceStableQuotient Δ_quot)
+            (mkPreLieDifferenceStableQuotient_tensor
+              (TensorProduct.tmul ℤ (forestGen xs) (treeGen r)))) +
+        (TensorProduct.assoc ℤ
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient).toLinearMap
+          ((LinearMap.rTensor PreLieDifferenceStableQuotient Δ_quot)
+            (mkPreLieDifferenceStableQuotient_tensor
+              (TensorProduct.tmul ℤ (forestGen ys) (treeGen r)))) := by
+      rw [hxs, hys]
+      rfl
+    _ =
+      (TensorProduct.assoc ℤ
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient).toLinearMap
+        (((LinearMap.rTensor PreLieDifferenceStableQuotient Δ_quot)
+            (mkPreLieDifferenceStableQuotient_tensor
+              (TensorProduct.tmul ℤ (forestGen xs) (treeGen r)))) +
+          ((LinearMap.rTensor PreLieDifferenceStableQuotient Δ_quot)
+            (mkPreLieDifferenceStableQuotient_tensor
+              (TensorProduct.tmul ℤ (forestGen ys) (treeGen r))))) := by
+      exact (LinearMap.map_add
+        (TensorProduct.assoc ℤ
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient).toLinearMap
+        _ _).symm
+    _ =
+      (TensorProduct.assoc ℤ
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor PreLieDifferenceStableQuotient Δ_quot)
+          (mkPreLieDifferenceStableQuotient_tensor
+            (TensorProduct.tmul ℤ (forestGen (xs ++ ys)) (treeGen r)))) := by
+      simp [forestGen_append, TensorProduct.add_tmul]
+
+/--
+The singleton-forest theorem already implies the full cut-tensor coassociative
+statement by induction on the forest variable.
+-/
+theorem cutTensorCoassociative_of_singleTreeCutTensorCoassociative
+    (hsing : SingleTreeCutTensorCoassociative) :
+    CutTensorCoassociative := by
+  intro f r
+  induction f with
+  | nil =>
+      exact comul_quot_coassoc_tensor_nil r
+  | cons t ts ih =>
+      exact comul_quot_coassoc_tensor_cons_of_singleton_and_tail
+        t ts r (hsing t r) ih
+
+/--
+Thus the arbitrary-forest and singleton-forest cut-tensor coassociativity
+statements are equivalent.
+-/
+theorem cutTensorCoassociative_iff_singleTreeCutTensorCoassociative :
+    CutTensorCoassociative ↔ SingleTreeCutTensorCoassociative := by
+  constructor
+  · exact singleTreeCutTensorCoassociative_of_cutTensorCoassociative
+  · exact cutTensorCoassociative_of_singleTreeCutTensorCoassociative
+
+/--
+Package the reduced coassociativity input at the singleton-forest level.
+
+This is the genuinely minimal combinatorial hypothesis needed for all later
+coassociativity consequences in the quotient layer.
+-/
+structure SingleTreeCutTensorCoassociativeWitness where
+  singleTreeCutTensorCoassociative : SingleTreeCutTensorCoassociative
+
+/--
+Promote a singleton-cut witness to the full forest-level cut-tensor
+coassociativity statement.
+-/
+def SingleTreeCutTensorCoassociativeWitness.toCutTensorCoassociative
+    (hw : SingleTreeCutTensorCoassociativeWitness) :
+    CutTensorCoassociative :=
+  cutTensorCoassociative_of_singleTreeCutTensorCoassociative
+    hw.singleTreeCutTensorCoassociative
+
+/--
+The singleton witness directly implies the pointwise forest-level cut-tensor
+coassociativity theorem.
+-/
+theorem SingleTreeCutTensorCoassociativeWitness.tensor
+    (hw : SingleTreeCutTensorCoassociativeWitness)
+    (f : Forest) (r : PTree) :
+    (LinearMap.lTensor PreLieDifferenceStableQuotient Δ_quot)
+        (mkPreLieDifferenceStableQuotient_tensor
+          (TensorProduct.tmul ℤ (forestGen f) (treeGen r))) =
+      (TensorProduct.assoc ℤ
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor PreLieDifferenceStableQuotient Δ_quot)
+          (mkPreLieDifferenceStableQuotient_tensor
+            (TensorProduct.tmul ℤ (forestGen f) (treeGen r)))) := by
+  exact hw.toCutTensorCoassociative f r
+
+/--
 Coassociativity at the level of a single admissible-cut tensor `mk(fg f) ⊗ mk(tg r)`:
 applying `lTensor Δ` (id ⊗ Δ) gives the same result as applying
 `assoc ∘ rTensor Δ` (assoc ∘ (Δ ⊗ id)).
@@ -376,6 +797,58 @@ theorem comul_quot_coassoc_tensor (f : Forest) (r : PTree) :
   sorry
 
 /--
+Assumption-driven reduction from the cut-tensor theorem to generator-level
+coassociativity.
+-/
+theorem comul_quot_coassoc_treeGen_of_cutTensorCoassociative
+    (hcut : CutTensorCoassociative) (x : PTree) :
+    coproductSupportSummary_comul_quot_left h_respects
+        (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      coproductSupportSummary_comul_quot_left_assoc h_respects
+        (mkPreLieDifferenceStableQuotient (treeGen x)) := by
+  classical
+  simp only [coproductSupportSummary_comul_quot_left_treeGen_sum,
+    coproductSupportSummary_comul_quot_left_assoc_treeGen_sum]
+  change
+    (((LinearMap.lTensor PreLieDifferenceStableQuotient Δ_quot).comp
+      mkPreLieDifferenceStableQuotient_tensor)
+        (coproductSupportSummary_sum x coproductSupportSummary_tensorGen)) =
+      ((((TensorProduct.assoc ℤ
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient).toLinearMap).comp
+        ((LinearMap.rTensor PreLieDifferenceStableQuotient Δ_quot).comp
+          mkPreLieDifferenceStableQuotient_tensor))
+          (coproductSupportSummary_sum x coproductSupportSummary_tensorGen))
+  rw [linearMap_coproductSupportSummary_sum
+      (((LinearMap.lTensor PreLieDifferenceStableQuotient Δ_quot).comp
+        mkPreLieDifferenceStableQuotient_tensor))
+      x coproductSupportSummary_tensorGen]
+  rw [linearMap_coproductSupportSummary_sum
+      (((TensorProduct.assoc ℤ
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient).toLinearMap).comp
+        ((LinearMap.rTensor PreLieDifferenceStableQuotient Δ_quot).comp
+          mkPreLieDifferenceStableQuotient_tensor))
+      x coproductSupportSummary_tensorGen]
+  apply coproductSupportSummary_sum_congr
+  intro p hp
+  rcases p with ⟨f, r⟩
+  change
+    (LinearMap.lTensor PreLieDifferenceStableQuotient Δ_quot)
+        (mkPreLieDifferenceStableQuotient_tensor
+          (TensorProduct.tmul ℤ (forestGen f) (treeGen r))) =
+      (TensorProduct.assoc ℤ
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor PreLieDifferenceStableQuotient Δ_quot)
+          (mkPreLieDifferenceStableQuotient_tensor
+            (TensorProduct.tmul ℤ (forestGen f) (treeGen r))))
+  exact hcut f r
+
+/--
 Coassociativity on a single generator `treeGen x`:
 `(id ⊗ Δ)(Δ(mk(tg x))) = assoc((Δ ⊗ id)(Δ(mk(tg x))))`.
 This follows from `comul_quot_coassoc_tensor` by summing over the admissible cuts of `x`.
@@ -385,29 +858,21 @@ theorem comul_quot_coassoc_treeGen (x : PTree) :
         (mkPreLieDifferenceStableQuotient (treeGen x)) =
       coproductSupportSummary_comul_quot_left_assoc h_respects
         (mkPreLieDifferenceStableQuotient (treeGen x)) := by
-  simp only [coproductSupportSummary_comul_quot_left_treeGen_sum,
-             coproductSupportSummary_comul_quot_left_assoc_treeGen_sum]
-  -- Both sides are Σ over cuts of x applied to the same tensor;
-  -- use linearity of assoc and rTensor to reduce to individual cut tensors.
-  rw [← coproductSupportSummary_comul_linear_treeGen]
-  simp only [coproductSupportSummary_comul_linear_apply]
-  -- Reduce to comul_quot_coassoc_tensor on each summand via linearity.
-  sorry
+  exact comul_quot_coassoc_treeGen_of_cutTensorCoassociative
+    (fun f r => comul_quot_coassoc_tensor f r) x
 
 /--
-Coassociativity of the descended comultiplication:
-`(id ⊗ Δ) ∘ Δ = assoc ∘ (Δ ⊗ id) ∘ Δ`
-as linear maps `PreLieDifferenceStableQuotient → Q ⊗ Q ⊗ Q`.
+Assumption-driven global coassociativity: once the pointwise cut-tensor theorem
+is known, the descended quotient coproduct is coassociative as a linear map.
 -/
-theorem coproductSupportSummary_comul_quot_coassoc :
+theorem coproductSupportSummary_comul_quot_coassoc_of_cutTensorCoassociative
+    (hcut : CutTensorCoassociative) :
     coproductSupportSummary_comul_quot_left h_respects =
       coproductSupportSummary_comul_quot_left_assoc h_respects := by
   apply LinearMap.ext
   intro a
-  -- Reduce to the quotient via induction on `linearProofTreeCarrier`.
   induction a using Submodule.Quotient.induction_on with
   | H a =>
-    -- Reduce to free-module generators via Finsupp linear induction.
     induction a using Finsupp.induction_linear with
     | zero =>
         simp [map_zero]
@@ -425,7 +890,66 @@ theorem coproductSupportSummary_comul_quot_coassoc :
             (coproductSupportSummary_comul_quot_left_assoc h_respects)
               (preLieDifferenceStableSubmodule.mkQ (Finsupp.single x n))
         rw [hq, LinearMap.map_smul, LinearMap.map_smul]
-        exact congrArg (fun q => n • q) (comul_quot_coassoc_treeGen x)
+        exact congrArg (fun q => n • q)
+          (comul_quot_coassoc_treeGen_of_cutTensorCoassociative hcut x)
+
+/--
+The singleton witness already suffices for generator-level quotient
+coassociativity.
+-/
+theorem comul_quot_coassoc_treeGen_of_singleTreeCutTensorCoassociative
+    (hsing : SingleTreeCutTensorCoassociative) (x : PTree) :
+    coproductSupportSummary_comul_quot_left h_respects
+        (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      coproductSupportSummary_comul_quot_left_assoc h_respects
+        (mkPreLieDifferenceStableQuotient (treeGen x)) := by
+  exact comul_quot_coassoc_treeGen_of_cutTensorCoassociative
+    (cutTensorCoassociative_of_singleTreeCutTensorCoassociative hsing) x
+
+/--
+Witness-packaged generator-level quotient coassociativity.
+-/
+theorem SingleTreeCutTensorCoassociativeWitness.treeGen
+    (hw : SingleTreeCutTensorCoassociativeWitness) (x : PTree) :
+    coproductSupportSummary_comul_quot_left h_respects
+        (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      coproductSupportSummary_comul_quot_left_assoc h_respects
+        (mkPreLieDifferenceStableQuotient (treeGen x)) := by
+  exact comul_quot_coassoc_treeGen_of_singleTreeCutTensorCoassociative
+    hw.singleTreeCutTensorCoassociative x
+
+/--
+The singleton witness also suffices for the global quotient coassociativity
+axiom.
+-/
+theorem coproductSupportSummary_comul_quot_coassoc_of_singleTreeCutTensorCoassociative
+    (hsing : SingleTreeCutTensorCoassociative) :
+    coproductSupportSummary_comul_quot_left h_respects =
+      coproductSupportSummary_comul_quot_left_assoc h_respects := by
+  exact coproductSupportSummary_comul_quot_coassoc_of_cutTensorCoassociative
+    (cutTensorCoassociative_of_singleTreeCutTensorCoassociative hsing)
+
+/--
+Witness-packaged global quotient coassociativity.
+-/
+theorem SingleTreeCutTensorCoassociativeWitness.coassoc
+    (hw : SingleTreeCutTensorCoassociativeWitness) :
+    coproductSupportSummary_comul_quot_left h_respects =
+      coproductSupportSummary_comul_quot_left_assoc h_respects := by
+  exact
+    coproductSupportSummary_comul_quot_coassoc_of_singleTreeCutTensorCoassociative
+      hw.singleTreeCutTensorCoassociative
+
+/--
+Coassociativity of the descended comultiplication:
+`(id ⊗ Δ) ∘ Δ = assoc ∘ (Δ ⊗ id) ∘ Δ`
+as linear maps `PreLieDifferenceStableQuotient → Q ⊗ Q ⊗ Q`.
+-/
+theorem coproductSupportSummary_comul_quot_coassoc :
+    coproductSupportSummary_comul_quot_left h_respects =
+      coproductSupportSummary_comul_quot_left_assoc h_respects := by
+  exact coproductSupportSummary_comul_quot_coassoc_of_cutTensorCoassociative
+    (fun f r => comul_quot_coassoc_tensor f r)
 
 end Coassociativity
 
@@ -1740,6 +2264,26 @@ def GraftPreLieDifferenceGeneratorFlatmapLengthBalanced
     (graftPreLieDifferenceGeneratorFlatmapRight u x y z).length
 
 /--
+Pointwise multiplicity balance for the two named raw two-step output lists,
+formulated directly in `Nat` rather than after coercion to `Int`.
+-/
+def PreLieDifferenceGeneratorFlatmapNatCountBalanced
+    (x y z : PTree) : Prop :=
+  ∀ w : PTree,
+    (preLieDifferenceGeneratorFlatmapLeft x y z).count w =
+      (preLieDifferenceGeneratorFlatmapRight x y z).count w
+
+/--
+Pointwise multiplicity balance for the two named raw three-step output lists,
+formulated directly in `Nat`.
+-/
+def GraftPreLieDifferenceGeneratorFlatmapNatCountBalanced
+    (u x y z : PTree) : Prop :=
+  ∀ w : PTree,
+    (graftPreLieDifferenceGeneratorFlatmapLeft u x y z).count w =
+      (graftPreLieDifferenceGeneratorFlatmapRight u x y z).count w
+
+/--
 The named two-step count-balance proposition is definitionally the same as the
 older additive count identity on the two raw comparison sides.
 -/
@@ -1806,6 +2350,74 @@ theorem graftPreLieDifferenceGeneratorFlatmapCountBalanced_iff
       graftPreLieDifferenceGeneratorFlatmapRight, List.count_append,
       Int.add_assoc, Int.add_left_comm, Int.add_comm]
       using hcount w
+
+/--
+The `Nat`-valued and `Int`-valued formulations of the two-step pointwise
+multiplicity balance are equivalent.
+-/
+theorem preLieDifferenceGeneratorFlatmapNatCountBalanced_iff
+    (x y z : PTree) :
+    PreLieDifferenceGeneratorFlatmapNatCountBalanced x y z ↔
+      PreLieDifferenceGeneratorFlatmapCountBalanced x y z := by
+  constructor
+  · intro hcount w
+    exact congrArg Int.ofNat (hcount w)
+  · intro hcount w
+    exact Int.ofNat.inj (hcount w)
+
+/--
+The `Nat`-valued and `Int`-valued formulations of the three-step pointwise
+multiplicity balance are equivalent.
+-/
+theorem graftPreLieDifferenceGeneratorFlatmapNatCountBalanced_iff
+    (u x y z : PTree) :
+    GraftPreLieDifferenceGeneratorFlatmapNatCountBalanced u x y z ↔
+      GraftPreLieDifferenceGeneratorFlatmapCountBalanced u x y z := by
+  constructor
+  · intro hcount w
+    exact congrArg Int.ofNat (hcount w)
+  · intro hcount w
+    exact Int.ofNat.inj (hcount w)
+
+/--
+The original `Int`-valued base flatmap balance follows from its `Nat`-valued
+version.
+-/
+theorem preLieDifferenceGeneratorFlatmapCountBalanced_of_natCountBalanced
+    (x y z : PTree)
+    (hcount : PreLieDifferenceGeneratorFlatmapNatCountBalanced x y z) :
+    PreLieDifferenceGeneratorFlatmapCountBalanced x y z :=
+  (preLieDifferenceGeneratorFlatmapNatCountBalanced_iff x y z).mp hcount
+
+/--
+Conversely, the `Nat`-valued base flatmap balance follows from the original
+`Int`-valued formulation.
+-/
+theorem preLieDifferenceGeneratorFlatmapNatCountBalanced_of_countBalanced
+    (x y z : PTree)
+    (hcount : PreLieDifferenceGeneratorFlatmapCountBalanced x y z) :
+    PreLieDifferenceGeneratorFlatmapNatCountBalanced x y z :=
+  (preLieDifferenceGeneratorFlatmapNatCountBalanced_iff x y z).mpr hcount
+
+/--
+The original `Int`-valued higher flatmap balance follows from its `Nat`-valued
+version.
+-/
+theorem graftPreLieDifferenceGeneratorFlatmapCountBalanced_of_natCountBalanced
+    (u x y z : PTree)
+    (hcount : GraftPreLieDifferenceGeneratorFlatmapNatCountBalanced u x y z) :
+    GraftPreLieDifferenceGeneratorFlatmapCountBalanced u x y z :=
+  (graftPreLieDifferenceGeneratorFlatmapNatCountBalanced_iff u x y z).mp hcount
+
+/--
+Conversely, the `Nat`-valued higher flatmap balance follows from the original
+`Int`-valued formulation.
+-/
+theorem graftPreLieDifferenceGeneratorFlatmapNatCountBalanced_of_countBalanced
+    (u x y z : PTree)
+    (hcount : GraftPreLieDifferenceGeneratorFlatmapCountBalanced u x y z) :
+    GraftPreLieDifferenceGeneratorFlatmapNatCountBalanced u x y z :=
+  (graftPreLieDifferenceGeneratorFlatmapNatCountBalanced_iff u x y z).mpr hcount
 
 /--
 The named two-step permutation-balance proposition is definitionally the same
@@ -2214,6 +2826,163 @@ theorem list_length_eq_of_count_balance
   exact (list_perm_of_count_balance l₁ l₂ hcount).length_eq
 
 /--
+`Nat`-valued count balance is already enough to recover a list permutation.
+-/
+theorem list_perm_of_natCount_balance
+    {α : Type*} [DecidableEq α]
+    (l₁ l₂ : List α)
+    (hcount : ∀ a : α, l₁.count a = l₂.count a) :
+    l₁.Perm l₂ := by
+  apply list_perm_of_count_balance
+  intro a
+  exact congrArg Int.ofNat (hcount a)
+
+/--
+`Nat`-valued count balance also forces equality of list lengths.
+-/
+theorem list_length_eq_of_natCount_balance
+    {α : Type*} [DecidableEq α]
+    (l₁ l₂ : List α)
+    (hcount : ∀ a : α, l₁.count a = l₂.count a) :
+    l₁.length = l₂.length := by
+  exact (list_perm_of_natCount_balance l₁ l₂ hcount).length_eq
+
+/--
+The `Nat`-valued base flatmap balance upgrades to a permutation of the two
+named raw output lists.
+-/
+theorem preLieDifferenceGeneratorFlatmap_perm_of_natCount_balance
+    (x y z : PTree)
+    (hcount : PreLieDifferenceGeneratorFlatmapNatCountBalanced x y z) :
+    PreLieDifferenceGeneratorFlatmapPermBalanced x y z := by
+  exact list_perm_of_natCount_balance
+    (preLieDifferenceGeneratorFlatmapLeft x y z)
+    (preLieDifferenceGeneratorFlatmapRight x y z)
+    hcount
+
+/--
+The `Nat`-valued base flatmap balance also forces equality of the total output
+lengths.
+-/
+theorem preLieDifferenceGeneratorFlatmap_length_eq_of_natCount_balance
+    (x y z : PTree)
+    (hcount : PreLieDifferenceGeneratorFlatmapNatCountBalanced x y z) :
+    PreLieDifferenceGeneratorFlatmapLengthBalanced x y z := by
+  exact
+    (preLieDifferenceGeneratorFlatmap_perm_of_natCount_balance
+      x y z hcount).length_eq
+
+/--
+The `Nat`-valued higher flatmap balance upgrades to a permutation of the two
+named three-step output lists.
+-/
+theorem graftPreLieDifferenceGeneratorFlatmap_perm_of_natCount_balance
+    (u x y z : PTree)
+    (hcount : GraftPreLieDifferenceGeneratorFlatmapNatCountBalanced u x y z) :
+    GraftPreLieDifferenceGeneratorFlatmapPermBalanced u x y z := by
+  exact list_perm_of_natCount_balance
+    (graftPreLieDifferenceGeneratorFlatmapLeft u x y z)
+    (graftPreLieDifferenceGeneratorFlatmapRight u x y z)
+    hcount
+
+/--
+The `Nat`-valued higher flatmap balance also forces equality of the total
+three-step output lengths.
+-/
+theorem graftPreLieDifferenceGeneratorFlatmap_length_eq_of_natCount_balance
+    (u x y z : PTree)
+    (hcount : GraftPreLieDifferenceGeneratorFlatmapNatCountBalanced u x y z) :
+    GraftPreLieDifferenceGeneratorFlatmapLengthBalanced u x y z := by
+  exact
+    (graftPreLieDifferenceGeneratorFlatmap_perm_of_natCount_balance
+      u x y z hcount).length_eq
+
+/--
+The corrected counit already kills a base pre-Lie difference generator under
+the stronger `Nat`-valued flatmap balance hypothesis.
+-/
+theorem correctedCounit_linear_preLieDifferenceGenerators_of_natCountBalanced
+    (x y z : PTree)
+    (hcount : PreLieDifferenceGeneratorFlatmapNatCountBalanced x y z) :
+    correctedCounit_linear (preLieDifferenceGenerators x y z) = 0 := by
+  exact correctedCounit_linear_preLieDifferenceGenerators_of_countBalanced x y z
+    (preLieDifferenceGeneratorFlatmapCountBalanced_of_natCountBalanced x y z hcount)
+
+/--
+Likewise for the one-step-grafted generator-level corrected counit.
+-/
+theorem correctedCounit_linear_graft_preLieDifferenceGenerators_of_natCountBalanced
+    (u x y z : PTree)
+    (hcount : GraftPreLieDifferenceGeneratorFlatmapNatCountBalanced u x y z) :
+    correctedCounit_linear
+        (graftPreLie (treeGen u) (preLieDifferenceGenerators x y z)) = 0 := by
+  exact
+    (correctedCounit_linear_graft_preLieDifferenceGenerators_iff_flatmap_length_balance
+      u x y z).2
+      (graftPreLieDifferenceGeneratorFlatmap_length_eq_of_natCount_balance
+        u x y z hcount)
+
+/--
+Base `Nat`-count balance propagates through one more fixed grafting step to a
+named three-step permutation balance.
+-/
+theorem graftPreLieDifferenceGeneratorFlatmapPermBalanced_of_preLieDifferenceGeneratorFlatmapNatCountBalanced
+    (u x y z : PTree)
+    (hcount : PreLieDifferenceGeneratorFlatmapNatCountBalanced x y z) :
+    GraftPreLieDifferenceGeneratorFlatmapPermBalanced u x y z := by
+  simpa [PreLieDifferenceGeneratorFlatmapPermBalanced,
+    GraftPreLieDifferenceGeneratorFlatmapPermBalanced,
+    preLieDifferenceGeneratorFlatmapLeft, preLieDifferenceGeneratorFlatmapRight,
+    graftPreLieDifferenceGeneratorFlatmapLeft,
+    graftPreLieDifferenceGeneratorFlatmapRight, List.flatMap_append,
+    List.flatMap_assoc] using
+    (preLieDifferenceGeneratorFlatmap_perm_of_natCount_balance x y z hcount).flatMap
+      (fun t _ => List.Perm.refl (PTree.matchingLeafGraftings u t))
+
+/--
+Base `Nat`-count balance propagates through one more fixed grafting step to the
+named three-step `Nat`-count balance.
+-/
+theorem graftPreLieDifferenceGeneratorFlatmapNatCountBalanced_of_preLieDifferenceGeneratorFlatmapNatCountBalanced
+    (u x y z : PTree)
+    (hcount : PreLieDifferenceGeneratorFlatmapNatCountBalanced x y z) :
+    GraftPreLieDifferenceGeneratorFlatmapNatCountBalanced u x y z := by
+  have hperm :
+      GraftPreLieDifferenceGeneratorFlatmapPermBalanced u x y z :=
+    graftPreLieDifferenceGeneratorFlatmapPermBalanced_of_preLieDifferenceGeneratorFlatmapNatCountBalanced
+      u x y z hcount
+  intro w
+  exact (List.perm_iff_count.mp hperm) w
+
+/--
+Base `Int`-count balance propagates through one more fixed grafting step to the
+named three-step `Nat`-count balance.
+-/
+theorem graftPreLieDifferenceGeneratorFlatmapNatCountBalanced_of_preLieDifferenceGeneratorFlatmapCountBalanced
+    (u x y z : PTree)
+    (hcount : PreLieDifferenceGeneratorFlatmapCountBalanced x y z) :
+    GraftPreLieDifferenceGeneratorFlatmapNatCountBalanced u x y z := by
+  exact
+    graftPreLieDifferenceGeneratorFlatmapNatCountBalanced_of_preLieDifferenceGeneratorFlatmapNatCountBalanced
+      u x y z
+      (preLieDifferenceGeneratorFlatmapNatCountBalanced_of_countBalanced
+        x y z hcount)
+
+/--
+Base `Int`-count balance therefore also propagates to the named three-step
+`Int`-count balance.
+-/
+theorem graftPreLieDifferenceGeneratorFlatmapCountBalanced_of_preLieDifferenceGeneratorFlatmapCountBalanced
+    (u x y z : PTree)
+    (hcount : PreLieDifferenceGeneratorFlatmapCountBalanced x y z) :
+    GraftPreLieDifferenceGeneratorFlatmapCountBalanced u x y z := by
+  exact
+    graftPreLieDifferenceGeneratorFlatmapCountBalanced_of_natCountBalanced
+      u x y z
+      (graftPreLieDifferenceGeneratorFlatmapNatCountBalanced_of_preLieDifferenceGeneratorFlatmapCountBalanced
+        u x y z hcount)
+
+/--
 The higher corrected-counit vanishing also follows from pointwise equality of
 the two concrete three-stage flatmap multiplicities.
 -/
@@ -2512,6 +3281,75 @@ def AllPreLieDifferenceGeneratorFlatmapsCountBalanced : Prop :=
   ∀ x y z : PTree, PreLieDifferenceGeneratorFlatmapCountBalanced x y z
 
 /--
+Global `Nat`-valued version of the remaining base combinatorial input.
+-/
+def AllPreLieDifferenceGeneratorFlatmapsNatCountBalanced : Prop :=
+  ∀ x y z : PTree, PreLieDifferenceGeneratorFlatmapNatCountBalanced x y z
+
+/--
+Global `Int`-valued higher flatmap balance.
+-/
+def AllGraftPreLieDifferenceGeneratorFlatmapsCountBalanced : Prop :=
+  ∀ u x y z : PTree, GraftPreLieDifferenceGeneratorFlatmapCountBalanced u x y z
+
+/--
+Global `Nat`-valued higher flatmap balance.
+-/
+def AllGraftPreLieDifferenceGeneratorFlatmapsNatCountBalanced : Prop :=
+  ∀ u x y z : PTree, GraftPreLieDifferenceGeneratorFlatmapNatCountBalanced u x y z
+
+/--
+The global `Nat`- and `Int`-valued base balance hypotheses are equivalent.
+-/
+theorem allPreLieDifferenceGeneratorFlatmapsCountBalanced_iff_natCountBalanced :
+    AllPreLieDifferenceGeneratorFlatmapsCountBalanced ↔
+      AllPreLieDifferenceGeneratorFlatmapsNatCountBalanced := by
+  constructor
+  · intro hbal x y z
+    exact preLieDifferenceGeneratorFlatmapNatCountBalanced_of_countBalanced
+      x y z (hbal x y z)
+  · intro hbal x y z
+    exact preLieDifferenceGeneratorFlatmapCountBalanced_of_natCountBalanced
+      x y z (hbal x y z)
+
+/--
+The global `Nat`- and `Int`-valued higher balance hypotheses are equivalent.
+-/
+theorem allGraftPreLieDifferenceGeneratorFlatmapsCountBalanced_iff_natCountBalanced :
+    AllGraftPreLieDifferenceGeneratorFlatmapsCountBalanced ↔
+      AllGraftPreLieDifferenceGeneratorFlatmapsNatCountBalanced := by
+  constructor
+  · intro hbal u x y z
+    exact graftPreLieDifferenceGeneratorFlatmapNatCountBalanced_of_countBalanced
+      u x y z (hbal u x y z)
+  · intro hbal u x y z
+    exact graftPreLieDifferenceGeneratorFlatmapCountBalanced_of_natCountBalanced
+      u x y z (hbal u x y z)
+
+/--
+Base global count balance automatically propagates to the one-more-graft global
+higher count balance.
+-/
+theorem allGraftPreLieDifferenceGeneratorFlatmapsCountBalanced_of_allPreLieDifferenceGeneratorFlatmapsCountBalanced
+    (hbal : AllPreLieDifferenceGeneratorFlatmapsCountBalanced) :
+    AllGraftPreLieDifferenceGeneratorFlatmapsCountBalanced := by
+  intro u x y z
+  exact
+    graftPreLieDifferenceGeneratorFlatmapCountBalanced_of_preLieDifferenceGeneratorFlatmapCountBalanced
+      u x y z (hbal x y z)
+
+/--
+Likewise in the `Nat`-valued formulation.
+-/
+theorem allGraftPreLieDifferenceGeneratorFlatmapsNatCountBalanced_of_allPreLieDifferenceGeneratorFlatmapsNatCountBalanced
+    (hbal : AllPreLieDifferenceGeneratorFlatmapsNatCountBalanced) :
+    AllGraftPreLieDifferenceGeneratorFlatmapsNatCountBalanced := by
+  intro u x y z
+  exact
+    graftPreLieDifferenceGeneratorFlatmapNatCountBalanced_of_preLieDifferenceGeneratorFlatmapNatCountBalanced
+      u x y z (hbal x y z)
+
+/--
 The corrected counit kills every pre-Lie difference generator.
 
 Proof outline: `preLieDifferenceGenerators x y z = comparison - swapped`
@@ -2535,6 +3373,18 @@ theorem correctedCounit_linear_preLieDifferenceGenerators_of_globalCountBalance
     correctedCounit_linear (preLieDifferenceGenerators x y z) = 0 := by
   exact correctedCounit_linear_preLieDifferenceGenerators_of_countBalanced x y z
     (hbal x y z)
+
+/--
+Under the global `Nat`-valued two-step multiplicity-balance hypothesis, the
+corrected counit vanishes on every concrete pre-Lie difference generator.
+-/
+theorem correctedCounit_linear_preLieDifferenceGenerators_of_globalNatCountBalance
+    (hbal : AllPreLieDifferenceGeneratorFlatmapsNatCountBalanced)
+    (x y z : PTree) :
+    correctedCounit_linear (preLieDifferenceGenerators x y z) = 0 := by
+  exact correctedCounit_linear_preLieDifferenceGenerators_of_globalCountBalance
+    ((allPreLieDifferenceGeneratorFlatmapsCountBalanced_iff_natCountBalanced).2 hbal)
+    x y z
 
 /--
 The corrected counit kills every element of `preLieDifferenceSubmodule`.
@@ -2573,6 +3423,18 @@ theorem correctedCounit_linear_kills_preLieDifferenceSubmodule_of_globalCountBal
     simp [correctedCounit_linear_add, hx, hy]
   · intro n x _ hx
     simpa [correctedCounit_linear_smul, hx]
+
+/--
+The global `Nat`-valued balance hypothesis is also enough to kill the concrete
+pre-Lie defect submodule.
+-/
+theorem correctedCounit_linear_kills_preLieDifferenceSubmodule_of_globalNatCountBalance
+    (hbal : AllPreLieDifferenceGeneratorFlatmapsNatCountBalanced)
+    {a : linearProofTreeCarrier}
+    (ha : a ∈ preLieDifferenceSubmodule) :
+    correctedCounit_linear a = 0 := by
+  exact correctedCounit_linear_kills_preLieDifferenceSubmodule_of_globalCountBalance
+    ((allPreLieDifferenceGeneratorFlatmapsCountBalanced_iff_natCountBalanced).2 hbal) ha
 
 /--
 If the stable closure coincides with the concrete pre-Lie defect submodule,
@@ -2634,6 +3496,45 @@ theorem correctedCounit_linear_graft_preLieDifferenceGenerators_of_globalCountBa
       u x y z (hbal x y z)
 
 /--
+Global `Nat`-valued base balance automatically implies the higher one-step
+grafted corrected-counit vanishing theorem.
+-/
+theorem correctedCounit_linear_graft_preLieDifferenceGenerators_of_globalNatCountBalance
+    (hbal : AllPreLieDifferenceGeneratorFlatmapsNatCountBalanced)
+    (u x y z : PTree) :
+    correctedCounit_linear
+        (graftPreLie (treeGen u) (preLieDifferenceGenerators x y z)) = 0 := by
+  exact
+    correctedCounit_linear_graft_preLieDifferenceGenerators_of_preLieDifferenceGeneratorFlatmapCountBalanced
+      u x y z
+      (preLieDifferenceGeneratorFlatmapCountBalanced_of_natCountBalanced
+        x y z (hbal x y z))
+
+/--
+Global higher `Int`-count balance gives the one-step-grafted corrected-counit
+vanishing theorem directly.
+-/
+theorem correctedCounit_linear_graft_preLieDifferenceGenerators_of_globalGraftCountBalance
+    (hbal : AllGraftPreLieDifferenceGeneratorFlatmapsCountBalanced)
+    (u x y z : PTree) :
+    correctedCounit_linear
+        (graftPreLie (treeGen u) (preLieDifferenceGenerators x y z)) = 0 := by
+  exact correctedCounit_linear_graft_preLieDifferenceGenerators_of_countBalanced
+    u x y z (hbal u x y z)
+
+/--
+Global higher `Nat`-count balance gives the one-step-grafted corrected-counit
+vanishing theorem directly.
+-/
+theorem correctedCounit_linear_graft_preLieDifferenceGenerators_of_globalGraftNatCountBalance
+    (hbal : AllGraftPreLieDifferenceGeneratorFlatmapsNatCountBalanced)
+    (u x y z : PTree) :
+    correctedCounit_linear
+        (graftPreLie (treeGen u) (preLieDifferenceGenerators x y z)) = 0 := by
+  exact correctedCounit_linear_graft_preLieDifferenceGenerators_of_natCountBalanced
+    u x y z (hbal u x y z)
+
+/--
 The corrected counit kills every element of `preLieDifferenceStableSubmodule`.
 
 At this point the remaining genuinely mathematical input is that the stable
@@ -2663,6 +3564,20 @@ theorem correctedCounit_linear_kills_stableSubmodule_of_globalCountBalance_and_e
   have ha' : a ∈ preLieDifferenceSubmodule := by
     simpa [hEq] using ha
   exact correctedCounit_linear_kills_preLieDifferenceSubmodule_of_globalCountBalance hbal ha'
+
+/--
+The same stable-submodule vanishing theorem under the stronger global
+`Nat`-valued balance hypothesis.
+-/
+theorem correctedCounit_linear_kills_stableSubmodule_of_globalNatCountBalance_and_eq
+    (hbal : AllPreLieDifferenceGeneratorFlatmapsNatCountBalanced)
+    (hEq : preLieDifferenceStableSubmodule = preLieDifferenceSubmodule)
+    {a : linearProofTreeCarrier}
+    (ha : a ∈ preLieDifferenceStableSubmodule) :
+    correctedCounit_linear a = 0 := by
+  exact correctedCounit_linear_kills_stableSubmodule_of_globalCountBalance_and_eq
+    ((allPreLieDifferenceGeneratorFlatmapsCountBalanced_iff_natCountBalanced).2 hbal)
+    hEq ha
 
 /--
 If the global two-step multiplicity-balance theorem is available and the stable
@@ -2736,6 +3651,64 @@ noncomputable def correctedCounit_quot_of_globalCountBalance_and_eq
   map_add _ _ _
 
 /--
+Nat-count-balance variant of the descended corrected counit under an equality
+presentation of the stable submodule.
+-/
+noncomputable def correctedCounit_quot_of_globalNatCountBalance_and_eq
+    (hbal : AllPreLieDifferenceGeneratorFlatmapsNatCountBalanced)
+    (hEq : preLieDifferenceStableSubmodule = preLieDifferenceSubmodule) :
+    PreLieDifferenceStableQuotient →ₗ[ℤ] ℤ :=
+  correctedCounit_quot_of_globalCountBalance_and_eq
+    ((allPreLieDifferenceGeneratorFlatmapsCountBalanced_iff_natCountBalanced).2 hbal)
+    hEq
+
+@[simp] theorem correctedCounit_quot_of_globalNatCountBalance_and_eq_mk
+    (hbal : AllPreLieDifferenceGeneratorFlatmapsNatCountBalanced)
+    (hEq : preLieDifferenceStableSubmodule = preLieDifferenceSubmodule)
+    (a : linearProofTreeCarrier) :
+    correctedCounit_quot_of_globalNatCountBalance_and_eq hbal hEq
+        (mkPreLieDifferenceStableQuotient a) =
+      correctedCounit_linear a := by
+  simp [correctedCounit_quot_of_globalNatCountBalance_and_eq]
+
+@[simp] theorem correctedCounit_quot_of_globalNatCountBalance_and_eq_treeGen
+    (hbal : AllPreLieDifferenceGeneratorFlatmapsNatCountBalanced)
+    (hEq : preLieDifferenceStableSubmodule = preLieDifferenceSubmodule)
+    (t : PTree) :
+    correctedCounit_quot_of_globalNatCountBalance_and_eq hbal hEq
+        (mkPreLieDifferenceStableQuotient (treeGen t)) = 1 := by
+  simp [correctedCounit_quot_of_globalNatCountBalance_and_eq_mk]
+
+@[simp] theorem correctedCounit_quot_of_globalNatCountBalance_and_eq_forestGen
+    (hbal : AllPreLieDifferenceGeneratorFlatmapsNatCountBalanced)
+    (hEq : preLieDifferenceStableSubmodule = preLieDifferenceSubmodule)
+    (f : Forest) :
+    correctedCounit_quot_of_globalNatCountBalance_and_eq hbal hEq
+        (mkPreLieDifferenceStableQuotient (forestGen f)) =
+      (f.length : ℤ) := by
+  induction f with
+  | nil =>
+      simp [correctedCounit_quot_of_globalNatCountBalance_and_eq_mk]
+  | cons t ts ih =>
+      simp [forestGen_cons,
+        correctedCounit_quot_of_globalNatCountBalance_and_eq_mk, ih, add_comm]
+
+@[simp] theorem correctedCounit_quot_of_globalNatCountBalance_and_eq_zero
+    (hbal : AllPreLieDifferenceGeneratorFlatmapsNatCountBalanced)
+    (hEq : preLieDifferenceStableSubmodule = preLieDifferenceSubmodule) :
+    correctedCounit_quot_of_globalNatCountBalance_and_eq hbal hEq 0 = 0 :=
+  map_zero _
+
+@[simp] theorem correctedCounit_quot_of_globalNatCountBalance_and_eq_add
+    (hbal : AllPreLieDifferenceGeneratorFlatmapsNatCountBalanced)
+    (hEq : preLieDifferenceStableSubmodule = preLieDifferenceSubmodule)
+    (a b : PreLieDifferenceStableQuotient) :
+    correctedCounit_quot_of_globalNatCountBalance_and_eq hbal hEq (a + b) =
+      correctedCounit_quot_of_globalNatCountBalance_and_eq hbal hEq a +
+        correctedCounit_quot_of_globalNatCountBalance_and_eq hbal hEq b :=
+  map_add _ _ _
+
+/--
 Likewise, if the global two-step multiplicity-balance theorem is available and
 the concrete defect submodule is already stable under generator grafting on
 both sides, then the corrected counit kills the whole stable closure.
@@ -2749,6 +3722,21 @@ theorem correctedCounit_linear_kills_stableSubmodule_of_globalCountBalance_and_p
     correctedCounit_linear a = 0 := by
   exact correctedCounit_linear_kills_stableSubmodule_of_globalCountBalance_and_eq
     hbal (preLieDifferenceStableSubmodule_eq_preLieDifferenceSubmodule hL hR) ha
+
+/--
+Nat-count-balance version of the same preservation-based stable-submodule
+vanishing theorem.
+-/
+theorem correctedCounit_linear_kills_stableSubmodule_of_globalNatCountBalance_and_preserves
+    (hbal : AllPreLieDifferenceGeneratorFlatmapsNatCountBalanced)
+    (hL : GraftPreLiePreservesPreLieDifferenceLeftOnTreeGenerators)
+    (hR : GraftPreLiePreservesPreLieDifferenceRightOnTreeGenerators)
+    {a : linearProofTreeCarrier}
+    (ha : a ∈ preLieDifferenceStableSubmodule) :
+    correctedCounit_linear a = 0 := by
+  exact correctedCounit_linear_kills_stableSubmodule_of_globalCountBalance_and_preserves
+    ((allPreLieDifferenceGeneratorFlatmapsCountBalanced_iff_natCountBalanced).2 hbal)
+    hL hR ha
 
 /--
 If the global two-step multiplicity-balance theorem is available and the
@@ -2826,6 +3814,213 @@ noncomputable def correctedCounit_quot_of_globalCountBalance_and_preserves
       correctedCounit_quot_of_globalCountBalance_and_preserves hbal hL hR a +
         correctedCounit_quot_of_globalCountBalance_and_preserves hbal hL hR b :=
   map_add _ _ _
+
+/--
+Nat-count-balance variant of the descended corrected counit under the standard
+generator-preservation hypotheses.
+-/
+noncomputable def correctedCounit_quot_of_globalNatCountBalance_and_preserves
+    (hbal : AllPreLieDifferenceGeneratorFlatmapsNatCountBalanced)
+    (hL : GraftPreLiePreservesPreLieDifferenceLeftOnTreeGenerators)
+    (hR : GraftPreLiePreservesPreLieDifferenceRightOnTreeGenerators) :
+    PreLieDifferenceStableQuotient →ₗ[ℤ] ℤ :=
+  correctedCounit_quot_of_globalCountBalance_and_preserves
+    ((allPreLieDifferenceGeneratorFlatmapsCountBalanced_iff_natCountBalanced).2 hbal)
+    hL hR
+
+@[simp] theorem correctedCounit_quot_of_globalNatCountBalance_and_preserves_mk
+    (hbal : AllPreLieDifferenceGeneratorFlatmapsNatCountBalanced)
+    (hL : GraftPreLiePreservesPreLieDifferenceLeftOnTreeGenerators)
+    (hR : GraftPreLiePreservesPreLieDifferenceRightOnTreeGenerators)
+    (a : linearProofTreeCarrier) :
+    correctedCounit_quot_of_globalNatCountBalance_and_preserves hbal hL hR
+        (mkPreLieDifferenceStableQuotient a) =
+      correctedCounit_linear a := by
+  simp [correctedCounit_quot_of_globalNatCountBalance_and_preserves]
+
+@[simp] theorem correctedCounit_quot_of_globalNatCountBalance_and_preserves_treeGen
+    (hbal : AllPreLieDifferenceGeneratorFlatmapsNatCountBalanced)
+    (hL : GraftPreLiePreservesPreLieDifferenceLeftOnTreeGenerators)
+    (hR : GraftPreLiePreservesPreLieDifferenceRightOnTreeGenerators)
+    (t : PTree) :
+    correctedCounit_quot_of_globalNatCountBalance_and_preserves hbal hL hR
+        (mkPreLieDifferenceStableQuotient (treeGen t)) = 1 := by
+  simp [correctedCounit_quot_of_globalNatCountBalance_and_preserves_mk]
+
+@[simp] theorem correctedCounit_quot_of_globalNatCountBalance_and_preserves_forestGen
+    (hbal : AllPreLieDifferenceGeneratorFlatmapsNatCountBalanced)
+    (hL : GraftPreLiePreservesPreLieDifferenceLeftOnTreeGenerators)
+    (hR : GraftPreLiePreservesPreLieDifferenceRightOnTreeGenerators)
+    (f : Forest) :
+    correctedCounit_quot_of_globalNatCountBalance_and_preserves hbal hL hR
+        (mkPreLieDifferenceStableQuotient (forestGen f)) =
+      (f.length : ℤ) := by
+  induction f with
+  | nil =>
+      simp [correctedCounit_quot_of_globalNatCountBalance_and_preserves_mk]
+  | cons t ts ih =>
+      simp [forestGen_cons,
+        correctedCounit_quot_of_globalNatCountBalance_and_preserves_mk, ih, add_comm]
+
+@[simp] theorem correctedCounit_quot_of_globalNatCountBalance_and_preserves_zero
+    (hbal : AllPreLieDifferenceGeneratorFlatmapsNatCountBalanced)
+    (hL : GraftPreLiePreservesPreLieDifferenceLeftOnTreeGenerators)
+    (hR : GraftPreLiePreservesPreLieDifferenceRightOnTreeGenerators) :
+    correctedCounit_quot_of_globalNatCountBalance_and_preserves hbal hL hR 0 = 0 :=
+  map_zero _
+
+@[simp] theorem correctedCounit_quot_of_globalNatCountBalance_and_preserves_add
+    (hbal : AllPreLieDifferenceGeneratorFlatmapsNatCountBalanced)
+    (hL : GraftPreLiePreservesPreLieDifferenceLeftOnTreeGenerators)
+    (hR : GraftPreLiePreservesPreLieDifferenceRightOnTreeGenerators)
+    (a b : PreLieDifferenceStableQuotient) :
+    correctedCounit_quot_of_globalNatCountBalance_and_preserves hbal hL hR (a + b) =
+      correctedCounit_quot_of_globalNatCountBalance_and_preserves hbal hL hR a +
+        correctedCounit_quot_of_globalNatCountBalance_and_preserves hbal hL hR b :=
+  map_add _ _ _
+
+/--
+Convenient package for a global `Nat`-count-balance witness.
+-/
+structure CorrectedCounitGlobalNatBalanceWitness where
+  flatmapNatCountBalanced : AllPreLieDifferenceGeneratorFlatmapsNatCountBalanced
+
+/--
+Convert a packaged global `Nat`-count-balance witness to the original
+`Int`-valued hypothesis.
+-/
+def CorrectedCounitGlobalNatBalanceWitness.toGlobalCountBalance
+    (hw : CorrectedCounitGlobalNatBalanceWitness) :
+    AllPreLieDifferenceGeneratorFlatmapsCountBalanced :=
+  (allPreLieDifferenceGeneratorFlatmapsCountBalanced_iff_natCountBalanced).2
+    hw.flatmapNatCountBalanced
+
+/--
+The induced global higher `Nat`-count-balance witness obtained by graft
+propagation.
+-/
+def CorrectedCounitGlobalNatBalanceWitness.toGlobalGraftNatCountBalance
+    (hw : CorrectedCounitGlobalNatBalanceWitness) :
+    AllGraftPreLieDifferenceGeneratorFlatmapsNatCountBalanced :=
+  allGraftPreLieDifferenceGeneratorFlatmapsNatCountBalanced_of_allPreLieDifferenceGeneratorFlatmapsNatCountBalanced
+    hw.flatmapNatCountBalanced
+
+/--
+The packaged witness immediately implies generator-level corrected-counit
+vanishing.
+-/
+theorem CorrectedCounitGlobalNatBalanceWitness.generator_vanishes
+    (hw : CorrectedCounitGlobalNatBalanceWitness)
+    (x y z : PTree) :
+    correctedCounit_linear (preLieDifferenceGenerators x y z) = 0 := by
+  exact correctedCounit_linear_preLieDifferenceGenerators_of_globalNatCountBalance
+    hw.flatmapNatCountBalanced x y z
+
+/--
+The packaged witness also implies the one-step-grafted generator-level
+vanishing theorem.
+-/
+theorem CorrectedCounitGlobalNatBalanceWitness.grafted_generator_vanishes
+    (hw : CorrectedCounitGlobalNatBalanceWitness)
+    (u x y z : PTree) :
+    correctedCounit_linear
+        (graftPreLie (treeGen u) (preLieDifferenceGenerators x y z)) = 0 := by
+  exact correctedCounit_linear_graft_preLieDifferenceGenerators_of_globalNatCountBalance
+    hw.flatmapNatCountBalanced u x y z
+
+/--
+The packaged witness kills the entire concrete pre-Lie defect submodule.
+-/
+theorem CorrectedCounitGlobalNatBalanceWitness.kills_preLieDifferenceSubmodule
+    (hw : CorrectedCounitGlobalNatBalanceWitness)
+    {a : linearProofTreeCarrier}
+    (ha : a ∈ preLieDifferenceSubmodule) :
+    correctedCounit_linear a = 0 := by
+  exact correctedCounit_linear_kills_preLieDifferenceSubmodule_of_globalNatCountBalance
+    hw.flatmapNatCountBalanced ha
+
+/--
+Convenient package for the full assumption set needed to descend the corrected
+counit to the stable quotient via the already-proved quotient-equality theorem.
+-/
+structure CorrectedCounitStableDescentWitness where
+  flatmapNatCountBalanced : AllPreLieDifferenceGeneratorFlatmapsNatCountBalanced
+  preserveLeft : GraftPreLiePreservesPreLieDifferenceLeftOnTreeGenerators
+  preserveRight : GraftPreLiePreservesPreLieDifferenceRightOnTreeGenerators
+
+/--
+Extract the original `Int`-valued base balance hypothesis from a stable-descent
+witness.
+-/
+def CorrectedCounitStableDescentWitness.toGlobalCountBalance
+    (hw : CorrectedCounitStableDescentWitness) :
+    AllPreLieDifferenceGeneratorFlatmapsCountBalanced :=
+  (allPreLieDifferenceGeneratorFlatmapsCountBalanced_iff_natCountBalanced).2
+    hw.flatmapNatCountBalanced
+
+/--
+The stable-descent witness identifies the stable closure with the concrete
+pre-Lie defect submodule.
+-/
+theorem CorrectedCounitStableDescentWitness.stable_eq
+    (hw : CorrectedCounitStableDescentWitness) :
+    preLieDifferenceStableSubmodule = preLieDifferenceSubmodule := by
+  exact preLieDifferenceStableSubmodule_eq_preLieDifferenceSubmodule
+    hw.preserveLeft hw.preserveRight
+
+/--
+Under the packaged assumptions, the corrected counit kills the stable
+submodule.
+-/
+theorem CorrectedCounitStableDescentWitness.kills_stableSubmodule
+    (hw : CorrectedCounitStableDescentWitness)
+    {a : linearProofTreeCarrier}
+    (ha : a ∈ preLieDifferenceStableSubmodule) :
+    correctedCounit_linear a = 0 := by
+  exact correctedCounit_linear_kills_stableSubmodule_of_globalNatCountBalance_and_preserves
+    hw.flatmapNatCountBalanced hw.preserveLeft hw.preserveRight ha
+
+/--
+The descended corrected counit obtained from a stable-descent witness.
+-/
+noncomputable def CorrectedCounitStableDescentWitness.quot
+    (hw : CorrectedCounitStableDescentWitness) :
+    PreLieDifferenceStableQuotient →ₗ[ℤ] ℤ :=
+  correctedCounit_quot_of_globalNatCountBalance_and_preserves
+    hw.flatmapNatCountBalanced hw.preserveLeft hw.preserveRight
+
+@[simp] theorem CorrectedCounitStableDescentWitness.quot_mk
+    (hw : CorrectedCounitStableDescentWitness)
+    (a : linearProofTreeCarrier) :
+    hw.quot (mkPreLieDifferenceStableQuotient a) = correctedCounit_linear a := by
+  simp [CorrectedCounitStableDescentWitness.quot]
+
+@[simp] theorem CorrectedCounitStableDescentWitness.quot_treeGen
+    (hw : CorrectedCounitStableDescentWitness)
+    (t : PTree) :
+    hw.quot (mkPreLieDifferenceStableQuotient (treeGen t)) = 1 := by
+  simp [CorrectedCounitStableDescentWitness.quot]
+
+@[simp] theorem CorrectedCounitStableDescentWitness.quot_forestGen
+    (hw : CorrectedCounitStableDescentWitness)
+    (f : Forest) :
+    hw.quot (mkPreLieDifferenceStableQuotient (forestGen f)) = (f.length : ℤ) := by
+  induction f with
+  | nil =>
+      simp [CorrectedCounitStableDescentWitness.quot_mk]
+  | cons t ts ih =>
+      simp [forestGen_cons, CorrectedCounitStableDescentWitness.quot_mk, ih, add_comm]
+
+@[simp] theorem CorrectedCounitStableDescentWitness.quot_zero
+    (hw : CorrectedCounitStableDescentWitness) :
+    hw.quot 0 = 0 := by
+  simp [CorrectedCounitStableDescentWitness.quot]
+
+@[simp] theorem CorrectedCounitStableDescentWitness.quot_add
+    (hw : CorrectedCounitStableDescentWitness)
+    (a b : PreLieDifferenceStableQuotient) :
+    hw.quot (a + b) = hw.quot a + hw.quot b := by
+  simp [CorrectedCounitStableDescentWitness.quot]
 
 /-- The corrected counit descends to the stable quotient. -/
 noncomputable def correctedCounit_quot :
@@ -3235,6 +4430,178 @@ theorem correctedCounit_lTensor_comp_comul_mk_eq_unit_add_error
   abel
 
 /--
+The naive right counit target viewed directly on the stable quotient.
+Proof-theoretically, this is the "no detached subproofs" structural term.
+-/
+noncomputable def correctedCounit_rTensor_unit_quot :
+    PreLieDifferenceStableQuotient →ₗ[ℤ]
+      TensorProduct ℤ ℤ PreLieDifferenceStableQuotient :=
+  TensorProduct.mk ℤ ℤ PreLieDifferenceStableQuotient 1
+
+/--
+The naive left counit target viewed directly on the stable quotient.
+-/
+noncomputable def correctedCounit_lTensor_unit_quot :
+    PreLieDifferenceStableQuotient →ₗ[ℤ]
+      TensorProduct ℤ PreLieDifferenceStableQuotient ℤ :=
+  (TensorProduct.mk ℤ PreLieDifferenceStableQuotient ℤ).flip 1
+
+@[simp] theorem correctedCounit_rTensor_unit_quot_mk
+    (a : linearProofTreeCarrier) :
+    correctedCounit_rTensor_unit_quot (mkPreLieDifferenceStableQuotient a) =
+      correctedCounit_rTensor_unit_linear a := by
+  rfl
+
+@[simp] theorem correctedCounit_lTensor_unit_quot_mk
+    (a : linearProofTreeCarrier) :
+    correctedCounit_lTensor_unit_quot (mkPreLieDifferenceStableQuotient a) =
+      correctedCounit_lTensor_unit_linear a := by
+  rfl
+
+/--
+The quotient-level right error map: the actual corrected-counit composite minus
+the naive structural unit term.
+-/
+noncomputable def correctedCounit_rTensor_error_quot :
+    PreLieDifferenceStableQuotient →ₗ[ℤ]
+      TensorProduct ℤ ℤ PreLieDifferenceStableQuotient :=
+  { toFun := fun q =>
+      (LinearMap.comp
+          (LinearMap.rTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+          Δ_quot) q -
+        correctedCounit_rTensor_unit_quot q
+    map_add' := by
+      intro q r
+      simp [sub_eq_add_neg, add_assoc, add_left_comm, add_comm]
+    map_smul' := by
+      intro n q
+      change
+        (LinearMap.comp
+            (LinearMap.rTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+            Δ_quot) (n • q) -
+          correctedCounit_rTensor_unit_quot (n • q) =
+        n •
+          ((LinearMap.comp
+              (LinearMap.rTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+              Δ_quot) q -
+            correctedCounit_rTensor_unit_quot q)
+      rw [LinearMap.map_smul, correctedCounit_rTensor_unit_quot.map_smul]
+      exact (smul_sub n
+        ((LinearMap.comp
+            (LinearMap.rTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+            Δ_quot) q)
+        (correctedCounit_rTensor_unit_quot q)).symm }
+
+/--
+The quotient-level left error map.
+-/
+noncomputable def correctedCounit_lTensor_error_quot :
+    PreLieDifferenceStableQuotient →ₗ[ℤ]
+      TensorProduct ℤ PreLieDifferenceStableQuotient ℤ :=
+  { toFun := fun q =>
+      (LinearMap.comp
+          (LinearMap.lTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+          Δ_quot) q -
+        correctedCounit_lTensor_unit_quot q
+    map_add' := by
+      intro q r
+      simp [sub_eq_add_neg, add_assoc, add_left_comm, add_comm]
+    map_smul' := by
+      intro n q
+      change
+        (LinearMap.comp
+            (LinearMap.lTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+            Δ_quot) (n • q) -
+          correctedCounit_lTensor_unit_quot (n • q) =
+        n •
+          ((LinearMap.comp
+              (LinearMap.lTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+              Δ_quot) q -
+            correctedCounit_lTensor_unit_quot q)
+      rw [LinearMap.map_smul, correctedCounit_lTensor_unit_quot.map_smul]
+      exact (smul_sub n
+        ((LinearMap.comp
+            (LinearMap.lTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+            Δ_quot) q)
+        (correctedCounit_lTensor_unit_quot q)).symm }
+
+@[simp] theorem correctedCounit_rTensor_error_quot_mk
+    (a : linearProofTreeCarrier) :
+    correctedCounit_rTensor_error_quot (mkPreLieDifferenceStableQuotient a) =
+      correctedCounit_rTensor_error_linear a := by
+  change
+    (LinearMap.rTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+        (Δ_quot (mkPreLieDifferenceStableQuotient a)) -
+      correctedCounit_rTensor_unit_quot (mkPreLieDifferenceStableQuotient a) =
+    correctedCounit_rTensor_error_linear a
+  rw [correctedCounit_rTensor_comp_comul_mk, correctedCounit_rTensor_unit_quot_mk]
+  rfl
+
+@[simp] theorem correctedCounit_lTensor_error_quot_mk
+    (a : linearProofTreeCarrier) :
+    correctedCounit_lTensor_error_quot (mkPreLieDifferenceStableQuotient a) =
+      correctedCounit_lTensor_error_linear a := by
+  change
+    (LinearMap.lTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+        (Δ_quot (mkPreLieDifferenceStableQuotient a)) -
+      correctedCounit_lTensor_unit_quot (mkPreLieDifferenceStableQuotient a) =
+    correctedCounit_lTensor_error_linear a
+  rw [correctedCounit_lTensor_comp_comul_mk, correctedCounit_lTensor_unit_quot_mk]
+  rfl
+
+/--
+On the quotient, the corrected right counit composite splits into the naive
+structural unit term plus an explicit quotient-level error.
+-/
+theorem correctedCounit_rTensor_comp_comul_eq_unit_add_error :
+    ∀ q : PreLieDifferenceStableQuotient,
+      (LinearMap.comp
+          (LinearMap.rTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+          Δ_quot) q =
+        correctedCounit_rTensor_unit_quot q +
+          correctedCounit_rTensor_error_quot q := by
+  intro q
+  simp [correctedCounit_rTensor_error_quot]
+
+/--
+On the quotient, the corrected left counit composite splits into the naive
+structural unit term plus an explicit quotient-level error.
+-/
+theorem correctedCounit_lTensor_comp_comul_eq_unit_add_error :
+    ∀ q : PreLieDifferenceStableQuotient,
+      (LinearMap.comp
+          (LinearMap.lTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+          Δ_quot) q =
+        correctedCounit_lTensor_unit_quot q +
+          correctedCounit_lTensor_error_quot q := by
+  intro q
+  simp [correctedCounit_lTensor_error_quot]
+
+/--
+Linear-map form of the quotient-level right counit decomposition.
+-/
+theorem correctedCounit_rTensor_comp_comul_eq_unit_add_error_linearMap :
+    LinearMap.comp
+        (LinearMap.rTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+        Δ_quot =
+      correctedCounit_rTensor_unit_quot + correctedCounit_rTensor_error_quot := by
+  apply LinearMap.ext
+  intro q
+  exact correctedCounit_rTensor_comp_comul_eq_unit_add_error q
+
+/--
+Linear-map form of the quotient-level left counit decomposition.
+-/
+theorem correctedCounit_lTensor_comp_comul_eq_unit_add_error_linearMap :
+    LinearMap.comp
+        (LinearMap.lTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+        Δ_quot =
+      correctedCounit_lTensor_unit_quot + correctedCounit_lTensor_error_quot := by
+  apply LinearMap.ext
+  intro q
+  exact correctedCounit_lTensor_comp_comul_eq_unit_add_error q
+
+/--
 Applying the corrected right counit to `Δ_quot` on a generator evaluates the
 support-sum cut formula by collapsing each cut forest with `correctedCounit_quot`.
 -/
@@ -3302,6 +4669,58 @@ theorem correctedCounit_lTensor_comp_comul_treeGen_forestSum
   simp
 
 /--
+On generators, the right defect is exactly the length-weighted cut profile
+minus the naive structural unit term.
+-/
+theorem correctedCounit_rTensor_error_linear_treeGen_cutFormula
+    (t : PTree) :
+    correctedCounit_rTensor_error_linear (treeGen t) =
+      coproductSupportSummary_sum t correctedCounit_rTensor_profileGen -
+        TensorProduct.tmul ℤ 1
+          (mkPreLieDifferenceStableQuotient (treeGen t)) := by
+  rw [correctedCounit_rTensor_error_linear_treeGen,
+    correctedCounit_rTensor_profile_linear_treeGen]
+
+/--
+On generators, the left defect is exactly the forest-sum cut profile minus the
+naive structural unit term.
+-/
+theorem correctedCounit_lTensor_error_linear_treeGen_cutFormula
+    (t : PTree) :
+    correctedCounit_lTensor_error_linear (treeGen t) =
+      coproductSupportSummary_sum t correctedCounit_lTensor_profileGen -
+        TensorProduct.tmul ℤ
+          (mkPreLieDifferenceStableQuotient (treeGen t)) 1 := by
+  rw [correctedCounit_lTensor_error_linear_treeGen,
+    correctedCounit_lTensor_profile_linear_treeGen]
+
+/--
+Quotient-level generator form of the right defect cut formula.
+-/
+theorem correctedCounit_rTensor_error_quot_treeGen_cutFormula
+    (t : PTree) :
+    correctedCounit_rTensor_error_quot
+        (mkPreLieDifferenceStableQuotient (treeGen t)) =
+      coproductSupportSummary_sum t correctedCounit_rTensor_profileGen -
+        TensorProduct.tmul ℤ 1
+          (mkPreLieDifferenceStableQuotient (treeGen t)) := by
+  rw [correctedCounit_rTensor_error_quot_mk,
+    correctedCounit_rTensor_error_linear_treeGen_cutFormula]
+
+/--
+Quotient-level generator form of the left defect cut formula.
+-/
+theorem correctedCounit_lTensor_error_quot_treeGen_cutFormula
+    (t : PTree) :
+    correctedCounit_lTensor_error_quot
+        (mkPreLieDifferenceStableQuotient (treeGen t)) =
+      coproductSupportSummary_sum t correctedCounit_lTensor_profileGen -
+        TensorProduct.tmul ℤ
+          (mkPreLieDifferenceStableQuotient (treeGen t)) 1 := by
+  rw [correctedCounit_lTensor_error_quot_mk,
+    correctedCounit_lTensor_error_linear_treeGen_cutFormula]
+
+/--
 On a leaf generator, the corrected right counit computation is explicit.
 -/
 theorem correctedCounit_rTensor_comp_comul_treeGen_leaf
@@ -3354,6 +4773,60 @@ theorem correctedCounit_lTensor_comp_comul_treeGen_stump
   rw [Δ_quot_mk_treeGen, coproductSupportSummary_comul_linear_stump,
     mkPreLieDifferenceStableQuotient_tensor_tmul]
   simp
+
+/--
+The naive right counit target is exact on leaves.
+-/
+theorem correctedCounit_rTensor_comp_comul_treeGen_leaf_eq_unit
+    (s : MultiSequent) :
+    (LinearMap.comp
+        (LinearMap.rTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+        Δ_quot)
+        (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s))) =
+      correctedCounit_rTensor_unit_quot
+        (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s))) := by
+  change
+    (LinearMap.rTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+        (Δ_quot (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s)))) =
+      TensorProduct.tmul ℤ 1
+        (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s)))
+  simpa using correctedCounit_rTensor_comp_comul_treeGen_leaf s
+
+/--
+The naive left counit target is exact on leaves.
+-/
+theorem correctedCounit_lTensor_comp_comul_treeGen_leaf_eq_unit
+    (s : MultiSequent) :
+    (LinearMap.comp
+        (LinearMap.lTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+        Δ_quot)
+        (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s))) =
+      correctedCounit_lTensor_unit_quot
+        (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s))) := by
+  change
+    (LinearMap.lTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+        (Δ_quot (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s)))) =
+      TensorProduct.tmul ℤ
+        (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s))) 1
+  simpa using correctedCounit_lTensor_comp_comul_treeGen_leaf s
+
+/--
+The naive left counit target is also exact on stumps.
+-/
+theorem correctedCounit_lTensor_comp_comul_treeGen_stump_eq_unit
+    (r : RuleTag) (s : MultiSequent) :
+    (LinearMap.comp
+        (LinearMap.lTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+        Δ_quot)
+        (mkPreLieDifferenceStableQuotient (treeGen (stump r s))) =
+      correctedCounit_lTensor_unit_quot
+        (mkPreLieDifferenceStableQuotient (treeGen (stump r s))) := by
+  change
+    (LinearMap.lTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+        (Δ_quot (mkPreLieDifferenceStableQuotient (treeGen (stump r s)))) =
+      TensorProduct.tmul ℤ
+        (mkPreLieDifferenceStableQuotient (treeGen (stump r s))) 1
+  simpa using correctedCounit_lTensor_comp_comul_treeGen_stump r s
 
 /--
 For a one-leaf-child tree, the corrected right counit produces the two explicit
@@ -3544,6 +5017,812 @@ theorem correctedCounit_lTensor_error_linear_treeGen_nodeLeaf
   abel
 
 /--
+For `nodeStump`, the right error term consists of the `nodeLeaf` remainder and
+the extra root-leaf contribution, minus the naive unit term.
+-/
+theorem correctedCounit_rTensor_error_linear_treeGen_nodeStump
+    (r : RuleTag) (s : MultiSequent) (r' : RuleTag) (s' : MultiSequent) :
+    correctedCounit_rTensor_error_linear (treeGen (nodeStump r s r' s')) =
+      TensorProduct.tmul ℤ 1
+          (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s'))) +
+        TensorProduct.tmul ℤ 1
+          (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s))) -
+        TensorProduct.tmul ℤ 1
+          (mkPreLieDifferenceStableQuotient (treeGen (nodeStump r s r' s'))) := by
+  rw [correctedCounit_rTensor_error_linear_treeGen,
+    ← correctedCounit_rTensor_comp_comul_mk (treeGen (nodeStump r s r' s')),
+    correctedCounit_rTensor_comp_comul_treeGen_nodeStump]
+
+/--
+For `nodeStump`, the left error term is exactly the extra child-stump
+contribution.
+-/
+theorem correctedCounit_lTensor_error_linear_treeGen_nodeStump
+    (r : RuleTag) (s : MultiSequent) (r' : RuleTag) (s' : MultiSequent) :
+    correctedCounit_lTensor_error_linear (treeGen (nodeStump r s r' s')) =
+      TensorProduct.tmul ℤ
+        (mkPreLieDifferenceStableQuotient (treeGen (stump r' s'))) 1 := by
+  rw [correctedCounit_lTensor_error_linear_treeGen,
+    ← correctedCounit_lTensor_comp_comul_mk (treeGen (nodeStump r s r' s')),
+    correctedCounit_lTensor_comp_comul_treeGen_nodeStump]
+  abel
+
+/--
+For `nodeNodeLeaf`, the right error term is the sum of the intermediate
+`nodeLeaf` remainder and the extra root-leaf contribution.
+-/
+theorem correctedCounit_rTensor_error_linear_treeGen_nodeNodeLeaf
+    (r : RuleTag) (s : MultiSequent) (r₁ : RuleTag) (s₁ s₂ : MultiSequent) :
+    correctedCounit_rTensor_error_linear
+        (treeGen (nodeNodeLeaf r s r₁ s₁ s₂)) =
+      TensorProduct.tmul ℤ 1
+          (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s₁))) +
+        TensorProduct.tmul ℤ 1
+          (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s))) := by
+  rw [correctedCounit_rTensor_error_linear_treeGen,
+    ← correctedCounit_rTensor_comp_comul_mk
+      (treeGen (nodeNodeLeaf r s r₁ s₁ s₂)),
+    correctedCounit_rTensor_comp_comul_treeGen_nodeNodeLeaf]
+  abel
+
+/--
+For `nodeNodeLeaf`, the left error term is the sum of the child-leaf and
+intermediate `nodeLeaf` contributions.
+-/
+theorem correctedCounit_lTensor_error_linear_treeGen_nodeNodeLeaf
+    (r : RuleTag) (s : MultiSequent) (r₁ : RuleTag) (s₁ s₂ : MultiSequent) :
+    correctedCounit_lTensor_error_linear
+        (treeGen (nodeNodeLeaf r s r₁ s₁ s₂)) =
+      TensorProduct.tmul ℤ
+          (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s₂))) 1 +
+        TensorProduct.tmul ℤ
+          (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r₁ s₁ s₂))) 1 := by
+  rw [correctedCounit_lTensor_error_linear_treeGen,
+    ← correctedCounit_lTensor_comp_comul_mk
+      (treeGen (nodeNodeLeaf r s r₁ s₁ s₂)),
+    correctedCounit_lTensor_comp_comul_treeGen_nodeNodeLeaf]
+  abel
+
+@[simp] theorem correctedCounit_rTensor_error_quot_treeGen_leaf
+    (s : MultiSequent) :
+    correctedCounit_rTensor_error_quot
+        (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s))) = 0 := by
+  rw [correctedCounit_rTensor_error_quot_mk,
+    correctedCounit_rTensor_error_linear_treeGen_leaf]
+
+@[simp] theorem correctedCounit_lTensor_error_quot_treeGen_leaf
+    (s : MultiSequent) :
+    correctedCounit_lTensor_error_quot
+        (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s))) = 0 := by
+  rw [correctedCounit_lTensor_error_quot_mk,
+    correctedCounit_lTensor_error_linear_treeGen_leaf]
+
+@[simp] theorem correctedCounit_rTensor_error_quot_treeGen_stump
+    (r : RuleTag) (s : MultiSequent) :
+    correctedCounit_rTensor_error_quot
+        (mkPreLieDifferenceStableQuotient (treeGen (stump r s))) =
+      TensorProduct.tmul ℤ 1
+          (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s))) -
+        TensorProduct.tmul ℤ 1
+          (mkPreLieDifferenceStableQuotient (treeGen (stump r s))) := by
+  rw [correctedCounit_rTensor_error_quot_mk,
+    correctedCounit_rTensor_error_linear_treeGen_stump]
+
+@[simp] theorem correctedCounit_lTensor_error_quot_treeGen_stump
+    (r : RuleTag) (s : MultiSequent) :
+    correctedCounit_lTensor_error_quot
+        (mkPreLieDifferenceStableQuotient (treeGen (stump r s))) = 0 := by
+  rw [correctedCounit_lTensor_error_quot_mk,
+    correctedCounit_lTensor_error_linear_treeGen_stump]
+
+@[simp] theorem correctedCounit_rTensor_error_quot_treeGen_nodeLeaf
+    (r : RuleTag) (s s' : MultiSequent) :
+    correctedCounit_rTensor_error_quot
+        (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s'))) =
+      TensorProduct.tmul ℤ 1
+        (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s))) := by
+  rw [correctedCounit_rTensor_error_quot_mk,
+    correctedCounit_rTensor_error_linear_treeGen_nodeLeaf]
+
+@[simp] theorem correctedCounit_lTensor_error_quot_treeGen_nodeLeaf
+    (r : RuleTag) (s s' : MultiSequent) :
+    correctedCounit_lTensor_error_quot
+        (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s'))) =
+      TensorProduct.tmul ℤ
+        (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s'))) 1 := by
+  rw [correctedCounit_lTensor_error_quot_mk,
+    correctedCounit_lTensor_error_linear_treeGen_nodeLeaf]
+
+@[simp] theorem correctedCounit_rTensor_error_quot_treeGen_nodeStump
+    (r : RuleTag) (s : MultiSequent) (r' : RuleTag) (s' : MultiSequent) :
+    correctedCounit_rTensor_error_quot
+        (mkPreLieDifferenceStableQuotient (treeGen (nodeStump r s r' s'))) =
+      TensorProduct.tmul ℤ 1
+          (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s'))) +
+        TensorProduct.tmul ℤ 1
+          (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s))) -
+        TensorProduct.tmul ℤ 1
+          (mkPreLieDifferenceStableQuotient (treeGen (nodeStump r s r' s'))) := by
+  rw [correctedCounit_rTensor_error_quot_mk,
+    correctedCounit_rTensor_error_linear_treeGen_nodeStump]
+
+@[simp] theorem correctedCounit_lTensor_error_quot_treeGen_nodeStump
+    (r : RuleTag) (s : MultiSequent) (r' : RuleTag) (s' : MultiSequent) :
+    correctedCounit_lTensor_error_quot
+        (mkPreLieDifferenceStableQuotient (treeGen (nodeStump r s r' s'))) =
+      TensorProduct.tmul ℤ
+        (mkPreLieDifferenceStableQuotient (treeGen (stump r' s'))) 1 := by
+  rw [correctedCounit_lTensor_error_quot_mk,
+    correctedCounit_lTensor_error_linear_treeGen_nodeStump]
+
+@[simp] theorem correctedCounit_rTensor_error_quot_treeGen_nodeNodeLeaf
+    (r : RuleTag) (s : MultiSequent) (r₁ : RuleTag) (s₁ s₂ : MultiSequent) :
+    correctedCounit_rTensor_error_quot
+        (mkPreLieDifferenceStableQuotient
+          (treeGen (nodeNodeLeaf r s r₁ s₁ s₂))) =
+      TensorProduct.tmul ℤ 1
+          (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s₁))) +
+        TensorProduct.tmul ℤ 1
+          (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s))) := by
+  rw [correctedCounit_rTensor_error_quot_mk,
+    correctedCounit_rTensor_error_linear_treeGen_nodeNodeLeaf]
+
+@[simp] theorem correctedCounit_lTensor_error_quot_treeGen_nodeNodeLeaf
+    (r : RuleTag) (s : MultiSequent) (r₁ : RuleTag) (s₁ s₂ : MultiSequent) :
+    correctedCounit_lTensor_error_quot
+        (mkPreLieDifferenceStableQuotient
+          (treeGen (nodeNodeLeaf r s r₁ s₁ s₂))) =
+      TensorProduct.tmul ℤ
+          (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s₂))) 1 +
+        TensorProduct.tmul ℤ
+          (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r₁ s₁ s₂))) 1 := by
+  rw [correctedCounit_lTensor_error_quot_mk,
+    correctedCounit_lTensor_error_linear_treeGen_nodeNodeLeaf]
+
+/-- The right defect is already nonzero on `nodeLeaf`. -/
+theorem correctedCounit_rTensor_error_quot_treeGen_nodeLeaf_ne_zero
+    (r : RuleTag) (s s' : MultiSequent) :
+    correctedCounit_rTensor_error_quot
+        (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s'))) ≠ 0 := by
+  intro h
+  have hEq := correctedCounit_rTensor_error_quot_treeGen_nodeLeaf r s s'
+  rw [h] at hEq
+  have hq :
+      mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s)) = 0 := by
+    simpa using (congrArg (TensorProduct.lid ℤ PreLieDifferenceStableQuotient) hEq).symm
+  have hone :
+      correctedCounit_quot
+          (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s))) = 1 := by
+    simpa using correctedCounit_quot_treeGen (PTree.leaf s)
+  rw [hq, correctedCounit_quot_zero] at hone
+  norm_num at hone
+
+/-- The left defect is already nonzero on `nodeLeaf`. -/
+theorem correctedCounit_lTensor_error_quot_treeGen_nodeLeaf_ne_zero
+    (r : RuleTag) (s s' : MultiSequent) :
+    correctedCounit_lTensor_error_quot
+        (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s'))) ≠ 0 := by
+  intro h
+  have hEq := correctedCounit_lTensor_error_quot_treeGen_nodeLeaf r s s'
+  rw [h] at hEq
+  have hq :
+      mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s')) = 0 := by
+    simpa using (congrArg (TensorProduct.rid ℤ PreLieDifferenceStableQuotient) hEq).symm
+  have hone :
+      correctedCounit_quot
+          (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s'))) = 1 := by
+    simpa using correctedCounit_quot_treeGen (PTree.leaf s')
+  rw [hq, correctedCounit_quot_zero] at hone
+  norm_num at hone
+
+/-- The right defect remains nonzero on `nodeStump`. -/
+theorem correctedCounit_rTensor_error_quot_treeGen_nodeStump_ne_zero
+    (r : RuleTag) (s : MultiSequent) (r' : RuleTag) (s' : MultiSequent) :
+    correctedCounit_rTensor_error_quot
+        (mkPreLieDifferenceStableQuotient (treeGen (nodeStump r s r' s'))) ≠ 0 := by
+  intro h
+  have hEq := correctedCounit_rTensor_error_quot_treeGen_nodeStump r s r' s'
+  rw [h] at hEq
+  have hq := (congrArg (TensorProduct.lid ℤ PreLieDifferenceStableQuotient) hEq).symm
+  have hcount : (1 : ℤ) = 0 := by
+    simpa [sub_eq_add_neg, add_assoc, add_left_comm, add_comm] using
+      congrArg correctedCounit_quot hq
+  norm_num at hcount
+
+/-- The left defect remains nonzero on `nodeStump`. -/
+theorem correctedCounit_lTensor_error_quot_treeGen_nodeStump_ne_zero
+    (r : RuleTag) (s : MultiSequent) (r' : RuleTag) (s' : MultiSequent) :
+    correctedCounit_lTensor_error_quot
+        (mkPreLieDifferenceStableQuotient (treeGen (nodeStump r s r' s'))) ≠ 0 := by
+  intro h
+  have hEq := correctedCounit_lTensor_error_quot_treeGen_nodeStump r s r' s'
+  rw [h] at hEq
+  have hq :
+      mkPreLieDifferenceStableQuotient (treeGen (stump r' s')) = 0 := by
+    simpa using (congrArg (TensorProduct.rid ℤ PreLieDifferenceStableQuotient) hEq).symm
+  have hone :
+      correctedCounit_quot
+          (mkPreLieDifferenceStableQuotient (treeGen (stump r' s'))) = 1 := by
+    simpa using correctedCounit_quot_treeGen (stump r' s')
+  rw [hq, correctedCounit_quot_zero] at hone
+  norm_num at hone
+
+/-- The right defect remains nonzero on `nodeNodeLeaf`. -/
+theorem correctedCounit_rTensor_error_quot_treeGen_nodeNodeLeaf_ne_zero
+    (r : RuleTag) (s : MultiSequent) (r₁ : RuleTag) (s₁ s₂ : MultiSequent) :
+    correctedCounit_rTensor_error_quot
+        (mkPreLieDifferenceStableQuotient
+          (treeGen (nodeNodeLeaf r s r₁ s₁ s₂))) ≠ 0 := by
+  intro h
+  have hEq := correctedCounit_rTensor_error_quot_treeGen_nodeNodeLeaf r s r₁ s₁ s₂
+  rw [h] at hEq
+  have hq :
+      mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s₁)) +
+        mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s)) = 0 := by
+    simpa using (congrArg (TensorProduct.lid ℤ PreLieDifferenceStableQuotient) hEq).symm
+  have hcount : (2 : ℤ) = 0 := by
+    simpa [add_assoc, add_left_comm, add_comm] using congrArg correctedCounit_quot hq
+  norm_num at hcount
+
+/-- The left defect remains nonzero on `nodeNodeLeaf`. -/
+theorem correctedCounit_lTensor_error_quot_treeGen_nodeNodeLeaf_ne_zero
+    (r : RuleTag) (s : MultiSequent) (r₁ : RuleTag) (s₁ s₂ : MultiSequent) :
+    correctedCounit_lTensor_error_quot
+        (mkPreLieDifferenceStableQuotient
+          (treeGen (nodeNodeLeaf r s r₁ s₁ s₂))) ≠ 0 := by
+  intro h
+  have hEq := correctedCounit_lTensor_error_quot_treeGen_nodeNodeLeaf r s r₁ s₁ s₂
+  rw [h] at hEq
+  have hq :
+      mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s₂)) +
+        mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r₁ s₁ s₂)) = 0 := by
+    simpa using (congrArg (TensorProduct.rid ℤ PreLieDifferenceStableQuotient) hEq).symm
+  have hcount : (2 : ℤ) = 0 := by
+    simpa [add_assoc, add_left_comm, add_comm] using congrArg correctedCounit_quot hq
+  norm_num at hcount
+
+/--
+Pointwise form of the right corrected-counit obstruction: at a specific quotient
+element, the naive unit law holds exactly when the right defect vanishes there.
+-/
+theorem correctedCounit_rTensor_comp_comul_eq_unit_iff_error_eq_zero_at
+    (q : PreLieDifferenceStableQuotient) :
+    (LinearMap.comp
+        (LinearMap.rTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+        Δ_quot) q =
+      correctedCounit_rTensor_unit_quot q ↔
+    correctedCounit_rTensor_error_quot q = 0 := by
+  constructor
+  · intro h
+    calc
+      correctedCounit_rTensor_error_quot q
+          =
+        (LinearMap.comp
+            (LinearMap.rTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+            Δ_quot) q -
+          correctedCounit_rTensor_unit_quot q := by
+            simp [correctedCounit_rTensor_error_quot]
+      _ = correctedCounit_rTensor_unit_quot q - correctedCounit_rTensor_unit_quot q := by
+            rw [h]
+      _ = 0 := sub_self _
+  · intro h
+    calc
+      (LinearMap.comp
+          (LinearMap.rTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+          Δ_quot) q
+          =
+        correctedCounit_rTensor_unit_quot q + correctedCounit_rTensor_error_quot q := by
+            exact correctedCounit_rTensor_comp_comul_eq_unit_add_error q
+      _ = correctedCounit_rTensor_unit_quot q + 0 := by rw [h]
+      _ = correctedCounit_rTensor_unit_quot q := by simp
+
+/--
+Pointwise form of the left corrected-counit obstruction: at a specific quotient
+element, the naive unit law holds exactly when the left defect vanishes there.
+-/
+theorem correctedCounit_lTensor_comp_comul_eq_unit_iff_error_eq_zero_at
+    (q : PreLieDifferenceStableQuotient) :
+    (LinearMap.comp
+        (LinearMap.lTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+        Δ_quot) q =
+      correctedCounit_lTensor_unit_quot q ↔
+    correctedCounit_lTensor_error_quot q = 0 := by
+  constructor
+  · intro h
+    calc
+      correctedCounit_lTensor_error_quot q
+          =
+        (LinearMap.comp
+            (LinearMap.lTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+            Δ_quot) q -
+          correctedCounit_lTensor_unit_quot q := by
+            simp [correctedCounit_lTensor_error_quot]
+      _ = correctedCounit_lTensor_unit_quot q - correctedCounit_lTensor_unit_quot q := by
+            rw [h]
+      _ = 0 := sub_self _
+  · intro h
+    calc
+      (LinearMap.comp
+          (LinearMap.lTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+          Δ_quot) q
+          =
+        correctedCounit_lTensor_unit_quot q + correctedCounit_lTensor_error_quot q := by
+            exact correctedCounit_lTensor_comp_comul_eq_unit_add_error q
+      _ = correctedCounit_lTensor_unit_quot q + 0 := by rw [h]
+      _ = correctedCounit_lTensor_unit_quot q := by simp
+
+/-- Every generator class is nonzero in the quotient, since the corrected counit
+evaluates to `1` on it. -/
+theorem mkPreLieDifferenceStableQuotient_treeGen_ne_zero
+    (t : PTree) :
+    mkPreLieDifferenceStableQuotient (treeGen t) ≠ 0 := by
+  intro h
+  have hone :
+      correctedCounit_quot
+          (mkPreLieDifferenceStableQuotient (treeGen t)) = 1 := by
+    simpa using correctedCounit_quot_treeGen t
+  rw [h, correctedCounit_quot_zero] at hone
+  norm_num at hone
+
+/--
+The naive right counit law on a stump holds exactly when the stump class agrees
+with the corresponding leaf class in the quotient.
+-/
+theorem correctedCounit_rTensor_comp_comul_treeGen_stump_eq_unit_iff
+    (r : RuleTag) (s : MultiSequent) :
+    (LinearMap.comp
+        (LinearMap.rTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+        Δ_quot)
+        (mkPreLieDifferenceStableQuotient (treeGen (stump r s))) =
+      correctedCounit_rTensor_unit_quot
+        (mkPreLieDifferenceStableQuotient (treeGen (stump r s))) ↔
+    mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s)) =
+      mkPreLieDifferenceStableQuotient (treeGen (stump r s)) := by
+  constructor
+  · intro h
+    have herr :
+        correctedCounit_rTensor_error_quot
+            (mkPreLieDifferenceStableQuotient (treeGen (stump r s))) = 0 := by
+      exact (correctedCounit_rTensor_comp_comul_eq_unit_iff_error_eq_zero_at _).1 h
+    have hEq := correctedCounit_rTensor_error_quot_treeGen_stump r s
+    rw [herr] at hEq
+    have hsub :
+        mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s)) -
+          mkPreLieDifferenceStableQuotient (treeGen (stump r s)) = 0 := by
+      simpa using
+        (congrArg (TensorProduct.lid ℤ PreLieDifferenceStableQuotient) hEq).symm
+    exact sub_eq_zero.mp hsub
+  · intro hEq
+    exact (correctedCounit_rTensor_comp_comul_eq_unit_iff_error_eq_zero_at _).2 <| by
+      simpa [hEq] using correctedCounit_rTensor_error_quot_treeGen_stump r s
+
+/--
+The naive right counit law on `nodeLeaf` holds exactly when the extra leaf term
+vanishes in the quotient.
+-/
+theorem correctedCounit_rTensor_comp_comul_treeGen_nodeLeaf_eq_unit_iff
+    (r : RuleTag) (s s' : MultiSequent) :
+    (LinearMap.comp
+        (LinearMap.rTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+        Δ_quot)
+        (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s'))) =
+      correctedCounit_rTensor_unit_quot
+        (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s'))) ↔
+    mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s)) = 0 := by
+  constructor
+  · intro h
+    have herr :
+        correctedCounit_rTensor_error_quot
+            (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s'))) = 0 := by
+      exact (correctedCounit_rTensor_comp_comul_eq_unit_iff_error_eq_zero_at _).1 h
+    have hEq := correctedCounit_rTensor_error_quot_treeGen_nodeLeaf r s s'
+    rw [herr] at hEq
+    simpa using
+      (congrArg (TensorProduct.lid ℤ PreLieDifferenceStableQuotient) hEq).symm
+  · intro hEq
+    exact (correctedCounit_rTensor_comp_comul_eq_unit_iff_error_eq_zero_at _).2 <| by
+      rw [correctedCounit_rTensor_error_quot_treeGen_nodeLeaf, hEq]
+      exact
+        (TensorProduct.tmul_zero
+          (R := ℤ) (M := ℤ) (N := PreLieDifferenceStableQuotient) (1 : ℤ))
+
+/--
+The naive left counit law on `nodeLeaf` holds exactly when the extra child-leaf
+term vanishes in the quotient.
+-/
+theorem correctedCounit_lTensor_comp_comul_treeGen_nodeLeaf_eq_unit_iff
+    (r : RuleTag) (s s' : MultiSequent) :
+    (LinearMap.comp
+        (LinearMap.lTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+        Δ_quot)
+        (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s'))) =
+      correctedCounit_lTensor_unit_quot
+        (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s'))) ↔
+    mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s')) = 0 := by
+  constructor
+  · intro h
+    have herr :
+        correctedCounit_lTensor_error_quot
+            (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s'))) = 0 := by
+      exact (correctedCounit_lTensor_comp_comul_eq_unit_iff_error_eq_zero_at _).1 h
+    have hEq := correctedCounit_lTensor_error_quot_treeGen_nodeLeaf r s s'
+    rw [herr] at hEq
+    simpa using
+      (congrArg (TensorProduct.rid ℤ PreLieDifferenceStableQuotient) hEq).symm
+  · intro hEq
+    exact (correctedCounit_lTensor_comp_comul_eq_unit_iff_error_eq_zero_at _).2 <| by
+      rw [correctedCounit_lTensor_error_quot_treeGen_nodeLeaf, hEq]
+      exact
+        (TensorProduct.zero_tmul
+          (R := ℤ) (M := PreLieDifferenceStableQuotient) (N := ℤ) (1 : ℤ))
+
+/--
+The naive left counit law on `nodeStump` holds exactly when the child stump
+class vanishes in the quotient.
+-/
+theorem correctedCounit_lTensor_comp_comul_treeGen_nodeStump_eq_unit_iff
+    (r : RuleTag) (s : MultiSequent) (r' : RuleTag) (s' : MultiSequent) :
+    (LinearMap.comp
+        (LinearMap.lTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+        Δ_quot)
+        (mkPreLieDifferenceStableQuotient (treeGen (nodeStump r s r' s'))) =
+      correctedCounit_lTensor_unit_quot
+        (mkPreLieDifferenceStableQuotient (treeGen (nodeStump r s r' s'))) ↔
+    mkPreLieDifferenceStableQuotient (treeGen (stump r' s')) = 0 := by
+  constructor
+  · intro h
+    have herr :
+        correctedCounit_lTensor_error_quot
+            (mkPreLieDifferenceStableQuotient (treeGen (nodeStump r s r' s'))) = 0 := by
+      exact (correctedCounit_lTensor_comp_comul_eq_unit_iff_error_eq_zero_at _).1 h
+    have hEq := correctedCounit_lTensor_error_quot_treeGen_nodeStump r s r' s'
+    rw [herr] at hEq
+    simpa using
+      (congrArg (TensorProduct.rid ℤ PreLieDifferenceStableQuotient) hEq).symm
+  · intro hEq
+    exact (correctedCounit_lTensor_comp_comul_eq_unit_iff_error_eq_zero_at _).2 <| by
+      rw [correctedCounit_lTensor_error_quot_treeGen_nodeStump, hEq]
+      exact
+        (TensorProduct.zero_tmul
+          (R := ℤ) (M := PreLieDifferenceStableQuotient) (N := ℤ) (1 : ℤ))
+
+/--
+The naive right counit law on `nodeStump` holds exactly when the quotient
+identifies the stump with the sum of its two visible right-side residues.
+-/
+theorem correctedCounit_rTensor_comp_comul_treeGen_nodeStump_eq_unit_iff
+    (r : RuleTag) (s : MultiSequent) (r' : RuleTag) (s' : MultiSequent) :
+    (LinearMap.comp
+        (LinearMap.rTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+        Δ_quot)
+        (mkPreLieDifferenceStableQuotient (treeGen (nodeStump r s r' s'))) =
+      correctedCounit_rTensor_unit_quot
+        (mkPreLieDifferenceStableQuotient (treeGen (nodeStump r s r' s'))) ↔
+    mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s')) +
+      mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s)) =
+        mkPreLieDifferenceStableQuotient (treeGen (nodeStump r s r' s')) := by
+  constructor
+  · intro h
+    have herr :
+        correctedCounit_rTensor_error_quot
+            (mkPreLieDifferenceStableQuotient (treeGen (nodeStump r s r' s'))) = 0 := by
+      exact (correctedCounit_rTensor_comp_comul_eq_unit_iff_error_eq_zero_at _).1 h
+    have hEq := correctedCounit_rTensor_error_quot_treeGen_nodeStump r s r' s'
+    rw [herr] at hEq
+    have hsub :
+        mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s')) +
+          mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s)) -
+          mkPreLieDifferenceStableQuotient (treeGen (nodeStump r s r' s')) = 0 := by
+      simpa using
+        (congrArg (TensorProduct.lid ℤ PreLieDifferenceStableQuotient) hEq).symm
+    exact sub_eq_zero.mp hsub
+  · intro hEq
+    exact (correctedCounit_rTensor_comp_comul_eq_unit_iff_error_eq_zero_at _).2 <| by
+      rw [correctedCounit_rTensor_error_quot_treeGen_nodeStump,
+        ← TensorProduct.tmul_add, hEq]
+      simp
+
+/-- The naive right counit law already fails on `nodeLeaf`. -/
+theorem correctedCounit_rTensor_comp_comul_treeGen_nodeLeaf_ne_unit
+    (r : RuleTag) (s s' : MultiSequent) :
+    (LinearMap.comp
+        (LinearMap.rTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+        Δ_quot)
+        (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s'))) ≠
+      correctedCounit_rTensor_unit_quot
+        (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s'))) := by
+  intro h
+  exact correctedCounit_rTensor_error_quot_treeGen_nodeLeaf_ne_zero r s s'
+    ((correctedCounit_rTensor_comp_comul_eq_unit_iff_error_eq_zero_at _).1 h)
+
+/-- The naive left counit law already fails on `nodeLeaf`. -/
+theorem correctedCounit_lTensor_comp_comul_treeGen_nodeLeaf_ne_unit
+    (r : RuleTag) (s s' : MultiSequent) :
+    (LinearMap.comp
+        (LinearMap.lTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+        Δ_quot)
+        (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s'))) ≠
+      correctedCounit_lTensor_unit_quot
+        (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s'))) := by
+  intro h
+  exact correctedCounit_lTensor_error_quot_treeGen_nodeLeaf_ne_zero r s s'
+    ((correctedCounit_lTensor_comp_comul_eq_unit_iff_error_eq_zero_at _).1 h)
+
+/-- The naive right counit law also fails on `nodeStump`. -/
+theorem correctedCounit_rTensor_comp_comul_treeGen_nodeStump_ne_unit
+    (r : RuleTag) (s : MultiSequent) (r' : RuleTag) (s' : MultiSequent) :
+    (LinearMap.comp
+        (LinearMap.rTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+        Δ_quot)
+        (mkPreLieDifferenceStableQuotient (treeGen (nodeStump r s r' s'))) ≠
+      correctedCounit_rTensor_unit_quot
+        (mkPreLieDifferenceStableQuotient (treeGen (nodeStump r s r' s'))) := by
+  intro h
+  exact correctedCounit_rTensor_error_quot_treeGen_nodeStump_ne_zero r s r' s'
+    ((correctedCounit_rTensor_comp_comul_eq_unit_iff_error_eq_zero_at _).1 h)
+
+/-- The naive left counit law also fails on `nodeStump`. -/
+theorem correctedCounit_lTensor_comp_comul_treeGen_nodeStump_ne_unit
+    (r : RuleTag) (s : MultiSequent) (r' : RuleTag) (s' : MultiSequent) :
+    (LinearMap.comp
+        (LinearMap.lTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+        Δ_quot)
+        (mkPreLieDifferenceStableQuotient (treeGen (nodeStump r s r' s'))) ≠
+      correctedCounit_lTensor_unit_quot
+        (mkPreLieDifferenceStableQuotient (treeGen (nodeStump r s r' s'))) := by
+  intro h
+  exact correctedCounit_lTensor_error_quot_treeGen_nodeStump_ne_zero r s r' s'
+    ((correctedCounit_lTensor_comp_comul_eq_unit_iff_error_eq_zero_at _).1 h)
+
+/-- The naive right counit law also fails on `nodeNodeLeaf`. -/
+theorem correctedCounit_rTensor_comp_comul_treeGen_nodeNodeLeaf_ne_unit
+    (r : RuleTag) (s : MultiSequent) (r₁ : RuleTag) (s₁ s₂ : MultiSequent) :
+    (LinearMap.comp
+        (LinearMap.rTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+        Δ_quot)
+        (mkPreLieDifferenceStableQuotient
+          (treeGen (nodeNodeLeaf r s r₁ s₁ s₂))) ≠
+      correctedCounit_rTensor_unit_quot
+        (mkPreLieDifferenceStableQuotient
+          (treeGen (nodeNodeLeaf r s r₁ s₁ s₂))) := by
+  intro h
+  exact correctedCounit_rTensor_error_quot_treeGen_nodeNodeLeaf_ne_zero r s r₁ s₁ s₂
+    ((correctedCounit_rTensor_comp_comul_eq_unit_iff_error_eq_zero_at _).1 h)
+
+/-- The naive left counit law also fails on `nodeNodeLeaf`. -/
+theorem correctedCounit_lTensor_comp_comul_treeGen_nodeNodeLeaf_ne_unit
+    (r : RuleTag) (s : MultiSequent) (r₁ : RuleTag) (s₁ s₂ : MultiSequent) :
+    (LinearMap.comp
+        (LinearMap.lTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+        Δ_quot)
+        (mkPreLieDifferenceStableQuotient
+          (treeGen (nodeNodeLeaf r s r₁ s₁ s₂))) ≠
+      correctedCounit_lTensor_unit_quot
+        (mkPreLieDifferenceStableQuotient
+          (treeGen (nodeNodeLeaf r s r₁ s₁ s₂))) := by
+  intro h
+  exact correctedCounit_lTensor_error_quot_treeGen_nodeNodeLeaf_ne_zero r s r₁ s₁ s₂
+    ((correctedCounit_lTensor_comp_comul_eq_unit_iff_error_eq_zero_at _).1 h)
+
+/--
+The naive right corrected-counit law holds exactly when the right error map
+vanishes.
+-/
+theorem correctedCounit_rTensor_comp_comul_eq_unit_iff_error_eq_zero :
+    LinearMap.comp
+        (LinearMap.rTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+        Δ_quot =
+      correctedCounit_rTensor_unit_quot ↔
+    correctedCounit_rTensor_error_quot = 0 := by
+  constructor
+  · intro h
+    apply LinearMap.ext
+    intro q
+    calc
+      correctedCounit_rTensor_error_quot q
+          =
+        (LinearMap.comp
+            (LinearMap.rTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+            Δ_quot) q -
+          correctedCounit_rTensor_unit_quot q := by
+            simp [correctedCounit_rTensor_error_quot]
+      _ = correctedCounit_rTensor_unit_quot q - correctedCounit_rTensor_unit_quot q := by
+            rw [congrArg (fun f => f q) h]
+            rfl
+      _ = 0 := sub_self _
+  · intro h
+    calc
+      LinearMap.comp
+          (LinearMap.rTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+          Δ_quot =
+        correctedCounit_rTensor_unit_quot + correctedCounit_rTensor_error_quot :=
+          correctedCounit_rTensor_comp_comul_eq_unit_add_error_linearMap
+      _ = correctedCounit_rTensor_unit_quot + 0 := by rw [h]
+      _ = correctedCounit_rTensor_unit_quot := by simp
+
+/--
+The naive left corrected-counit law holds exactly when the left error map
+vanishes.
+-/
+theorem correctedCounit_lTensor_comp_comul_eq_unit_iff_error_eq_zero :
+    LinearMap.comp
+        (LinearMap.lTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+        Δ_quot =
+      correctedCounit_lTensor_unit_quot ↔
+    correctedCounit_lTensor_error_quot = 0 := by
+  constructor
+  · intro h
+    apply LinearMap.ext
+    intro q
+    calc
+      correctedCounit_lTensor_error_quot q
+          =
+        (LinearMap.comp
+            (LinearMap.lTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+            Δ_quot) q -
+          correctedCounit_lTensor_unit_quot q := by
+            simp [correctedCounit_lTensor_error_quot]
+      _ = correctedCounit_lTensor_unit_quot q - correctedCounit_lTensor_unit_quot q := by
+            rw [congrArg (fun f => f q) h]
+            rfl
+      _ = 0 := sub_self _
+  · intro h
+    calc
+      LinearMap.comp
+          (LinearMap.lTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+          Δ_quot =
+        correctedCounit_lTensor_unit_quot + correctedCounit_lTensor_error_quot :=
+          correctedCounit_lTensor_comp_comul_eq_unit_add_error_linearMap
+      _ = correctedCounit_lTensor_unit_quot + 0 := by rw [h]
+      _ = correctedCounit_lTensor_unit_quot := by simp
+
+/--
+Pointwise form of the right corrected-counit obstruction:
+the naive right unit law holds on every quotient element exactly when the right
+defect vanishes everywhere.
+-/
+theorem correctedCounit_rTensor_comp_comul_eq_unit_iff_error_eq_zero_forall :
+    (∀ q,
+        (LinearMap.comp
+            (LinearMap.rTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+            Δ_quot) q =
+          correctedCounit_rTensor_unit_quot q) ↔
+      ∀ q, correctedCounit_rTensor_error_quot q = 0 := by
+  constructor
+  · intro h q
+    exact (correctedCounit_rTensor_comp_comul_eq_unit_iff_error_eq_zero_at q).1 (h q)
+  · intro h q
+    exact (correctedCounit_rTensor_comp_comul_eq_unit_iff_error_eq_zero_at q).2 (h q)
+
+/--
+Pointwise form of the left corrected-counit obstruction:
+the naive left unit law holds on every quotient element exactly when the left
+defect vanishes everywhere.
+-/
+theorem correctedCounit_lTensor_comp_comul_eq_unit_iff_error_eq_zero_forall :
+    (∀ q,
+        (LinearMap.comp
+            (LinearMap.lTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+            Δ_quot) q =
+          correctedCounit_lTensor_unit_quot q) ↔
+      ∀ q, correctedCounit_lTensor_error_quot q = 0 := by
+  constructor
+  · intro h q
+    exact (correctedCounit_lTensor_comp_comul_eq_unit_iff_error_eq_zero_at q).1 (h q)
+  · intro h q
+    exact (correctedCounit_lTensor_comp_comul_eq_unit_iff_error_eq_zero_at q).2 (h q)
+
+/--
+There is a concrete quotient element on which the naive right corrected-counit
+law fails.
+-/
+theorem correctedCounit_rTensor_comp_comul_exists_ne_unit :
+    ∃ q : PreLieDifferenceStableQuotient,
+      (LinearMap.comp
+          (LinearMap.rTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+          Δ_quot) q ≠
+        correctedCounit_rTensor_unit_quot q := by
+  let s : MultiSequent := ⟨0, 0⟩
+  refine ⟨mkPreLieDifferenceStableQuotient
+      (treeGen (nodeLeaf RuleTag.baseAx s s)), ?_⟩
+  exact correctedCounit_rTensor_comp_comul_treeGen_nodeLeaf_ne_unit RuleTag.baseAx s s
+
+/--
+There is a concrete quotient element on which the naive left corrected-counit
+law fails.
+-/
+theorem correctedCounit_lTensor_comp_comul_exists_ne_unit :
+    ∃ q : PreLieDifferenceStableQuotient,
+      (LinearMap.comp
+          (LinearMap.lTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+          Δ_quot) q ≠
+        correctedCounit_lTensor_unit_quot q := by
+  let s : MultiSequent := ⟨0, 0⟩
+  refine ⟨mkPreLieDifferenceStableQuotient
+      (treeGen (nodeLeaf RuleTag.baseAx s s)), ?_⟩
+  exact correctedCounit_lTensor_comp_comul_treeGen_nodeLeaf_ne_unit RuleTag.baseAx s s
+
+/--
+The naive right corrected-counit law does not hold pointwise on all quotient
+elements.
+-/
+theorem correctedCounit_rTensor_comp_comul_not_forall_eq_unit :
+    ¬ ∀ q : PreLieDifferenceStableQuotient,
+        (LinearMap.comp
+            (LinearMap.rTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+            Δ_quot) q =
+          correctedCounit_rTensor_unit_quot q := by
+  intro h
+  rcases correctedCounit_rTensor_comp_comul_exists_ne_unit with ⟨q, hq⟩
+  exact hq (h q)
+
+/--
+The naive left corrected-counit law does not hold pointwise on all quotient
+elements.
+-/
+theorem correctedCounit_lTensor_comp_comul_not_forall_eq_unit :
+    ¬ ∀ q : PreLieDifferenceStableQuotient,
+        (LinearMap.comp
+            (LinearMap.lTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+            Δ_quot) q =
+          correctedCounit_lTensor_unit_quot q := by
+  intro h
+  rcases correctedCounit_lTensor_comp_comul_exists_ne_unit with ⟨q, hq⟩
+  exact hq (h q)
+
+/-- The right error map is genuinely non-zero. -/
+theorem correctedCounit_rTensor_error_quot_ne_zero :
+    correctedCounit_rTensor_error_quot ≠ 0 := by
+  let s : MultiSequent := ⟨0, 0⟩
+  intro h
+  have hzeroTensor :
+      TensorProduct.tmul ℤ (1 : ℤ)
+        (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s))) = 0 := by
+    have hEval :
+        correctedCounit_rTensor_error_quot
+            (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf RuleTag.baseAx s s))) = 0 := by
+      simpa using congrArg
+        (fun f =>
+          f (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf RuleTag.baseAx s s)))) h
+    rw [correctedCounit_rTensor_error_quot_treeGen_nodeLeaf RuleTag.baseAx s s] at hEval
+    exact hEval
+  have hzero :
+      mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s)) = 0 := by
+    simpa using congrArg (TensorProduct.lid ℤ PreLieDifferenceStableQuotient) hzeroTensor
+  have hone :
+      correctedCounit_quot
+          (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s))) = 1 := by
+    simpa using correctedCounit_quot_treeGen (PTree.leaf s)
+  rw [hzero, correctedCounit_quot_zero] at hone
+  norm_num at hone
+
+/-- The left error map is genuinely non-zero. -/
+theorem correctedCounit_lTensor_error_quot_ne_zero :
+    correctedCounit_lTensor_error_quot ≠ 0 := by
+  let s : MultiSequent := ⟨0, 0⟩
+  intro h
+  have hzeroTensor :
+      TensorProduct.tmul ℤ
+        (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s))) (1 : ℤ) = 0 := by
+    have hEval :
+        correctedCounit_lTensor_error_quot
+            (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf RuleTag.baseAx s s))) = 0 := by
+      simpa using congrArg
+        (fun f =>
+          f (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf RuleTag.baseAx s s)))) h
+    rw [correctedCounit_lTensor_error_quot_treeGen_nodeLeaf RuleTag.baseAx s s] at hEval
+    exact hEval
+  have hzero :
+      mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s)) = 0 := by
+    simpa using congrArg (TensorProduct.rid ℤ PreLieDifferenceStableQuotient) hzeroTensor
+  have hone :
+      correctedCounit_quot
+          (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s))) = 1 := by
+    simpa using correctedCounit_quot_treeGen (PTree.leaf s)
+  rw [hzero, correctedCounit_quot_zero] at hone
+  norm_num at hone
+
+/--
 The proposed global corrected right counit law is already obstructed on
 `nodeLeaf`: it would force the extra `leaf s` term to vanish.
 -/
@@ -3554,54 +5833,14 @@ theorem correctedCounit_rTensor_comp_comul_obstructed
         Δ_quot ≠
       TensorProduct.mk ℤ ℤ PreLieDifferenceStableQuotient 1 := by
   intro h
-  have hEval := congrArg
-      (fun f =>
-        f (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s')))) h
-  have hTensor :
-      TensorProduct.tmul ℤ (1 : ℤ)
-          (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s'))) +
-        TensorProduct.tmul ℤ (1 : ℤ)
-          (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s))) =
-      TensorProduct.tmul ℤ (1 : ℤ)
-          (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s'))) := by
-    calc
-      TensorProduct.tmul ℤ (1 : ℤ)
-          (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s'))) +
-        TensorProduct.tmul ℤ (1 : ℤ)
-          (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s)))
-          =
-        (LinearMap.rTensor PreLieDifferenceStableQuotient correctedCounit_quot)
-          (Δ_quot (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s')))) := by
-            symm
-            exact correctedCounit_rTensor_comp_comul_treeGen_nodeLeaf r s s'
-      _ =
-        (fun f =>
-          f (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s'))))
-          ((TensorProduct.mk ℤ ℤ PreLieDifferenceStableQuotient) 1) := by
-            exact hEval
-      _ =
-        TensorProduct.tmul ℤ (1 : ℤ)
-          (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s'))) := by
-            simp [TensorProduct.mk_apply]
-  have hLid :
-      mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s')) +
-        mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s)) =
-      mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s')) := by
-    simpa using congrArg (TensorProduct.lid ℤ PreLieDifferenceStableQuotient) hTensor
-  have hzero :
-      mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s)) = 0 := by
-    have hCancel :
-        mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s')) +
-          mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s)) =
-        mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s')) + 0 := by
-      simpa using hLid
-    exact add_left_cancel hCancel
-  have hone :
-      correctedCounit_quot
-          (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s))) = 1 := by
-    simpa using correctedCounit_quot_treeGen (PTree.leaf s)
-  rw [hzero, correctedCounit_quot_zero] at hone
-  norm_num at hone
+  have hEq :
+      LinearMap.comp
+          (LinearMap.rTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+          Δ_quot =
+        correctedCounit_rTensor_unit_quot := by
+    simpa [correctedCounit_rTensor_unit_quot] using h
+  exact correctedCounit_rTensor_error_quot_ne_zero
+    ((correctedCounit_rTensor_comp_comul_eq_unit_iff_error_eq_zero).1 hEq)
 
 /--
 The proposed global corrected left counit law is likewise obstructed on
@@ -3614,54 +5853,14 @@ theorem correctedCounit_lTensor_comp_comul_obstructed
         Δ_quot ≠
       (TensorProduct.mk ℤ PreLieDifferenceStableQuotient ℤ).flip 1 := by
   intro h
-  have hEval := congrArg
-      (fun f =>
-        f (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s')))) h
-  have hTensor :
-      TensorProduct.tmul ℤ
-          (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s'))) (1 : ℤ) +
-        TensorProduct.tmul ℤ
-          (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s'))) (1 : ℤ) =
-      TensorProduct.tmul ℤ
-          (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s'))) (1 : ℤ) := by
-    calc
-      TensorProduct.tmul ℤ
-          (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s'))) (1 : ℤ) +
-        TensorProduct.tmul ℤ
-          (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s'))) (1 : ℤ)
-          =
-        (LinearMap.lTensor PreLieDifferenceStableQuotient correctedCounit_quot)
-          (Δ_quot (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s')))) := by
-            symm
-            exact correctedCounit_lTensor_comp_comul_treeGen_nodeLeaf r s s'
-      _ =
-        (fun f =>
-          f (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s'))))
-          ((TensorProduct.mk ℤ PreLieDifferenceStableQuotient ℤ).flip 1) := by
-            exact hEval
-      _ =
-        TensorProduct.tmul ℤ
-          (mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s'))) (1 : ℤ) := by
-            simp [TensorProduct.mk_apply]
-  have hRid :
-      mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s')) +
-        mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s')) =
-      mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s')) := by
-    simpa using congrArg (TensorProduct.rid ℤ PreLieDifferenceStableQuotient) hTensor
-  have hzero :
-      mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s')) = 0 := by
-    have hCancel :
-        mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s')) +
-          mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s')) =
-        0 + mkPreLieDifferenceStableQuotient (treeGen (nodeLeaf r s s')) := by
-      simpa using hRid
-    exact add_right_cancel hCancel
-  have hone :
-      correctedCounit_quot
-          (mkPreLieDifferenceStableQuotient (treeGen (PTree.leaf s'))) = 1 := by
-    simpa using correctedCounit_quot_treeGen (PTree.leaf s')
-  rw [hzero, correctedCounit_quot_zero] at hone
-  norm_num at hone
+  have hEq :
+      LinearMap.comp
+          (LinearMap.lTensor PreLieDifferenceStableQuotient correctedCounit_quot)
+          Δ_quot =
+        correctedCounit_lTensor_unit_quot := by
+    simpa [correctedCounit_lTensor_unit_quot] using h
+  exact correctedCounit_lTensor_error_quot_ne_zero
+    ((correctedCounit_lTensor_comp_comul_eq_unit_iff_error_eq_zero).1 hEq)
 
 /--
 The naive global right counit law for the corrected counit is false:
@@ -4480,6 +6679,779 @@ On tree generators, the OG counit is zero.
         (mkPreLieDifferenceStableQuotient (treeGen x)) = 0 :=
   stableUEA_OGPrimitiveComultiplication_counit_treeGen
     stableUEA_OGPrimitive_respectsStableQuotient_axiom x
+
+/--
+Linear maps out of `PreLieDifferenceStableQuotient` are determined by their
+values on the tree-generator classes.
+-/
+theorem PreLieDifferenceStableQuotient_linearMap_ext_treeGen
+    {M : Type*} [AddCommMonoid M] [Module Int M]
+    {f g : PreLieDifferenceStableQuotient →ₗ[Int] M}
+    (hgen : ∀ x : PTree,
+      f (mkPreLieDifferenceStableQuotient (treeGen x)) =
+        g (mkPreLieDifferenceStableQuotient (treeGen x))) :
+    f = g := by
+  apply LinearMap.ext
+  intro q
+  induction q using Submodule.Quotient.induction_on with
+  | H a =>
+      induction a using Finsupp.induction_linear with
+      | zero =>
+          simp
+      | add a b ha hb =>
+          simpa [mkPreLieDifferenceStableQuotient.map_add] using congrArg₂ (· + ·) ha hb
+      | single x n =>
+          have hq :
+              mkPreLieDifferenceStableQuotient (Finsupp.single x n) =
+                n • mkPreLieDifferenceStableQuotient (treeGen x) := by
+            simpa [treeGen] using
+              (mkPreLieDifferenceStableQuotient.map_smul n (treeGen x))
+          change
+            f (mkPreLieDifferenceStableQuotient (Finsupp.single x n)) =
+              g (mkPreLieDifferenceStableQuotient (Finsupp.single x n))
+          rw [hq, LinearMap.map_smul, LinearMap.map_smul, hgen x]
+
+/--
+Any quotient comultiplication with the primitive generator formula has the same
+comultiplication map as `OGPrimitiveComul`.
+-/
+theorem stableQuotientComultiplication_comul_eq_OGPrimitive_of_generator_formula
+    (Δ : StableQuotientComultiplication)
+    (hcomul : ∀ x : PTree,
+      Δ.comul (mkPreLieDifferenceStableQuotient (treeGen x)) =
+        TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
+          TensorProduct.tmul Int 1 (stableUEA_treeGen x)) :
+    Δ.comul = OGPrimitiveComul.comul := by
+  apply PreLieDifferenceStableQuotient_linearMap_ext_treeGen
+  intro x
+  rw [hcomul x, OGPrimitiveComul_comul_treeGen]
+
+/--
+Any quotient comultiplication with zero generator counit has the same counit
+map as `OGPrimitiveComul`.
+-/
+theorem stableQuotientComultiplication_counit_eq_OGPrimitive_of_generator_formula
+    (Δ : StableQuotientComultiplication)
+    (hcounit : ∀ x : PTree,
+      Δ.counit (mkPreLieDifferenceStableQuotient (treeGen x)) = 0) :
+    Δ.counit = OGPrimitiveComul.counit := by
+  apply PreLieDifferenceStableQuotient_linearMap_ext_treeGen
+  intro x
+  rw [hcounit x, OGPrimitiveComul_counit_treeGen]
+
+/--
+The OG primitive quotient comultiplication is canonical: any quotient
+comultiplication with the expected primitive generator formula and zero
+generator counit agrees with it on both structure maps.
+-/
+theorem stableQuotientComultiplication_eq_OGPrimitive_of_generator_formula
+    (Δ : StableQuotientComultiplication)
+    (hcomul : ∀ x : PTree,
+      Δ.comul (mkPreLieDifferenceStableQuotient (treeGen x)) =
+        TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
+          TensorProduct.tmul Int 1 (stableUEA_treeGen x))
+    (hcounit : ∀ x : PTree,
+      Δ.counit (mkPreLieDifferenceStableQuotient (treeGen x)) = 0) :
+    Δ.comul = OGPrimitiveComul.comul ∧
+      Δ.counit = OGPrimitiveComul.counit := by
+  exact
+    ⟨stableQuotientComultiplication_comul_eq_OGPrimitive_of_generator_formula
+        Δ hcomul,
+      stableQuotientComultiplication_counit_eq_OGPrimitive_of_generator_formula
+        Δ hcounit⟩
+
+/--
+Any packaged quotient comultiplication data agrees with the OG primitive
+quotient comultiplication on both structure maps.
+-/
+theorem StableQuotientComultiplicationData_eq_OGPrimitive
+    (D : StableQuotientComultiplicationData) :
+    D.comul = OGPrimitiveComul.comul ∧
+      D.counit = OGPrimitiveComul.counit := by
+  exact
+    stableQuotientComultiplication_eq_OGPrimitive_of_generator_formula
+      D.Δ D.comul_on_generators D.counit_on_generators
+
+/--
+Likewise, any quotient comultiplication pack with the generator axioms agrees
+with the OG primitive pack on both structure maps.
+-/
+theorem StableQuotientComultiplicationPack_eq_OGPrimitive
+    (D : StableQuotientComultiplicationPack) :
+    D.comul = OGPrimitiveComulPack.comul ∧
+      D.counit = OGPrimitiveComulPack.counit := by
+  constructor
+  · apply PreLieDifferenceStableQuotient_linearMap_ext_treeGen
+    intro x
+    rw [D.comul_on_treeGen, OGPrimitiveComulPack.comul_on_treeGen]
+  · apply PreLieDifferenceStableQuotient_linearMap_ext_treeGen
+    intro x
+    rw [D.counit_on_treeGen, OGPrimitiveComulPack.counit_on_treeGen]
+
+/--
+Any quotient comultiplication satisfying the primitive generator formula already
+obeys the full primitive formula on arbitrary raw linear combinations.
+-/
+theorem stableQuotientComultiplication_comul_mk_eq_primitive_formula_of_generator_formula
+    (Δ : StableQuotientComultiplication)
+    (hcomul : ∀ x : PTree,
+      Δ.comul (mkPreLieDifferenceStableQuotient (treeGen x)) =
+        TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
+          TensorProduct.tmul Int 1 (stableUEA_treeGen x))
+    (a : linearProofTreeCarrier) :
+    Δ.comul (mkPreLieDifferenceStableQuotient a) =
+      TensorProduct.tmul Int (preLieDifferenceStableQuotientToUEA a) 1 +
+        TensorProduct.tmul Int 1 (preLieDifferenceStableQuotientToUEA a) := by
+  rw [stableQuotientComultiplication_comul_eq_OGPrimitive_of_generator_formula
+    Δ hcomul]
+  exact OGPrimitiveComul_comul_mk a
+
+/--
+Likewise, any quotient comultiplication with zero generator counit has
+identically zero counit on arbitrary raw linear combinations.
+-/
+theorem stableQuotientComultiplication_counit_mk_eq_zero_of_generator_formula
+    (Δ : StableQuotientComultiplication)
+    (hcounit : ∀ x : PTree,
+      Δ.counit (mkPreLieDifferenceStableQuotient (treeGen x)) = 0)
+    (a : linearProofTreeCarrier) :
+    Δ.counit (mkPreLieDifferenceStableQuotient a) = 0 := by
+  rw [stableQuotientComultiplication_counit_eq_OGPrimitive_of_generator_formula
+    Δ hcounit]
+  exact OGPrimitiveComul_counit_mk a
+
+/--
+Packaged quotient comultiplication data already satisfies the full primitive
+formula on arbitrary raw linear combinations.
+-/
+theorem StableQuotientComultiplicationData_comul_mk_eq_primitive_formula
+    (D : StableQuotientComultiplicationData)
+    (a : linearProofTreeCarrier) :
+    D.comul (mkPreLieDifferenceStableQuotient a) =
+      TensorProduct.tmul Int (preLieDifferenceStableQuotientToUEA a) 1 +
+        TensorProduct.tmul Int 1 (preLieDifferenceStableQuotientToUEA a) := by
+  exact
+    stableQuotientComultiplication_comul_mk_eq_primitive_formula_of_generator_formula
+      D.Δ D.comul_on_generators a
+
+/--
+Packaged quotient comultiplication data has identically zero counit on
+arbitrary raw linear combinations.
+-/
+theorem StableQuotientComultiplicationData_counit_mk_eq_zero
+    (D : StableQuotientComultiplicationData)
+    (a : linearProofTreeCarrier) :
+    D.counit (mkPreLieDifferenceStableQuotient a) = 0 := by
+  exact
+    stableQuotientComultiplication_counit_mk_eq_zero_of_generator_formula
+      D.Δ D.counit_on_generators a
+
+/--
+Likewise for quotient comultiplication packs: the primitive generator law
+forces the full primitive formula on arbitrary raw linear combinations.
+-/
+theorem StableQuotientComultiplicationPack_comul_mk_eq_primitive_formula
+    (D : StableQuotientComultiplicationPack)
+    (a : linearProofTreeCarrier) :
+    D.comul (mkPreLieDifferenceStableQuotient a) =
+      TensorProduct.tmul Int (preLieDifferenceStableQuotientToUEA a) 1 +
+        TensorProduct.tmul Int 1 (preLieDifferenceStableQuotientToUEA a) := by
+  exact
+    stableQuotientComultiplication_comul_mk_eq_primitive_formula_of_generator_formula
+      D.Δ D.comul_on_treeGen a
+
+/--
+Likewise, every quotient comultiplication pack with the generator axioms has
+identically zero counit.
+-/
+theorem StableQuotientComultiplicationPack_counit_mk_eq_zero
+    (D : StableQuotientComultiplicationPack)
+    (a : linearProofTreeCarrier) :
+    D.counit (mkPreLieDifferenceStableQuotient a) = 0 := by
+  exact
+    stableQuotientComultiplication_counit_mk_eq_zero_of_generator_formula
+      D.Δ D.counit_on_treeGen a
+
+/-!
+### Conditional UEA lifts of the primitive OG formulas
+
+When the tensor square of the stable UEA carries the expected algebra
+structure, the primitive quotient formulas upgrade to honest algebra
+morphisms out of the stable UEA by the universal property of
+`UniversalEnvelopingAlgebra`.
+
+This is the algebra-side half of the expected bialgebra package: the target
+coalgebra axioms are still tracked separately, but the multiplicative lifts are
+now canonical rather than only informally described.
+-/
+
+section OGPrimitiveUEALifts
+
+variable [Ring stableUEATensor] [Algebra ℤ stableUEATensor]
+
+noncomputable local instance (priority := 1000) :
+    LieRing PreLieDifferenceStableQuotient :=
+  preLieDifferenceStableQuotientLieRing
+
+local instance (priority := 1000) : LieRing stableUEATensor :=
+  LieRing.ofAssociativeRing
+
+local instance (priority := 1000) : LieAlgebra ℤ stableUEATensor :=
+  LieAlgebra.ofAssociativeAlgebra
+
+/--
+Two algebra homomorphisms out of the stable UEA are equal as soon as they agree
+on the canonical Lie insertion `ι`.
+-/
+theorem stableUEA_algHom_ext_ι
+    (Φ Ψ : preLieDifferenceStableQuotientUEA →ₐ[ℤ] stableUEATensor)
+    (hι : ∀ q : PreLieDifferenceStableQuotient,
+      Φ (preLieDifferenceStableQuotientUEA_ι q) =
+        Ψ (preLieDifferenceStableQuotientUEA_ι q)) :
+    Φ = Ψ := by
+  apply UniversalEnvelopingAlgebra.hom_ext (R := ℤ)
+  ext q
+  exact hι q
+
+/--
+Likewise for algebra homomorphisms from the stable UEA to `ℤ`.
+-/
+theorem stableUEA_counitAlgHom_ext_ι
+    (ε₁ ε₂ : preLieDifferenceStableQuotientUEA →ₐ[ℤ] ℤ)
+    (hι : ∀ q : PreLieDifferenceStableQuotient,
+      ε₁ (preLieDifferenceStableQuotientUEA_ι q) =
+        ε₂ (preLieDifferenceStableQuotientUEA_ι q)) :
+    ε₁ = ε₂ := by
+  apply UniversalEnvelopingAlgebra.hom_ext (R := ℤ)
+  ext q
+  exact hι q
+
+/--
+Any two multiplicative comultiplication candidates whose restrictions to the
+Lie generators agree with `OGPrimitiveComul.comul` must coincide.
+-/
+theorem stableUEA_comulAlgHom_unique_of_ι_formula
+    (Φ Ψ : preLieDifferenceStableQuotientUEA →ₐ[ℤ] stableUEATensor)
+    (hΦ : ∀ q : PreLieDifferenceStableQuotient,
+      Φ (preLieDifferenceStableQuotientUEA_ι q) = OGPrimitiveComul.comul q)
+    (hΨ : ∀ q : PreLieDifferenceStableQuotient,
+      Ψ (preLieDifferenceStableQuotientUEA_ι q) = OGPrimitiveComul.comul q) :
+    Φ = Ψ := by
+  apply stableUEA_algHom_ext_ι
+  intro q
+  rw [hΦ q, hΨ q]
+
+/--
+Likewise, any two multiplicative counit candidates whose restrictions to the
+Lie generators agree with `OGPrimitiveComul.counit` must coincide.
+-/
+theorem stableUEA_counitAlgHom_unique_of_ι_formula
+    (ε₁ ε₂ : preLieDifferenceStableQuotientUEA →ₐ[ℤ] ℤ)
+    (hε₁ : ∀ q : PreLieDifferenceStableQuotient,
+      ε₁ (preLieDifferenceStableQuotientUEA_ι q) = OGPrimitiveComul.counit q)
+    (hε₂ : ∀ q : PreLieDifferenceStableQuotient,
+      ε₂ (preLieDifferenceStableQuotientUEA_ι q) = OGPrimitiveComul.counit q) :
+    ε₁ = ε₂ := by
+  apply stableUEA_counitAlgHom_ext_ι
+  intro q
+  rw [hε₁ q, hε₂ q]
+
+/--
+Any algebra hom out of the stable UEA with the OG primitive formula on `ι`
+automatically satisfies the corresponding tree-generator formula.
+-/
+theorem stableUEA_comulAlgHom_treeGen_formula_of_ι_formula
+    (Φ : preLieDifferenceStableQuotientUEA →ₐ[ℤ] stableUEATensor)
+    (hΦ : ∀ q : PreLieDifferenceStableQuotient,
+      Φ (preLieDifferenceStableQuotientUEA_ι q) = OGPrimitiveComul.comul q) :
+    ∀ x : PTree,
+      Φ (stableUEA_treeGen x) =
+        TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+          TensorProduct.tmul ℤ 1 (stableUEA_treeGen x) := by
+  intro x
+  simpa [stableUEA_treeGen_eq_ι] using
+    congrArg id (hΦ (mkPreLieDifferenceStableQuotient (treeGen x)))
+
+/--
+Likewise, the OG counit formula on `ι` implies the expected tree-generator
+vanishing formula.
+-/
+theorem stableUEA_counitAlgHom_treeGen_formula_of_ι_formula
+    (ε : preLieDifferenceStableQuotientUEA →ₐ[ℤ] ℤ)
+    (hε : ∀ q : PreLieDifferenceStableQuotient,
+      ε (preLieDifferenceStableQuotientUEA_ι q) = OGPrimitiveComul.counit q) :
+    ∀ x : PTree, ε (stableUEA_treeGen x) = 0 := by
+  intro x
+  simpa [stableUEA_treeGen_eq_ι] using
+    congrArg id (hε (mkPreLieDifferenceStableQuotient (treeGen x)))
+
+end OGPrimitiveUEALifts
+
+section OGPrimitiveUEABialgebraRigidity
+
+variable [Ring stableUEATensor] [Algebra ℤ stableUEATensor]
+
+/--
+Bundled stable-UEA bialgebra data has the OG primitive comultiplication formula
+on the canonical Lie insertion `ι`.
+-/
+def StableUEABialgebraData.OGPrimitiveComulOnIota
+    (D : StableUEABialgebraData) : Prop :=
+  ∀ q : PreLieDifferenceStableQuotient,
+    D.comulAlgHom (preLieDifferenceStableQuotientUEA_ι q) =
+      OGPrimitiveComul.comul q
+
+/--
+Bundled stable-UEA bialgebra data has the OG primitive counit formula on the
+canonical Lie insertion `ι`.
+-/
+def StableUEABialgebraData.OGPrimitiveCounitOnIota
+    (D : StableUEABialgebraData) : Prop :=
+  ∀ q : PreLieDifferenceStableQuotient,
+    D.counitAlgHom (preLieDifferenceStableQuotientUEA_ι q) =
+      OGPrimitiveComul.counit q
+
+/--
+Combined OG primitive `ι`-formula for bundled stable-UEA bialgebra data.
+-/
+def StableUEABialgebraData.OGPrimitiveOnIota
+    (D : StableUEABialgebraData) : Prop :=
+  StableUEABialgebraData.OGPrimitiveComulOnIota D ∧
+    StableUEABialgebraData.OGPrimitiveCounitOnIota D
+
+/--
+Any two packaged stable-UEA bialgebra candidates with the same OG primitive
+formula on `ι` have the same multiplicative comultiplication map.
+-/
+theorem StableUEABialgebraData_comulAlgHom_eq_of_ι_formula
+    (D E : StableUEABialgebraData)
+    (hD : StableUEABialgebraData.OGPrimitiveComulOnIota D)
+    (hE : StableUEABialgebraData.OGPrimitiveComulOnIota E) :
+    D.comulAlgHom = E.comulAlgHom := by
+  exact stableUEA_comulAlgHom_unique_of_ι_formula D.comulAlgHom E.comulAlgHom hD hE
+
+/--
+Likewise for the multiplicative counit maps in bundled stable-UEA bialgebra
+data.
+-/
+theorem StableUEABialgebraData_counitAlgHom_eq_of_ι_formula
+    (D E : StableUEABialgebraData)
+    (hD : StableUEABialgebraData.OGPrimitiveCounitOnIota D)
+    (hE : StableUEABialgebraData.OGPrimitiveCounitOnIota E) :
+    D.counitAlgHom = E.counitAlgHom := by
+  exact
+    stableUEA_counitAlgHom_unique_of_ι_formula
+      D.counitAlgHom E.counitAlgHom hD hE
+
+/--
+Any two bundled stable-UEA bialgebra candidates with the OG primitive
+behavior on `ι` also agree on their underlying UEA-level comultiplication maps.
+-/
+theorem StableUEABialgebraData_comul_eq_of_ι_formula
+    (D E : StableUEABialgebraData)
+    (hD : StableUEABialgebraData.OGPrimitiveComulOnIota D)
+    (hE : StableUEABialgebraData.OGPrimitiveComulOnIota E) :
+    D.comul = E.comul := by
+  have hAlg :
+      D.comulAlgHom = E.comulAlgHom :=
+    StableUEABialgebraData_comulAlgHom_eq_of_ι_formula D E hD hE
+  ext x
+  rw [← D.comulAlgHom_apply_simp, ← E.comulAlgHom_apply_simp, hAlg]
+
+/--
+Likewise for the underlying UEA-level counit maps.
+-/
+theorem StableUEABialgebraData_counit_eq_of_ι_formula
+    (D E : StableUEABialgebraData)
+    (hD : StableUEABialgebraData.OGPrimitiveCounitOnIota D)
+    (hE : StableUEABialgebraData.OGPrimitiveCounitOnIota E) :
+    D.counit = E.counit := by
+  have hAlg :
+      D.counitAlgHom = E.counitAlgHom :=
+    StableUEABialgebraData_counitAlgHom_eq_of_ι_formula D E hD hE
+  ext x
+  rw [← D.counitAlgHom_apply_simp, ← E.counitAlgHom_apply_simp, hAlg]
+
+/--
+Hence any two bundled stable-UEA bialgebra candidates with the OG primitive
+behavior on `ι` agree on both multiplicative maps and on the induced UEA-level
+coalgebra structure maps.
+-/
+theorem StableUEABialgebraData_eq_on_structure_maps_of_ι_formula
+    (D E : StableUEABialgebraData)
+    (hDcomul : StableUEABialgebraData.OGPrimitiveComulOnIota D)
+    (hEcomul : StableUEABialgebraData.OGPrimitiveComulOnIota E)
+    (hDcounit : StableUEABialgebraData.OGPrimitiveCounitOnIota D)
+    (hEcounit : StableUEABialgebraData.OGPrimitiveCounitOnIota E) :
+    D.comulAlgHom = E.comulAlgHom ∧
+      D.counitAlgHom = E.counitAlgHom ∧
+      D.comul = E.comul ∧
+      D.counit = E.counit := by
+  have hAlgComul :
+      D.comulAlgHom = E.comulAlgHom :=
+    StableUEABialgebraData_comulAlgHom_eq_of_ι_formula D E hDcomul hEcomul
+  have hAlgCounit :
+      D.counitAlgHom = E.counitAlgHom :=
+    StableUEABialgebraData_counitAlgHom_eq_of_ι_formula D E hDcounit hEcounit
+  have hComul :
+      D.comul = E.comul := by
+    exact StableUEABialgebraData_comul_eq_of_ι_formula D E hDcomul hEcomul
+  have hCounit :
+      D.counit = E.counit := by
+    exact StableUEABialgebraData_counit_eq_of_ι_formula D E hDcounit hEcounit
+  exact ⟨hAlgComul, hAlgCounit, hComul, hCounit⟩
+
+/--
+Under the OG primitive `ι`-formula, two bundled stable-UEA bialgebra
+candidates agree pointwise on the Lie-generator image.
+-/
+theorem StableUEABialgebraData_eq_on_ι_of_ι_formula
+    (D E : StableUEABialgebraData)
+    (hDcomul : StableUEABialgebraData.OGPrimitiveComulOnIota D)
+    (hEcomul : StableUEABialgebraData.OGPrimitiveComulOnIota E)
+    (hDcounit : StableUEABialgebraData.OGPrimitiveCounitOnIota D)
+    (hEcounit : StableUEABialgebraData.OGPrimitiveCounitOnIota E) :
+    (∀ q : PreLieDifferenceStableQuotient,
+      D.comul (preLieDifferenceStableQuotientUEA_ι q) =
+        E.comul (preLieDifferenceStableQuotientUEA_ι q)) ∧
+    (∀ q : PreLieDifferenceStableQuotient,
+      D.counit (preLieDifferenceStableQuotientUEA_ι q) =
+        E.counit (preLieDifferenceStableQuotientUEA_ι q)) := by
+  have hMaps :=
+    StableUEABialgebraData_eq_on_structure_maps_of_ι_formula
+      D E hDcomul hEcomul hDcounit hEcounit
+  rcases hMaps with ⟨_, _, hComul, hCounit⟩
+  constructor
+  · intro q
+    rw [hComul]
+  · intro q
+    rw [hCounit]
+
+/--
+In particular, the same rigidity holds on the UEA images of tree generators.
+-/
+theorem StableUEABialgebraData_eq_on_treeGen_of_ι_formula
+    (D E : StableUEABialgebraData)
+    (hDcomul : StableUEABialgebraData.OGPrimitiveComulOnIota D)
+    (hEcomul : StableUEABialgebraData.OGPrimitiveComulOnIota E)
+    (hDcounit : StableUEABialgebraData.OGPrimitiveCounitOnIota D)
+    (hEcounit : StableUEABialgebraData.OGPrimitiveCounitOnIota E) :
+    (∀ x : PTree, D.comul (stableUEA_treeGen x) = E.comul (stableUEA_treeGen x)) ∧
+    (∀ x : PTree, D.counit (stableUEA_treeGen x) = E.counit (stableUEA_treeGen x)) := by
+  have hι :=
+    StableUEABialgebraData_eq_on_ι_of_ι_formula
+      D E hDcomul hEcomul hDcounit hEcounit
+  rcases hι with ⟨hComul, hCounit⟩
+  constructor
+  · intro x
+    simpa [stableUEA_treeGen_eq_ι] using
+      hComul (mkPreLieDifferenceStableQuotient (treeGen x))
+  · intro x
+    simpa [stableUEA_treeGen_eq_ι] using
+      hCounit (mkPreLieDifferenceStableQuotient (treeGen x))
+
+/--
+A bundled stable-UEA bialgebra candidate with the OG primitive formula on `ι`
+already has the expected primitive tree-generator comultiplication formula.
+-/
+theorem StableUEABialgebraData_comul_on_treeGen_of_ι_formula
+    (D : StableUEABialgebraData)
+    (hDcomul : StableUEABialgebraData.OGPrimitiveComulOnIota D) :
+    ∀ x : PTree,
+      D.comul (stableUEA_treeGen x) =
+        TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+          TensorProduct.tmul ℤ 1 (stableUEA_treeGen x) := by
+  intro x
+  rw [← D.comulAlgHom_apply_simp]
+  exact stableUEA_comulAlgHom_treeGen_formula_of_ι_formula D.comulAlgHom hDcomul x
+
+/--
+Likewise, the OG counit formula on `ι` implies the expected vanishing on tree
+generators for bundled stable-UEA bialgebra data.
+-/
+theorem StableUEABialgebraData_counit_on_treeGen_of_ι_formula
+    (D : StableUEABialgebraData)
+    (hDcounit : StableUEABialgebraData.OGPrimitiveCounitOnIota D) :
+    ∀ x : PTree, D.counit (stableUEA_treeGen x) = 0 := by
+  intro x
+  rw [← D.counitAlgHom_apply_simp]
+  exact stableUEA_counitAlgHom_treeGen_formula_of_ι_formula D.counitAlgHom hDcounit x
+
+/--
+The combined OG primitive `ι`-formula immediately yields the standard
+tree-generator formulas for bundled stable-UEA bialgebra data.
+-/
+theorem StableUEABialgebraData_on_treeGen_of_OGPrimitiveOnIota
+    (D : StableUEABialgebraData)
+    (hD : StableUEABialgebraData.OGPrimitiveOnIota D) :
+    (∀ x : PTree,
+      D.comul (stableUEA_treeGen x) =
+        TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+          TensorProduct.tmul ℤ 1 (stableUEA_treeGen x)) ∧
+    (∀ x : PTree, D.counit (stableUEA_treeGen x) = 0) := by
+  exact
+    ⟨StableUEABialgebraData_comul_on_treeGen_of_ι_formula D hD.1,
+      StableUEABialgebraData_counit_on_treeGen_of_ι_formula D hD.2⟩
+
+/--
+The OG primitive `ι`-formula for a bundled stable-UEA bialgebra candidate
+forces the full primitive comultiplication formula on arbitrary raw linear
+combinations.
+-/
+theorem StableUEABialgebraData_comul_mk_eq_primitive_formula_of_ι_formula
+    (D : StableUEABialgebraData)
+    (hD : StableUEABialgebraData.OGPrimitiveComulOnIota D)
+    (a : linearProofTreeCarrier) :
+    D.comul (preLieDifferenceStableQuotientToUEA a) =
+      TensorProduct.tmul ℤ (preLieDifferenceStableQuotientToUEA a) 1 +
+        TensorProduct.tmul ℤ 1 (preLieDifferenceStableQuotientToUEA a) := by
+  rw [← D.comulAlgHom_apply_simp]
+  simpa [preLieDifferenceStableQuotientToUEA] using
+    (hD (mkPreLieDifferenceStableQuotient a)).trans (OGPrimitiveComul_comul_mk a)
+
+/--
+Likewise, the OG primitive `ι`-formula forces identically zero counit on
+arbitrary raw linear combinations.
+-/
+theorem StableUEABialgebraData_counit_mk_eq_zero_of_ι_formula
+    (D : StableUEABialgebraData)
+    (hD : StableUEABialgebraData.OGPrimitiveCounitOnIota D)
+    (a : linearProofTreeCarrier) :
+    D.counit (preLieDifferenceStableQuotientToUEA a) = 0 := by
+  rw [← D.counitAlgHom_apply_simp]
+  simpa [preLieDifferenceStableQuotientToUEA] using
+    (hD (mkPreLieDifferenceStableQuotient a)).trans (OGPrimitiveComul_counit_mk a)
+
+/--
+Forest-level form of the bundled UEA-side primitive comultiplication formula.
+-/
+theorem StableUEABialgebraData_comul_forestGen_of_ι_formula
+    (D : StableUEABialgebraData)
+    (hD : StableUEABialgebraData.OGPrimitiveComulOnIota D)
+    (f : Forest) :
+    D.comul (preLieDifferenceStableQuotientToUEA (forestGen f)) =
+      TensorProduct.tmul ℤ (preLieDifferenceStableQuotientToUEA (forestGen f)) 1 +
+        TensorProduct.tmul ℤ 1 (preLieDifferenceStableQuotientToUEA (forestGen f)) := by
+  simpa using
+    StableUEABialgebraData_comul_mk_eq_primitive_formula_of_ι_formula
+      D hD (forestGen f)
+
+/--
+Forest-level form of the bundled UEA-side primitive counit formula.
+-/
+theorem StableUEABialgebraData_counit_forestGen_of_ι_formula
+    (D : StableUEABialgebraData)
+    (hD : StableUEABialgebraData.OGPrimitiveCounitOnIota D)
+    (f : Forest) :
+    D.counit (preLieDifferenceStableQuotientToUEA (forestGen f)) = 0 := by
+  exact
+    StableUEABialgebraData_counit_mk_eq_zero_of_ι_formula
+      D hD (forestGen f)
+
+/--
+Combined forest-level OG primitive formula for bundled stable-UEA bialgebra
+data.
+-/
+theorem StableUEABialgebraData_on_forestGen_of_OGPrimitiveOnIota
+    (D : StableUEABialgebraData)
+    (hD : StableUEABialgebraData.OGPrimitiveOnIota D)
+    (f : Forest) :
+    D.comul (preLieDifferenceStableQuotientToUEA (forestGen f)) =
+      TensorProduct.tmul ℤ (preLieDifferenceStableQuotientToUEA (forestGen f)) 1 +
+        TensorProduct.tmul ℤ 1 (preLieDifferenceStableQuotientToUEA (forestGen f)) ∧
+    D.counit (preLieDifferenceStableQuotientToUEA (forestGen f)) = 0 := by
+  exact
+    ⟨StableUEABialgebraData_comul_forestGen_of_ι_formula D hD.1 f,
+      StableUEABialgebraData_counit_forestGen_of_ι_formula D hD.2 f⟩
+
+/--
+If a bundled stable-UEA bialgebra candidate is OG primitive on `ι`, then its
+UEA-level comultiplication agrees with `OGPrimitiveComul.comul` on every raw
+linear combination.
+-/
+theorem StableUEABialgebraData_comul_mk_eq_OGPrimitive_of_ι_formula
+    (D : StableUEABialgebraData)
+    (hD : StableUEABialgebraData.OGPrimitiveComulOnIota D)
+    (a : linearProofTreeCarrier) :
+    D.comul (preLieDifferenceStableQuotientToUEA a) =
+      OGPrimitiveComul.comul (mkPreLieDifferenceStableQuotient a) := by
+  rw [← D.comulAlgHom_apply_simp]
+  simpa [preLieDifferenceStableQuotientToUEA] using
+    hD (mkPreLieDifferenceStableQuotient a)
+
+/--
+Likewise for the counit.
+-/
+theorem StableUEABialgebraData_counit_mk_eq_OGPrimitive_of_ι_formula
+    (D : StableUEABialgebraData)
+    (hD : StableUEABialgebraData.OGPrimitiveCounitOnIota D)
+    (a : linearProofTreeCarrier) :
+    D.counit (preLieDifferenceStableQuotientToUEA a) =
+      OGPrimitiveComul.counit (mkPreLieDifferenceStableQuotient a) := by
+  rw [← D.counitAlgHom_apply_simp]
+  simpa [preLieDifferenceStableQuotientToUEA] using
+    hD (mkPreLieDifferenceStableQuotient a)
+
+/--
+Combined raw-combination comparison with `OGPrimitiveComul`.
+-/
+theorem StableUEABialgebraData_on_mk_eq_OGPrimitive_of_OGPrimitiveOnIota
+    (D : StableUEABialgebraData)
+    (hD : StableUEABialgebraData.OGPrimitiveOnIota D)
+    (a : linearProofTreeCarrier) :
+    D.comul (preLieDifferenceStableQuotientToUEA a) =
+      OGPrimitiveComul.comul (mkPreLieDifferenceStableQuotient a) ∧
+    D.counit (preLieDifferenceStableQuotientToUEA a) =
+      OGPrimitiveComul.counit (mkPreLieDifferenceStableQuotient a) := by
+  exact
+    ⟨StableUEABialgebraData_comul_mk_eq_OGPrimitive_of_ι_formula D hD.1 a,
+      StableUEABialgebraData_counit_mk_eq_OGPrimitive_of_ι_formula D hD.2 a⟩
+
+/--
+Combined raw primitive formula for a bundled stable-UEA bialgebra candidate
+that is OG primitive on `ι`.
+-/
+theorem StableUEABialgebraData_on_mk_of_OGPrimitiveOnIota
+    (D : StableUEABialgebraData)
+    (hD : StableUEABialgebraData.OGPrimitiveOnIota D)
+    (a : linearProofTreeCarrier) :
+    D.comul (preLieDifferenceStableQuotientToUEA a) =
+      TensorProduct.tmul ℤ (preLieDifferenceStableQuotientToUEA a) 1 +
+        TensorProduct.tmul ℤ 1 (preLieDifferenceStableQuotientToUEA a) ∧
+    D.counit (preLieDifferenceStableQuotientToUEA a) = 0 := by
+  exact
+    ⟨StableUEABialgebraData_comul_mk_eq_primitive_formula_of_ι_formula D hD.1 a,
+      StableUEABialgebraData_counit_mk_eq_zero_of_ι_formula D hD.2 a⟩
+
+/--
+Tree-generator specialization of the UEA-vs-OG primitive comparison.
+-/
+theorem StableUEABialgebraData_on_treeGen_eq_OGPrimitive_of_OGPrimitiveOnIota
+    (D : StableUEABialgebraData)
+    (hD : StableUEABialgebraData.OGPrimitiveOnIota D)
+    (x : PTree) :
+    D.comul (stableUEA_treeGen x) =
+      OGPrimitiveComul.comul (mkPreLieDifferenceStableQuotient (treeGen x)) ∧
+    D.counit (stableUEA_treeGen x) =
+      OGPrimitiveComul.counit (mkPreLieDifferenceStableQuotient (treeGen x)) := by
+  simpa [stableUEA_treeGen_eq_ι, preLieDifferenceStableQuotientToUEA] using
+    StableUEABialgebraData_on_mk_eq_OGPrimitive_of_OGPrimitiveOnIota
+      D hD (treeGen x)
+
+/--
+Forest specialization of the UEA-vs-OG primitive comparison.
+-/
+theorem StableUEABialgebraData_on_forestGen_eq_OGPrimitive_of_OGPrimitiveOnIota
+    (D : StableUEABialgebraData)
+    (hD : StableUEABialgebraData.OGPrimitiveOnIota D)
+    (f : Forest) :
+    D.comul (preLieDifferenceStableQuotientToUEA (forestGen f)) =
+      OGPrimitiveComul.comul (mkPreLieDifferenceStableQuotient (forestGen f)) ∧
+    D.counit (preLieDifferenceStableQuotientToUEA (forestGen f)) =
+      OGPrimitiveComul.counit (mkPreLieDifferenceStableQuotient (forestGen f)) := by
+  exact
+    StableUEABialgebraData_on_mk_eq_OGPrimitive_of_OGPrimitiveOnIota
+      D hD (forestGen f)
+
+/--
+Any two bundled stable-UEA bialgebra candidates that are OG primitive on `ι`
+agree on arbitrary raw linear combinations in the stable UEA.
+-/
+theorem StableUEABialgebraData_eq_on_mk_of_OGPrimitiveOnIota
+    (D E : StableUEABialgebraData)
+    (hD : StableUEABialgebraData.OGPrimitiveOnIota D)
+    (hE : StableUEABialgebraData.OGPrimitiveOnIota E)
+    (a : linearProofTreeCarrier) :
+    D.comul (preLieDifferenceStableQuotientToUEA a) =
+      E.comul (preLieDifferenceStableQuotientToUEA a) ∧
+    D.counit (preLieDifferenceStableQuotientToUEA a) =
+      E.counit (preLieDifferenceStableQuotientToUEA a) := by
+  have hD' := StableUEABialgebraData_on_mk_eq_OGPrimitive_of_OGPrimitiveOnIota D hD a
+  have hE' := StableUEABialgebraData_on_mk_eq_OGPrimitive_of_OGPrimitiveOnIota E hE a
+  exact ⟨by rw [hD'.1, hE'.1], by rw [hD'.2, hE'.2]⟩
+
+/--
+Any two bundled stable-UEA bialgebra candidates with the OG primitive
+`ι`-formula agree on every forest input in the stable UEA.
+-/
+theorem StableUEABialgebraData_eq_on_forestGen_of_ι_formula
+    (D E : StableUEABialgebraData)
+    (hDcomul : StableUEABialgebraData.OGPrimitiveComulOnIota D)
+    (hEcomul : StableUEABialgebraData.OGPrimitiveComulOnIota E)
+    (hDcounit : StableUEABialgebraData.OGPrimitiveCounitOnIota D)
+    (hEcounit : StableUEABialgebraData.OGPrimitiveCounitOnIota E)
+    (f : Forest) :
+    D.comul (preLieDifferenceStableQuotientToUEA (forestGen f)) =
+      E.comul (preLieDifferenceStableQuotientToUEA (forestGen f)) ∧
+    D.counit (preLieDifferenceStableQuotientToUEA (forestGen f)) =
+      E.counit (preLieDifferenceStableQuotientToUEA (forestGen f)) := by
+  have hMaps :=
+    StableUEABialgebraData_eq_on_structure_maps_of_ι_formula
+      D E hDcomul hEcomul hDcounit hEcounit
+  rcases hMaps with ⟨_, _, hComul, hCounit⟩
+  exact ⟨by rw [hComul], by rw [hCounit]⟩
+
+/--
+Combined-predicate form of forest-level agreement for bundled stable-UEA
+bialgebra candidates.
+-/
+theorem StableUEABialgebraData_eq_on_forestGen_of_OGPrimitiveOnIota
+    (D E : StableUEABialgebraData)
+    (hD : StableUEABialgebraData.OGPrimitiveOnIota D)
+    (hE : StableUEABialgebraData.OGPrimitiveOnIota E)
+    (f : Forest) :
+    D.comul (preLieDifferenceStableQuotientToUEA (forestGen f)) =
+      E.comul (preLieDifferenceStableQuotientToUEA (forestGen f)) ∧
+    D.counit (preLieDifferenceStableQuotientToUEA (forestGen f)) =
+      E.counit (preLieDifferenceStableQuotientToUEA (forestGen f)) := by
+  exact
+    StableUEABialgebraData_eq_on_forestGen_of_ι_formula
+      D E hD.1 hE.1 hD.2 hE.2 f
+
+/--
+If two bundled stable-UEA bialgebra candidates are both OG primitive on `ι`,
+then they agree on the UEA images of all tree generators.
+-/
+theorem StableUEABialgebraData_eq_on_treeGen_of_OGPrimitiveOnIota
+    (D E : StableUEABialgebraData)
+    (hD : StableUEABialgebraData.OGPrimitiveOnIota D)
+    (hE : StableUEABialgebraData.OGPrimitiveOnIota E) :
+    (∀ x : PTree, D.comul (stableUEA_treeGen x) = E.comul (stableUEA_treeGen x)) ∧
+    (∀ x : PTree, D.counit (stableUEA_treeGen x) = E.counit (stableUEA_treeGen x)) := by
+  exact
+    StableUEABialgebraData_eq_on_treeGen_of_ι_formula
+      D E hD.1 hE.1 hD.2 hE.2
+
+/--
+The OG primitive `ι`-formula determines the forest-level comultiplication of a
+bundled stable-UEA bialgebra candidate uniquely.
+-/
+theorem StableUEABialgebraData_comul_forestGen_eq_of_OGPrimitiveOnIota
+    (D E : StableUEABialgebraData)
+    (hD : StableUEABialgebraData.OGPrimitiveOnIota D)
+    (hE : StableUEABialgebraData.OGPrimitiveOnIota E)
+    (f : Forest) :
+    D.comul (preLieDifferenceStableQuotientToUEA (forestGen f)) =
+      E.comul (preLieDifferenceStableQuotientToUEA (forestGen f)) := by
+  exact
+    (StableUEABialgebraData_eq_on_forestGen_of_OGPrimitiveOnIota
+      D E hD hE f).1
+
+/--
+Likewise for the forest-level counit.
+-/
+theorem StableUEABialgebraData_counit_forestGen_eq_of_OGPrimitiveOnIota
+    (D E : StableUEABialgebraData)
+    (hD : StableUEABialgebraData.OGPrimitiveOnIota D)
+    (hE : StableUEABialgebraData.OGPrimitiveOnIota E)
+    (f : Forest) :
+    D.counit (preLieDifferenceStableQuotientToUEA (forestGen f)) =
+      E.counit (preLieDifferenceStableQuotientToUEA (forestGen f)) := by
+  exact
+    (StableUEABialgebraData_eq_on_forestGen_of_OGPrimitiveOnIota
+      D E hD hE f).2
+
+end OGPrimitiveUEABialgebraRigidity
 
 /--
 On a sum of two tree generators, the OG primitive comultiplication is the sum
@@ -5844,6 +8816,33 @@ theorem GLSupport_OGRaw_compare_forestGen
     stableUEA_OGPrimitive_comul_linear_forestGen f⟩
 
 /--
+Forest-level comparison between the raw GL support-side comultiplication and
+the descended OG primitive comultiplication.
+-/
+theorem GLSupport_OG_comul_compare_forestGen
+    (f : Forest) :
+    stableUEA_coproductSupportSummary_comul_linear (forestGen f) =
+        stableUEA_coproductSupportSummary_comulForest f ∧
+      OGPrimitiveComul.comul
+          (mkPreLieDifferenceStableQuotient (forestGen f)) =
+        stableUEA_expectedPrimitiveComulForest f := by
+  exact ⟨stableUEA_coproductSupportSummary_comul_linear_forestGen f,
+    OGPrimitiveComul_comul_forestGen f⟩
+
+/--
+Forest-level comparison between the raw GL support-side comultiplication and
+the expected primitive comultiplication formula.
+-/
+theorem GLSupport_expectedPrimitive_compare_forestGen
+    (f : Forest) :
+    stableUEA_coproductSupportSummary_comul_linear (forestGen f) =
+        stableUEA_coproductSupportSummary_comulForest f ∧
+      stableUEA_expectedPrimitiveComulLinear (forestGen f) =
+        stableUEA_expectedPrimitiveComulForest f := by
+  exact ⟨stableUEA_coproductSupportSummary_comul_linear_forestGen f,
+    stableUEA_expectedPrimitiveComulLinear_forestGen f⟩
+
+/--
 Raw same-codomain counit comparison on a forest generator sum: both the GL
 support-side counit and the OG primitive counit vanish.
 -/
@@ -5913,6 +8912,83 @@ theorem OGPrimitiveComul_comul_forestGen_append
     OGPrimitiveComul_comul_forestGen, stableUEA_expectedPrimitiveComulForest_append]
 
 /--
+Any packaged quotient comultiplication data agrees with the OG primitive forest
+formula on arbitrary forest sums.
+-/
+theorem StableQuotientComultiplicationData_comul_forestGen
+    (D : StableQuotientComultiplicationData)
+    (f : Forest) :
+    D.comul (mkPreLieDifferenceStableQuotient (forestGen f)) =
+      stableUEA_expectedPrimitiveComulForest f := by
+  have hD := StableQuotientComultiplicationData_eq_OGPrimitive D
+  rw [hD.1]
+  exact OGPrimitiveComul_comul_forestGen f
+
+/--
+Any packaged quotient comultiplication data has zero counit on arbitrary forest
+sums.
+-/
+theorem StableQuotientComultiplicationData_counit_forestGen
+    (D : StableQuotientComultiplicationData)
+    (f : Forest) :
+    D.counit (mkPreLieDifferenceStableQuotient (forestGen f)) = 0 := by
+  have hD := StableQuotientComultiplicationData_eq_OGPrimitive D
+  rw [hD.2]
+  exact OGPrimitiveComul_counit_forestGen f
+
+/--
+Any quotient comultiplication pack agrees with the OG primitive forest formula
+on arbitrary forest sums.
+-/
+theorem StableQuotientComultiplicationPack_comul_forestGen
+    (D : StableQuotientComultiplicationPack)
+    (f : Forest) :
+    D.comul (mkPreLieDifferenceStableQuotient (forestGen f)) =
+      stableUEA_expectedPrimitiveComulForest f := by
+  have hD := StableQuotientComultiplicationPack_eq_OGPrimitive D
+  rw [hD.1]
+  exact OGPrimitiveComul_comul_forestGen f
+
+/--
+Any quotient comultiplication pack has zero counit on arbitrary forest sums.
+-/
+theorem StableQuotientComultiplicationPack_counit_forestGen
+    (D : StableQuotientComultiplicationPack)
+    (f : Forest) :
+    D.counit (mkPreLieDifferenceStableQuotient (forestGen f)) = 0 := by
+  have hD := StableQuotientComultiplicationPack_eq_OGPrimitive D
+  rw [hD.2]
+  exact OGPrimitiveComul_counit_forestGen f
+
+/--
+Any packaged quotient comultiplication data is additive with respect to forest
+concatenation.
+-/
+theorem StableQuotientComultiplicationData_comul_forestGen_append
+    (D : StableQuotientComultiplicationData)
+    (xs ys : Forest) :
+    D.comul (mkPreLieDifferenceStableQuotient (forestGen (xs ++ ys))) =
+      D.comul (mkPreLieDifferenceStableQuotient (forestGen xs)) +
+        D.comul (mkPreLieDifferenceStableQuotient (forestGen ys)) := by
+  have hD := StableQuotientComultiplicationData_eq_OGPrimitive D
+  rw [hD.1]
+  exact OGPrimitiveComul_comul_forestGen_append xs ys
+
+/--
+Likewise, any quotient comultiplication pack is additive with respect to forest
+concatenation.
+-/
+theorem StableQuotientComultiplicationPack_comul_forestGen_append
+    (D : StableQuotientComultiplicationPack)
+    (xs ys : Forest) :
+    D.comul (mkPreLieDifferenceStableQuotient (forestGen (xs ++ ys))) =
+      D.comul (mkPreLieDifferenceStableQuotient (forestGen xs)) +
+        D.comul (mkPreLieDifferenceStableQuotient (forestGen ys)) := by
+  have hD := StableQuotientComultiplicationPack_eq_OGPrimitive D
+  rw [hD.1]
+  exact OGPrimitiveComul_comul_forestGen_append xs ys
+
+/--
 The descended GL support-side comultiplication of an appended forest is the sum
 of the descended GL support-side comultiplications of the two parts.
 -/
@@ -5948,6 +9024,39 @@ theorem GL_OG_comul_compare_forestGen_append
           (mkPreLieDifferenceStableQuotient (forestGen ys)) := by
   exact ⟨instance_comul_forestGen_append xs ys,
     OGPrimitiveComul_comul_forestGen_append xs ys⟩
+
+/--
+The raw GL support-side and descended OG primitive forest comultiplications are
+both additive with respect to forest concatenation.
+-/
+theorem GLSupport_OG_comul_compare_forestGen_append
+    (xs ys : Forest) :
+    stableUEA_coproductSupportSummary_comul_linear (forestGen (xs ++ ys)) =
+      stableUEA_coproductSupportSummary_comul_linear (forestGen xs) +
+        stableUEA_coproductSupportSummary_comul_linear (forestGen ys) ∧
+    OGPrimitiveComul.comul
+        (mkPreLieDifferenceStableQuotient (forestGen (xs ++ ys))) =
+      OGPrimitiveComul.comul
+          (mkPreLieDifferenceStableQuotient (forestGen xs)) +
+        OGPrimitiveComul.comul
+          (mkPreLieDifferenceStableQuotient (forestGen ys)) := by
+  exact ⟨stableUEA_coproductSupportSummary_comul_linear_forestGen_append xs ys,
+    OGPrimitiveComul_comul_forestGen_append xs ys⟩
+
+/--
+The raw GL support-side and expected primitive forest comultiplications are
+both additive with respect to forest concatenation.
+-/
+theorem GLSupport_expectedPrimitive_compare_forestGen_append
+    (xs ys : Forest) :
+    stableUEA_coproductSupportSummary_comul_linear (forestGen (xs ++ ys)) =
+      stableUEA_coproductSupportSummary_comul_linear (forestGen xs) +
+        stableUEA_coproductSupportSummary_comul_linear (forestGen ys) ∧
+    stableUEA_expectedPrimitiveComulLinear (forestGen (xs ++ ys)) =
+      stableUEA_expectedPrimitiveComulLinear (forestGen xs) +
+        stableUEA_expectedPrimitiveComulLinear (forestGen ys) := by
+  exact ⟨stableUEA_coproductSupportSummary_comul_linear_forestGen_append xs ys,
+    stableUEA_expectedPrimitiveComulLinear_forestGen_append xs ys⟩
 
 /--
 Both descended counits vanish on appended forest sums.
@@ -7303,10 +10412,10 @@ All non-trivial theorems that remain `sorry`'d, with their mathematical status:
    The kernel is stable under graftPreLie by tree generators.
    *Status*: Requires the coaction formula Δ(u ▷ a) in terms of Δ(a).
 
-3. `comul_quot_coassoc_treeGen` / `coproductSupportSummary_comul_quot_coassoc`
-   (Section 5):
-   Coassociativity of the descended comultiplication.
-   *Status*: Requires a two-level cut bijection.
+3. `comul_quot_coassoc_tensor` (Section 5):
+   Pointwise cut-tensor coassociativity for the descended comultiplication.
+   *Status*: Requires a two-level cut bijection.  The higher tree-level and
+   global coassociativity theorems are now reduced to this pointwise theorem.
 
 ### Sorry'd counit theorems (structural issue in main file)
 
@@ -7346,7 +10455,7 @@ The theorem
 
 is now proved in Section 17, so it is no longer part of the live blocker list.
 
-At the theorem level, the file still contains 12 explicit `sorry`s; the list
+At the theorem level, the file still contains 9 explicit `sorry`s; the list
 below groups those into the main mathematical bottlenecks rather than counting
 every wrapper lemma separately.
 -/
@@ -7354,7 +10463,7 @@ every wrapper lemma separately.
 section SorryLedger
 
 /-- Summary: the live blocker list above has 9 grouped items, while the file
-still contains 12 explicit theorem-level `sorry`s.  The mathematical content is
+still contains 9 explicit theorem-level `sorry`s.  The mathematical content is
 fully specified; the remaining `sorry`s mark combinatorial or UEA-theoretic
 gaps rather than missing architectural structure. -/
 theorem sorry_ledger_count : True := trivial
