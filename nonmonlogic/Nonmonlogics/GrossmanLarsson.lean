@@ -144,6 +144,25 @@ inductive RuleTag where
 | neg_r
 deriving DecidableEq, Repr
 
+namespace RuleTag
+
+/-- The number of immediate premise trees dictated by each logical rule. -/
+def arity : RuleTag → Nat
+| baseAx => 0
+| imp_l => 2
+| imp_r => 1
+| conj_l => 1
+| conj_r => 2
+| disj_l => 2
+| disj_r => 1
+| neg_l => 1
+| neg_r => 1
+
+theorem arity_le_two (r : RuleTag) : r.arity ≤ 2 := by
+  cases r <;> simp [arity]
+
+end RuleTag
+
 inductive PTree : Type where
 | leaf : MultiSequent → PTree
 | node : RuleTag → MultiSequent → List PTree → PTree
@@ -225,6 +244,14 @@ def IsDyadic : PTree → Prop
 | leaf _      => True
 | node _ _ cs => cs.length ≤ 2 ∧ ∀ c, c ∈ cs → IsDyadic c
 
+/--
+Proof trees whose immediate branching is exactly the branching dictated by
+their rule tags, recursively through all child subtrees.
+-/
+def RespectsRuleArity : PTree → Prop
+| leaf _      => True
+| node r _ cs => cs.length = r.arity ∧ ∀ c, c ∈ cs → RespectsRuleArity c
+
 @[simp] theorem isLeaf_leaf (s : MultiSequent) :
     IsLeaf (leaf s) := by
   trivial
@@ -244,6 +271,16 @@ def IsDyadic : PTree → Prop
 @[simp] theorem isDyadic_leaf (s : MultiSequent) :
     IsDyadic (leaf s) := by
   simp [IsDyadic]
+
+@[simp] theorem respectsRuleArity_leaf (s : MultiSequent) :
+    RespectsRuleArity (leaf s) := by
+  simp [RespectsRuleArity]
+
+@[simp] theorem respectsRuleArity_node
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree) :
+    RespectsRuleArity (node r s cs) ↔
+      cs.length = r.arity ∧ ∀ c, c ∈ cs → RespectsRuleArity c := by
+  simp [RespectsRuleArity]
 
 end PTree
 
@@ -272,6 +309,37 @@ def toTree {base : BaseRel} {s : MultiSequent} (d : NMMS base s) : PTree :=
   | @NMMS.neg_r _ A Γ Θ d =>
       PTree.node RuleTag.neg_r (Γ ∣∼ ((¬A) ::ₘ Θ)) [toTree d]
 
+/--
+Height of an `NMMS` derivation, defined by the inference-rule constructors.
+This is the proof-theoretic height; forgetting to `PTree` preserves it.
+-/
+def derivationHeight {base : BaseRel} {s : MultiSequent}
+    (d : NMMS base s) : Nat :=
+  match d with
+  | NMMS.baseAx _ => 1
+  | NMMS.imp_l d₁ d₂ =>
+      1 + [derivationHeight d₁, derivationHeight d₂].foldr max 0
+  | NMMS.imp_r d =>
+      1 + [derivationHeight d].foldr max 0
+  | NMMS.conj_l d =>
+      1 + [derivationHeight d].foldr max 0
+  | NMMS.conj_r d₁ d₂ =>
+      1 + [derivationHeight d₁, derivationHeight d₂].foldr max 0
+  | NMMS.disj_l d₁ d₂ =>
+      1 + [derivationHeight d₁, derivationHeight d₂].foldr max 0
+  | NMMS.disj_r d =>
+      1 + [derivationHeight d].foldr max 0
+  | NMMS.neg_l d =>
+      1 + [derivationHeight d].foldr max 0
+  | NMMS.neg_r d =>
+      1 + [derivationHeight d].foldr max 0
+
+/-- The proof-theoretic height is exactly the height of the forgotten tree. -/
+theorem height_toTree_eq_derivationHeight {base : BaseRel} {s : MultiSequent}
+    (d : NMMS base s) :
+    PTree.height (NMMS.toTree d) = NMMS.derivationHeight d := by
+  induction d <;> simp [NMMS.toTree, NMMS.derivationHeight, PTree.height, *]
+
 end NMMS
 
 theorem toTree_conclusion {base : BaseRel} {s : MultiSequent}
@@ -284,6 +352,278 @@ theorem toTree_isDyadic {base : BaseRel} {s : MultiSequent}
     (d : NMMS base s) :
     PTree.IsDyadic (NMMS.toTree d) := by
   induction d <;> simp [NMMS.toTree, PTree.IsDyadic, *]
+
+theorem toTree_respectsRuleArity {base : BaseRel} {s : MultiSequent}
+    (d : NMMS base s) :
+    PTree.RespectsRuleArity (NMMS.toTree d) := by
+  induction d <;> simp [NMMS.toTree, RuleTag.arity, *]
+
+/-! ## Base-relation extension and induced derivation/tree transport -/
+
+/--
+`base'` extends `base` when every primitive base entailment available in `base`
+is also available in `base'`.
+
+This is the fixed-syntax notion of extension relevant to the current proof-tree
+development. It separates "changing the primitive consequence relation" from
+"changing the object-language syntax".
+-/
+def BaseRelExtends (base base' : BaseRel) : Prop :=
+  ∀ ⦃Γ Θ : Multiset MyProp⦄, base Γ Θ → base' Γ Θ
+
+theorem BaseRelExtends_refl (base : BaseRel) :
+    BaseRelExtends base base := by
+  intro Γ Θ h
+  exact h
+
+theorem BaseRelExtends_trans {base₁ base₂ base₃ : BaseRel}
+    (h₁₂ : BaseRelExtends base₁ base₂)
+    (h₂₃ : BaseRelExtends base₂ base₃) :
+    BaseRelExtends base₁ base₃ := by
+  intro Γ Θ h
+  exact h₂₃ (h₁₂ h)
+
+/--
+Antecedent monotonicity for the primitive material relation.
+
+This is deliberately a property, not an axiom.  The intended defeasible bases
+may fail it: a material reason from `Γ` to `Θ` need not survive adding further
+prelogical information to the antecedent.
+-/
+def BaseRelAntecedentMonotone (base : BaseRel) : Prop :=
+  ∀ ⦃Γ Δ Θ : Multiset MyProp⦄,
+    IsBaseMultiset Δ → base Γ Θ → base (Γ + Δ) Θ
+
+/--
+A concrete witness that antecedent strengthening fails in the primitive
+material relation.
+-/
+def FailsAntecedentStrengthening
+    (base : BaseRel) (Γ Δ Θ : Multiset MyProp) : Prop :=
+  IsBaseMultiset Δ ∧ base Γ Θ ∧ ¬ base (Γ + Δ) Θ
+
+theorem not_antecedentMonotone_of_fails
+    {base : BaseRel} {Γ Δ Θ : Multiset MyProp}
+    (hfail : FailsAntecedentStrengthening base Γ Δ Θ) :
+    ¬ BaseRelAntecedentMonotone base := by
+  intro hmono
+  exact hfail.2.2 (hmono hfail.1 hfail.2.1)
+
+/--
+An admissible update relation between material bases.  Unlike
+`BaseRelExtends`, this carries no monotonicity assumption: it is the right place
+to model defeasible update, revision, or adding information that can defeat
+old material reasons.
+-/
+abbrev AdmissibleBaseUpdate := BaseRel → BaseRel → Prop
+
+/-- The special update relation given by ordinary monotone extension. -/
+def monotoneBaseUpdate : AdmissibleBaseUpdate :=
+  BaseRelExtends
+
+/-- An update regime is monotone when every admissible update is base inclusion. -/
+def BaseUpdateMonotone (U : AdmissibleBaseUpdate) : Prop :=
+  ∀ ⦃base base' : BaseRel⦄, U base base' → BaseRelExtends base base'
+
+/-- An update regime is reflexive when each base is an admissible update of itself. -/
+def BaseUpdateReflexive (U : AdmissibleBaseUpdate) : Prop :=
+  ∀ base : BaseRel, U base base
+
+/--
+An update regime is transitive when admissible update histories can be
+composed.  This is a base-level analogue of path composition; it should not be
+confused with proof-theoretic cut.
+-/
+def BaseUpdateTransitive (U : AdmissibleBaseUpdate) : Prop :=
+  ∀ ⦃base₁ base₂ base₃ : BaseRel⦄,
+    U base₁ base₂ → U base₂ base₃ → U base₁ base₃
+
+theorem monotoneBaseUpdate_monotone :
+    BaseUpdateMonotone monotoneBaseUpdate := by
+  intro base base' h
+  exact h
+
+theorem monotoneBaseUpdate_reflexive :
+    BaseUpdateReflexive monotoneBaseUpdate := by
+  intro base
+  exact BaseRelExtends_refl base
+
+theorem monotoneBaseUpdate_transitive :
+    BaseUpdateTransitive monotoneBaseUpdate := by
+  intro base₁ base₂ base₃ h₁₂ h₂₃
+  exact BaseRelExtends_trans h₁₂ h₂₃
+
+namespace NMMS
+
+/--
+Lift an `NMMS` derivation across an extension of the primitive base relation.
+
+This is the fundamental proof-theoretic monotonicity-in-the-background result:
+when the primitive base axioms are extended, every old derivation remains a
+valid derivation over the larger base.
+-/
+def mapBase
+    {base base' : BaseRel}
+    (h : BaseRelExtends base base') :
+    {s : MultiSequent} → NMMS base s → NMMS base' s
+  | _, @NMMS.baseAx _ Γ Θ hb =>
+      NMMS.baseAx (h hb)
+  | _, @NMMS.imp_l _ A B Γ Θ d₁ d₂ =>
+      NMMS.imp_l (mapBase h d₁) (mapBase h d₂)
+  | _, @NMMS.imp_r _ A B Γ Θ d =>
+      NMMS.imp_r (mapBase h d)
+  | _, @NMMS.conj_l _ A B Γ Θ d =>
+      NMMS.conj_l (mapBase h d)
+  | _, @NMMS.conj_r _ A B Γ Θ d₁ d₂ =>
+      NMMS.conj_r (mapBase h d₁) (mapBase h d₂)
+  | _, @NMMS.disj_l _ A B Γ Θ d₁ d₂ =>
+      NMMS.disj_l (mapBase h d₁) (mapBase h d₂)
+  | _, @NMMS.disj_r _ A B Γ Θ d =>
+      NMMS.disj_r (mapBase h d)
+  | _, @NMMS.neg_l _ A Γ Θ d =>
+      NMMS.neg_l (mapBase h d)
+  | _, @NMMS.neg_r _ A Γ Θ d =>
+      NMMS.neg_r (mapBase h d)
+
+@[simp] theorem toTree_mapBase
+    {base base' : BaseRel}
+    (h : BaseRelExtends base base')
+    {s : MultiSequent} (d : NMMS base s) :
+    NMMS.toTree (mapBase h d) = NMMS.toTree d := by
+  induction d <;> simp [NMMS.toTree, mapBase, *]
+
+end NMMS
+
+/-- A sequent is derivable over a material base when it has an `NMMS` proof. -/
+def DerivableSequent (base : BaseRel) (s : MultiSequent) : Prop :=
+  Nonempty (NMMS base s)
+
+theorem derivableSequent_of_derivation
+    {base : BaseRel} {s : MultiSequent}
+    (d : NMMS base s) :
+    DerivableSequent base s :=
+  ⟨d⟩
+
+/--
+Logical closure is monotone in the background material base: extending the
+primitive material axioms preserves existing derivations.  This is different
+from antecedent weakening inside a fixed base.
+-/
+theorem derivableSequent_mono
+    {base base' : BaseRel}
+    (h : BaseRelExtends base base')
+    {s : MultiSequent}
+    (hs : DerivableSequent base s) :
+    DerivableSequent base' s := by
+  rcases hs with ⟨d⟩
+  exact ⟨NMMS.mapBase h d⟩
+
+/--
+Stability of a sequent under a chosen regime of admissible base updates.
+
+For `monotoneBaseUpdate`, this is ordinary persistence under base inclusion.
+For a genuinely defeasible update relation, this is the semantic place where
+survival/failure under context or base change is recorded.
+-/
+def SequentStableUnderUpdates
+    (U : AdmissibleBaseUpdate) (base : BaseRel) (s : MultiSequent) : Prop :=
+  ∀ ⦃base' : BaseRel⦄, U base base' → DerivableSequent base' s
+
+/--
+Formula-level stability over a fixed antecedent context.  This is the external
+semantic reading that the object-language marker `mon A` is intended to
+express, without adding global weakening as a structural rule.
+-/
+def FormulaStableUnderUpdates
+    (U : AdmissibleBaseUpdate) (base : BaseRel)
+    (Γ : Multiset MyProp) (A : MyProp) : Prop :=
+  SequentStableUnderUpdates U base (Γ ∣∼ ({A} : Multiset MyProp))
+
+theorem sequentStableUnderMonotoneUpdate_of_derivable
+    {base : BaseRel} {s : MultiSequent}
+    (hs : DerivableSequent base s) :
+    SequentStableUnderUpdates monotoneBaseUpdate base s := by
+  intro base' h
+  exact derivableSequent_mono h hs
+
+theorem derivableSequent_of_stableUnderUpdates
+    {U : AdmissibleBaseUpdate} {base : BaseRel} {s : MultiSequent}
+    (hrefl : U base base)
+    (hstable : SequentStableUnderUpdates U base s) :
+    DerivableSequent base s :=
+  hstable hrefl
+
+/--
+A proof tree is derivable over `base` when it is the forgetful image of some
+`NMMS` derivation over that base relation.
+-/
+def DerivableTree (base : BaseRel) (t : PTree) : Prop :=
+  ∃ s : MultiSequent, ∃ d : NMMS base s, NMMS.toTree d = t
+
+theorem derivableTree_of_derivation
+    {base : BaseRel} {s : MultiSequent}
+    (d : NMMS base s) :
+    DerivableTree base (NMMS.toTree d) := by
+  exact ⟨s, d, rfl⟩
+
+theorem derivableTree_respectsRuleArity
+    {base : BaseRel} {t : PTree}
+    (ht : DerivableTree base t) :
+    PTree.RespectsRuleArity t := by
+  rcases ht with ⟨s, d, rfl⟩
+  exact toTree_respectsRuleArity d
+
+theorem derivableTree_conclusion
+    {base : BaseRel} {t : PTree}
+    (ht : DerivableTree base t) :
+    ∃ s : MultiSequent, t.conclusion = s := by
+  rcases ht with ⟨s, d, rfl⟩
+  exact ⟨s, toTree_conclusion d⟩
+
+/--
+Derivable proof trees are monotone with respect to extension of the primitive
+base relation.
+-/
+theorem derivableTree_mono
+    {base base' : BaseRel}
+    (h : BaseRelExtends base base')
+    {t : PTree}
+    (ht : DerivableTree base t) :
+    DerivableTree base' t := by
+  rcases ht with ⟨s, d, rfl⟩
+  exact ⟨s, NMMS.mapBase h d, NMMS.toTree_mapBase h d⟩
+
+/--
+Forest-level version of `DerivableTree`: every member tree is derivable over
+the chosen base relation.
+-/
+def DerivableForest (base : BaseRel) (f : Forest) : Prop :=
+  ∀ t, t ∈ f → DerivableTree base t
+
+theorem derivableForest_nil (base : BaseRel) :
+    DerivableForest base [] := by
+  intro t ht
+  simp at ht
+
+theorem derivableForest_cons
+    {base : BaseRel} {t : PTree} {f : Forest}
+    (ht : DerivableTree base t)
+    (hf : DerivableForest base f) :
+    DerivableForest base (t :: f) := by
+  intro u hu
+  simp at hu
+  rcases hu with rfl | hu
+  · exact ht
+  · exact hf u hu
+
+theorem derivableForest_mono
+    {base base' : BaseRel}
+    (h : BaseRelExtends base base')
+    {f : Forest}
+    (hf : DerivableForest base f) :
+    DerivableForest base' f := by
+  intro t ht
+  exact derivableTree_mono h (hf t ht)
 
 def IsImmediateSubtree (t u : PTree) : Prop :=
   u ∈ t.children
@@ -326,6 +666,86 @@ theorem child_size_lt_parent
           | inr hmem =>
               have := ih hmem
               omega
+
+namespace PTree
+
+theorem child_respectsRuleArity
+    {t c : PTree}
+    (ht : RespectsRuleArity t)
+    (hc : c ∈ t.children) :
+    RespectsRuleArity c := by
+  cases t with
+  | leaf s =>
+      simp [children] at hc
+  | node r s cs =>
+      have hnode :
+          cs.length = r.arity ∧
+            ∀ c, c ∈ cs → RespectsRuleArity c := by
+        simpa [RespectsRuleArity] using ht
+      exact hnode.2 c (by simpa [children] using hc)
+
+theorem getElem_respectsRuleArity
+    {r : RuleTag} {s : MultiSequent} {cs : List PTree}
+    (ht : RespectsRuleArity (PTree.node r s cs))
+    (i : Nat) (hi : i < cs.length) :
+    RespectsRuleArity cs[i] := by
+  exact child_respectsRuleArity ht (by
+    unfold children
+    exact List.getElem_mem (l := cs) hi)
+
+theorem respectsRuleArity_children_length
+    {r : RuleTag} {s : MultiSequent} {cs : List PTree}
+    (ht : RespectsRuleArity (PTree.node r s cs)) :
+    cs.length = r.arity := by
+  have hnode :
+      cs.length = r.arity ∧
+        ∀ c, c ∈ cs → RespectsRuleArity c := by
+    simpa [RespectsRuleArity] using ht
+  exact hnode.1
+
+theorem respectsRuleArity_isDyadic (t : PTree) :
+    RespectsRuleArity t → IsDyadic t := by
+  let P : Nat → Prop :=
+    fun n => ∀ t : PTree,
+      t.size = n → RespectsRuleArity t → IsDyadic t
+  have hP : ∀ n, (∀ m < n, P m) → P n := by
+    intro n ih t hsize h
+    cases t with
+    | leaf s =>
+        simp
+    | node r s cs =>
+        have hnode :
+            cs.length = r.arity ∧
+              ∀ c, c ∈ cs → RespectsRuleArity c := by
+          simpa [RespectsRuleArity] using h
+        rcases hnode with ⟨hlen, hchildren⟩
+        have hdy : cs.length ≤ 2 ∧ ∀ c, c ∈ cs → IsDyadic c := by
+          constructor
+          · rw [hlen]
+            exact RuleTag.arity_le_two r
+          · intro c hc
+            have hlt : c.size < (PTree.node r s cs).size := by
+              exact child_size_lt_parent (PTree.node r s cs) c (by
+                unfold IsImmediateSubtree PTree.children
+                simpa using hc)
+            have hcP : P c.size := ih c.size (by simpa [hsize] using hlt)
+            exact hcP c rfl (hchildren c hc)
+        simpa [IsDyadic] using hdy
+  have hstrong : ∀ n, P n := by
+    intro n
+    refine Nat.strong_induction_on n ?_
+    intro n ih
+    exact hP n ih
+  exact hstrong t.size t rfl
+
+end PTree
+
+theorem derivableTree_isDyadic
+    {base : BaseRel} {t : PTree}
+    (ht : DerivableTree base t) :
+    PTree.IsDyadic t :=
+  PTree.respectsRuleArity_isDyadic t
+    (derivableTree_respectsRuleArity ht)
 
 /-! ## Subtree navigation and address machinery -/
 
@@ -560,6 +980,45 @@ def isPrefixOf : Address → Address → Bool
 
 def comparableBool (a b : Address) : Bool :=
   isPrefixOf a b || isPrefixOf b a
+
+theorem isPrefixOf_eq_true_iff_isAncestorOf
+    (a b : Address) :
+    isPrefixOf a b = true ↔ isAncestorOf a b := by
+  induction a generalizing b with
+  | nil =>
+      constructor
+      · intro _
+        exact ⟨b, by simp [isAncestorOf]⟩
+      · intro _
+        rfl
+  | cons x xs ih =>
+      cases b with
+      | nil =>
+          constructor
+          · intro h
+            simp [isPrefixOf] at h
+          · intro h
+            rcases h with ⟨c, hc⟩
+            simp at hc
+      | cons y ys =>
+          constructor
+          · intro h
+            simp [isPrefixOf] at h
+            rcases h with ⟨hxy, htail⟩
+            subst hxy
+            rcases (ih ys).mp htail with ⟨c, hc⟩
+            exact ⟨c, by simp [isAncestorOf, hc]⟩
+          · intro h
+            rcases h with ⟨c, hc⟩
+            cases hc
+            have htail : isPrefixOf xs (xs ++ c) = true :=
+              (ih (xs ++ c)).mpr ⟨c, rfl⟩
+            simp [isPrefixOf, htail]
+
+theorem comparableBool_eq_true_iff_comparable
+    (a b : Address) :
+    comparableBool a b = true ↔ comparable a b := by
+  simp [comparableBool, comparable, isPrefixOf_eq_true_iff_isAncestorOf]
 
 def allAddressesGo : Nat → PTree → Address → List Address
   | 0, _, _ => []
@@ -1095,6 +1554,93 @@ noncomputable def leafGraftProductTree (u t : PTree) : GLCarrier :=
   have := congrArg (fun f => f t) h
   simp [treeGen] at this
 
+/-! ## Derivable-tree generators and their base-extension inclusions -/
+
+/--
+The set of tree generators coming from proof trees derivable over `base`.
+
+This is the first algebraic shadow of the proof-theoretic base relation: rather
+than taking all formal trees at once, we isolate the linear generators actually
+realized by derivations over the chosen primitive consequence relation.
+-/
+def derivableTreeGeneratorSet (base : BaseRel) : Set GLCarrier :=
+  {a | ∃ t : PTree, DerivableTree base t ∧ a = treeGen t}
+
+/--
+The ℤ-submodule generated by proof trees derivable over `base`.
+
+This is a natural candidate for the "reachable" or proof-theoretically
+meaningful part of the ambient Grossman-Larson carrier.
+-/
+def derivableTreeSubmodule (base : BaseRel) : Submodule ℤ GLCarrier :=
+  Submodule.span ℤ (derivableTreeGeneratorSet base)
+
+theorem treeGen_mem_derivableTreeGeneratorSet
+    {base : BaseRel} {t : PTree}
+    (ht : DerivableTree base t) :
+    treeGen t ∈ derivableTreeGeneratorSet base := by
+  exact ⟨t, ht, rfl⟩
+
+theorem treeGen_mem_derivableTreeSubmodule
+    {base : BaseRel} {t : PTree}
+    (ht : DerivableTree base t) :
+    treeGen t ∈ derivableTreeSubmodule base := by
+  exact Submodule.subset_span (treeGen_mem_derivableTreeGeneratorSet ht)
+
+/--
+Base-relation extension enlarges the derivable-tree generator set.
+-/
+theorem derivableTreeGeneratorSet_mono
+    {base base' : BaseRel}
+    (h : BaseRelExtends base base') :
+    derivableTreeGeneratorSet base ⊆ derivableTreeGeneratorSet base' := by
+  intro a ha
+  rcases ha with ⟨t, ht, rfl⟩
+  exact ⟨t, derivableTree_mono h ht, rfl⟩
+
+/--
+Base-relation extension enlarges the derivable-tree submodule.
+-/
+theorem derivableTreeSubmodule_mono
+    {base base' : BaseRel}
+    (h : BaseRelExtends base base') :
+    derivableTreeSubmodule base ≤ derivableTreeSubmodule base' := by
+  refine Submodule.span_le.mpr ?_
+  intro a ha
+  exact Submodule.subset_span (derivableTreeGeneratorSet_mono h ha)
+
+/--
+The canonical linear inclusion of the derivable-tree submodule for `base` into
+the one for `base'`, whenever `base'` extends `base`.
+
+This is the first concrete algebraic morphism induced by base extension in the
+current fixed-syntax setting.
+-/
+noncomputable def derivableTreeSubmoduleInclusion
+    {base base' : BaseRel}
+    (h : BaseRelExtends base base') :
+    derivableTreeSubmodule base →ₗ[ℤ] derivableTreeSubmodule base' :=
+  (derivableTreeSubmodule base).inclusion (derivableTreeSubmodule_mono h)
+
+@[simp] theorem derivableTreeSubmoduleInclusion_apply
+    {base base' : BaseRel}
+    (h : BaseRelExtends base base')
+    (x : derivableTreeSubmodule base) :
+    derivableTreeSubmoduleInclusion h x = ⟨x.1, derivableTreeSubmodule_mono h x.2⟩ := by
+  rfl
+
+@[simp] theorem derivableTreeSubmoduleInclusion_treeGen
+    {base base' : BaseRel}
+    (h : BaseRelExtends base base')
+    {t : PTree}
+    (ht : DerivableTree base t) :
+    derivableTreeSubmoduleInclusion h
+        ⟨treeGen t, treeGen_mem_derivableTreeSubmodule ht⟩ =
+      ⟨treeGen t,
+        treeGen_mem_derivableTreeSubmodule (derivableTree_mono h ht)⟩ := by
+  apply Subtype.ext
+  rfl
+
 /-! ## Auxiliary cut layer retained for possible future coproduct work -/
 
 namespace PTree
@@ -1141,10 +1687,84 @@ def isAntichainBool (addrs : List Address) : Bool :=
     |>.all id)
   |>.all id
 
+/-- The boolean antichain test enforces the structural comparability condition. -/
+theorem isAntichainBool_eq_true_implies
+    {addrs : List Address}
+    (hanti : isAntichainBool addrs = true) :
+    ∀ a, a ∈ addrs →
+      ∀ b, b ∈ addrs →
+        a ≠ b → ¬ comparable a b := by
+  intro a ha b hb hne hcomp
+  rcases List.getElem_of_mem ha with ⟨i, hi, haeq⟩
+  rcases List.getElem_of_mem hb with ⟨j, hj, hbeq⟩
+  have houter :
+      (addrs.mapIdx (fun j b =>
+        i == j || !comparableBool addrs[i] b)).all id = true := by
+    have hmem :
+        ((addrs.mapIdx (fun j b =>
+          i == j || !comparableBool addrs[i] b)).all id) ∈
+            addrs.mapIdx (fun i a =>
+              (addrs.mapIdx (fun j b =>
+                i == j || !comparableBool a b)).all id) := by
+      rw [List.mem_mapIdx]
+      refine ⟨i, hi, ?_⟩
+      rfl
+    exact (List.all_eq_true.mp hanti _ hmem)
+  have hinner :
+      i == j || !comparableBool addrs[i] addrs[j] = true := by
+    have hmem :
+        (i == j || !comparableBool addrs[i] addrs[j]) ∈
+            addrs.mapIdx (fun j b =>
+              i == j || !comparableBool addrs[i] b) := by
+      rw [List.mem_mapIdx]
+      refine ⟨j, hj, ?_⟩
+      rfl
+    exact (List.all_eq_true.mp houter _ hmem)
+  by_cases hij : i = j
+  · subst j
+    have hab : a = b := by
+      exact haeq.symm.trans hbeq
+    exact hne hab
+  · have hinnerFalse : comparableBool addrs[i] addrs[j] = false := by
+      simpa [hij] using hinner
+    have hcomp' : comparable addrs[i] addrs[j] := by
+      simpa [haeq, hbeq] using hcomp
+    have hcompBool :
+        comparableBool addrs[i] addrs[j] = true :=
+      (comparableBool_eq_true_iff_comparable addrs[i] addrs[j]).mpr hcomp'
+    simp [hinnerFalse] at hcompBool
+
 def allAdmissibleCuts (t : PTree) : List (List Address) :=
   (sublists (allAddresses t)).filter (fun cut =>
     cut.all (fun a => validAddress t a) &&
     isAntichainBool cut)
+
+/-- Every cut enumerated by `allAdmissibleCuts` is structurally admissible. -/
+def isAdmissibleCut_of_mem_allAdmissibleCuts
+    {t : PTree} {cut : List Address}
+    (hcut : cut ∈ allAdmissibleCuts t) :
+    IsAdmissibleCut t where
+  nodes := cut
+  valid := by
+    intro a ha
+    unfold allAdmissibleCuts at hcut
+    rcases List.mem_filter.mp hcut with ⟨_hsub, hbool⟩
+    have hvalid : cut.all (fun a => validAddress t a) = true := by
+      cases hv : cut.all (fun a => validAddress t a) <;>
+        cases hanti : isAntichainBool cut <;>
+          simp [hv, hanti] at hbool
+      rfl
+    exact List.all_eq_true.mp hvalid a ha
+  antichain := by
+    intro a ha b hb hne hcomp
+    unfold allAdmissibleCuts at hcut
+    rcases List.mem_filter.mp hcut with ⟨_hsub, hbool⟩
+    have hanti : isAntichainBool cut = true := by
+      cases hv : cut.all (fun a => validAddress t a) <;>
+        cases hanti : isAntichainBool cut <;>
+          simp [hv, hanti] at hbool
+      rfl
+    exact isAntichainBool_eq_true_implies hanti a ha b hb hne hcomp
 
 def coproductTerm (t : PTree) (cut : List Address) : Forest × PTree :=
   (cut.filterMap (subtreeAt t), remainderGo cut [] t)
@@ -1252,6 +1872,58 @@ theorem isBaseAdmissible_restrictCut
   apply hbase (i :: addr)
   · simpa using haddr
   · simp [PTree.subtreeAt, hi, hsubt]
+
+theorem comparable_cons_cons_of_comparable
+    {i : Nat} {a b : Address}
+    (h : comparable a b) :
+    comparable (i :: a) (i :: b) := by
+  cases h with
+  | inl ha =>
+      left
+      rcases ha with ⟨c, hc⟩
+      refine ⟨c, ?_⟩
+      simp [isAncestorOf, hc]
+  | inr hb =>
+      right
+      rcases hb with ⟨c, hc⟩
+      refine ⟨c, ?_⟩
+      simp [isAncestorOf, hc]
+
+/--
+Prop-level admissible cuts restrict along immediate premise subtrees.
+
+This is the structural proof-theoretic fact behind the boolean/list
+enumeration used by `allAdmissibleCuts`: cutting inside a child of a rule
+node gives an admissible cut of that child, and antichains are preserved
+because comparability is preserved by adding the common child prefix.
+-/
+def isAdmissibleCut_restrictCut
+    {s : MultiSequent} {r : RuleTag} {cs : List PTree}
+    (cut : IsAdmissibleCut (PTree.node r s cs))
+    (i : Nat) (hi : i < cs.length) :
+    IsAdmissibleCut cs[i] where
+  nodes := restrictCut cut.nodes i
+  valid := by
+    intro addr haddr
+    have hparentMem : i :: addr ∈ cut.nodes := by
+      simpa using
+        (mem_restrictCut_iff (cut := cut.nodes) (i := i) (addr := addr)).mp haddr
+    have hparentValid := cut.valid (i :: addr) hparentMem
+    unfold ValidAddress validAddress at hparentValid ⊢
+    simpa [subtreeAt, hi] using hparentValid
+  antichain := by
+    intro a ha b hb hne hcomp
+    have hpa : i :: a ∈ cut.nodes := by
+      simpa using
+        (mem_restrictCut_iff (cut := cut.nodes) (i := i) (addr := a)).mp ha
+    have hpb : i :: b ∈ cut.nodes := by
+      simpa using
+        (mem_restrictCut_iff (cut := cut.nodes) (i := i) (addr := b)).mp hb
+    have hpne : i :: a ≠ i :: b := by
+      intro h
+      exact hne (List.cons.inj h).2
+    exact cut.antichain (i :: a) hpa (i :: b) hpb hpne
+      (comparable_cons_cons_of_comparable hcomp)
 
 private theorem mapIdx_go_congr'
     {α β : Type _} :

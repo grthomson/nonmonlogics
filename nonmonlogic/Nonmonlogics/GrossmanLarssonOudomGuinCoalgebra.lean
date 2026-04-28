@@ -1,4 +1,4 @@
-import Mathlib.Algebra.NonAssoc.PreLie.Basic
+﻿import Mathlib.Algebra.NonAssoc.PreLie.Basic
 import Mathlib.Algebra.NonAssoc.LieAdmissible.Defs
 import Mathlib.Algebra.Lie.UniversalEnveloping
 import Mathlib.LinearAlgebra.TensorProduct.Basic
@@ -93,6 +93,136 @@ noncomputable def stableUEA_OGPrimitiveGeneratorComulData :
   rfl
 
 /--
+The primitive UEA comultiplication already factors through the stable quotient.
+
+This is the quotient-level linear map
+`q ↦ ι(q) ⊗ 1 + 1 ⊗ ι(q)`.  Proving the raw generator-linear map factors
+through this map is what makes the primitive OG coalgebra live on the correct
+quotient carrier rather than on arbitrary raw proof-tree combinations.
+-/
+noncomputable def stableUEA_OGPrimitiveComulFromStableQuotient :
+    PreLieDifferenceStableQuotient →ₗ[ℤ] stableUEATensor where
+  toFun := fun q =>
+    TensorProduct.tmul ℤ (preLieDifferenceStableQuotientUEA_ι_linear q) 1 +
+      TensorProduct.tmul ℤ 1 (preLieDifferenceStableQuotientUEA_ι_linear q)
+  map_add' := by
+    intro q r
+    simp [LinearMap.map_add, TensorProduct.add_tmul, TensorProduct.tmul_add,
+      add_assoc, add_left_comm, add_comm]
+  map_smul' := by
+    intro z q
+    simp only [LinearMap.map_smul, RingHom.id_apply]
+    let v := preLieDifferenceStableQuotientUEA_ι_linear q
+    change
+      (z • v) ⊗ₜ[ℤ] (1 : preLieDifferenceStableQuotientUEA) +
+          (1 : preLieDifferenceStableQuotientUEA) ⊗ₜ[ℤ] (z • v) =
+        z •
+          (v ⊗ₜ[ℤ] (1 : preLieDifferenceStableQuotientUEA) +
+            (1 : preLieDifferenceStableQuotientUEA) ⊗ₜ[ℤ] v)
+    have hleft :
+        (z • v) ⊗ₜ[ℤ] (1 : preLieDifferenceStableQuotientUEA) =
+          z • (v ⊗ₜ[ℤ] (1 : preLieDifferenceStableQuotientUEA)) := by
+      exact (TensorProduct.smul_tmul' (R := ℤ) z v
+        (1 : preLieDifferenceStableQuotientUEA)).symm
+    have hright :
+        (1 : preLieDifferenceStableQuotientUEA) ⊗ₜ[ℤ] (z • v) =
+          z • ((1 : preLieDifferenceStableQuotientUEA) ⊗ₜ[ℤ] v) := by
+      calc
+        (1 : preLieDifferenceStableQuotientUEA) ⊗ₜ[ℤ] (z • v)
+            = (z • (1 : preLieDifferenceStableQuotientUEA)) ⊗ₜ[ℤ] v := by
+              rw [TensorProduct.tmul_smul]
+              exact (TensorProduct.smul_tmul' (R := ℤ) z
+                (1 : preLieDifferenceStableQuotientUEA) v)
+        _ = z • ((1 : preLieDifferenceStableQuotientUEA) ⊗ₜ[ℤ] v) := by
+              exact (TensorProduct.smul_tmul' (R := ℤ) z
+                (1 : preLieDifferenceStableQuotientUEA) v).symm
+    calc
+      (z • v) ⊗ₜ[ℤ] (1 : preLieDifferenceStableQuotientUEA) +
+          (1 : preLieDifferenceStableQuotientUEA) ⊗ₜ[ℤ] (z • v) =
+        z • (v ⊗ₜ[ℤ] (1 : preLieDifferenceStableQuotientUEA)) +
+          z • ((1 : preLieDifferenceStableQuotientUEA) ⊗ₜ[ℤ] v) := by
+          rw [hleft, hright]
+      _ =
+        z •
+          (v ⊗ₜ[ℤ] (1 : preLieDifferenceStableQuotientUEA) +
+            (1 : preLieDifferenceStableQuotientUEA) ⊗ₜ[ℤ] v) := by
+          exact (smul_add z
+            (v ⊗ₜ[ℤ] (1 : preLieDifferenceStableQuotientUEA))
+            ((1 : preLieDifferenceStableQuotientUEA) ⊗ₜ[ℤ] v)).symm
+
+@[simp] theorem stableUEA_OGPrimitiveComulFromStableQuotient_mk_treeGen
+    (x : PTree) :
+    stableUEA_OGPrimitiveComulFromStableQuotient
+        (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen x) := by
+  rw [stableUEA_treeGen_eq_ι]
+  rfl
+
+/--
+The raw primitive generator-linear comultiplication is exactly the quotient
+primitive comultiplication after applying the stable quotient map.
+-/
+theorem stableUEA_OGPrimitive_comul_linear_factor
+    (a : linearProofTreeCarrier) :
+    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData a =
+      stableUEA_OGPrimitiveComulFromStableQuotient
+        (mkPreLieDifferenceStableQuotient a) := by
+  classical
+  refine Finsupp.induction_linear a ?_ ?_ ?_
+  · simp [stableUEA_OGPrimitiveComulFromStableQuotient]
+  · intro a b ha hb
+    calc
+      stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData (a + b) =
+          stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData a +
+            stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData b := by
+            simp
+      _ =
+          stableUEA_OGPrimitiveComulFromStableQuotient
+              (mkPreLieDifferenceStableQuotient a) +
+            stableUEA_OGPrimitiveComulFromStableQuotient
+              (mkPreLieDifferenceStableQuotient b) := by
+            rw [ha, hb]
+      _ =
+          stableUEA_OGPrimitiveComulFromStableQuotient
+            (mkPreLieDifferenceStableQuotient (a + b)) := by
+            simp
+  · intro x n
+    have htree :
+        stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData
+            (treeGen x) =
+          stableUEA_OGPrimitiveComulFromStableQuotient
+            (mkPreLieDifferenceStableQuotient (treeGen x)) := by
+      simp
+    have hn :
+        stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData
+            (n • treeGen x) =
+          stableUEA_OGPrimitiveComulFromStableQuotient
+            (mkPreLieDifferenceStableQuotient (n • treeGen x)) := by
+      calc
+        stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData
+            (n • treeGen x) =
+          n • stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData
+            (treeGen x) := by
+            simp
+        _ =
+          n • stableUEA_OGPrimitiveComulFromStableQuotient
+            (mkPreLieDifferenceStableQuotient (treeGen x)) := by
+            rw [htree]
+        _ =
+          stableUEA_OGPrimitiveComulFromStableQuotient
+            (mkPreLieDifferenceStableQuotient (n • treeGen x)) := by
+            simp
+    simpa [treeGen] using hn
+
+theorem stableUEA_OGPrimitive_counit_linear_eq_zero :
+    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData = 0 := by
+  apply LinearMap.ext
+  intro a
+  rw [stableUEA_counit_linear_apply, LinearMap.zero_apply]
+  simp [stableUEA_OGPrimitiveGeneratorComulData]
+
+/--
 The actual quotient descent obligation for the Oudom-Guin primitive coalgebra.
 This is intentionally named as the gate: proving this is the next substantive
 well-definedness result, and it keeps us from pretending the raw CK product is
@@ -108,6 +238,32 @@ theorem stableUEA_OGPrimitiveRespectsStableQuotient_iff :
         stableUEA_OGPrimitiveGeneratorComulData := by
   rfl
 
+/--
+The primitive Oudom-Guin comultiplication respects the stable quotient.
+
+The proof is structural rather than combinatorial: the primitive formula factors
+through `mkPreLieDifferenceStableQuotient`, so every element of the stable
+submodule maps to zero.  This is exactly why the UEA carrier is the right
+coalgebra carrier.
+-/
+theorem stableUEA_OGPrimitiveRespectsStableQuotient_proof :
+    stableUEA_OGPrimitiveRespectsStableQuotient := by
+  intro a ha
+  constructor
+  · rw [stableUEA_OGPrimitive_comul_linear_factor]
+    have hq : mkPreLieDifferenceStableQuotient a = 0 := by
+      change
+        (Submodule.Quotient.mk a :
+          linearProofTreeCarrier ⧸ preLieDifferenceStableSubmodule) = 0
+      exact (Submodule.Quotient.mk_eq_zero
+        (p := preLieDifferenceStableSubmodule)).2 ha
+    rw [hq]
+    simp [stableUEA_OGPrimitiveComulFromStableQuotient]
+  · have hzero :=
+      congrFun
+        (congrArg DFunLike.coe stableUEA_OGPrimitive_counit_linear_eq_zero) a
+    simpa using hzero
+
 /-- The descended primitive comultiplication, conditional on the quotient gate. -/
 noncomputable def stableUEA_OGPrimitiveComultiplication
     (h : stableUEA_OGPrimitiveRespectsStableQuotient) :
@@ -121,6 +277,18 @@ noncomputable def stableUEA_OGPrimitiveComultiplicationPack
     StableQuotientComultiplicationPack :=
   stableUEA_comultiplication_descend_pack
     stableUEA_OGPrimitiveGeneratorComulData h
+
+/-- The descended primitive comultiplication using the proved quotient gate. -/
+noncomputable def stableUEA_OGPrimitiveComultiplicationCanonical :
+    StableQuotientComultiplication :=
+  stableUEA_OGPrimitiveComultiplication
+    stableUEA_OGPrimitiveRespectsStableQuotient_proof
+
+/-- The packaged descended primitive comultiplication using the proved quotient gate. -/
+noncomputable def stableUEA_OGPrimitiveComultiplicationPackCanonical :
+    StableQuotientComultiplicationPack :=
+  stableUEA_OGPrimitiveComultiplicationPack
+    stableUEA_OGPrimitiveRespectsStableQuotient_proof
 
 @[simp] theorem stableUEA_OGPrimitiveComultiplication_comul_treeGen
     (h : stableUEA_OGPrimitiveRespectsStableQuotient) (x : PTree) :
@@ -141,6 +309,112 @@ noncomputable def stableUEA_OGPrimitiveComultiplicationPack
     stableUEA_OGPrimitiveGeneratorComulData] using
     (stableUEA_comultiplication_descend_counit_on_generators
       stableUEA_OGPrimitiveGeneratorComulData h x)
+
+@[simp] theorem stableUEA_OGPrimitiveComultiplicationCanonical_comul_treeGen
+    (x : PTree) :
+    stableUEA_OGPrimitiveComultiplicationCanonical.comul
+        (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
+        TensorProduct.tmul Int 1 (stableUEA_treeGen x) := by
+  simpa [stableUEA_OGPrimitiveComultiplicationCanonical] using
+    stableUEA_OGPrimitiveComultiplication_comul_treeGen
+      stableUEA_OGPrimitiveRespectsStableQuotient_proof x
+
+@[simp] theorem stableUEA_OGPrimitiveComultiplicationCanonical_counit_treeGen
+    (x : PTree) :
+    stableUEA_OGPrimitiveComultiplicationCanonical.counit
+        (mkPreLieDifferenceStableQuotient (treeGen x)) = 0 := by
+  simpa [stableUEA_OGPrimitiveComultiplicationCanonical] using
+    stableUEA_OGPrimitiveComultiplication_counit_treeGen
+      stableUEA_OGPrimitiveRespectsStableQuotient_proof x
+
+@[simp] theorem stableUEA_OGPrimitiveComultiplication_comul_mk
+    (h : stableUEA_OGPrimitiveRespectsStableQuotient)
+    (a : linearProofTreeCarrier) :
+    (stableUEA_OGPrimitiveComultiplication h).comul
+        (mkPreLieDifferenceStableQuotient a) =
+      stableUEA_OGPrimitiveComulFromStableQuotient
+        (mkPreLieDifferenceStableQuotient a) := by
+  simp [stableUEA_OGPrimitiveComultiplication,
+    stableUEA_comultiplication_descend,
+    stableUEA_OGPrimitive_comul_linear_factor]
+
+@[simp] theorem stableUEA_OGPrimitiveComultiplication_counit_mk
+    (h : stableUEA_OGPrimitiveRespectsStableQuotient)
+    (a : linearProofTreeCarrier) :
+    (stableUEA_OGPrimitiveComultiplication h).counit
+        (mkPreLieDifferenceStableQuotient a) = 0 := by
+  simp [stableUEA_OGPrimitiveComultiplication,
+    stableUEA_comultiplication_descend,
+    stableUEA_OGPrimitive_counit_linear_eq_zero]
+
+theorem stableUEA_OGPrimitiveComultiplication_comul_eq_fromStableQuotient
+    (h : stableUEA_OGPrimitiveRespectsStableQuotient) :
+    (stableUEA_OGPrimitiveComultiplication h).comul =
+      stableUEA_OGPrimitiveComulFromStableQuotient := by
+  apply LinearMap.ext
+  intro q
+  induction q using Submodule.Quotient.induction_on with
+  | H a =>
+      exact stableUEA_OGPrimitiveComultiplication_comul_mk h a
+
+theorem stableUEA_OGPrimitiveComultiplication_counit_eq_zero
+    (h : stableUEA_OGPrimitiveRespectsStableQuotient) :
+    (stableUEA_OGPrimitiveComultiplication h).counit = 0 := by
+  apply LinearMap.ext
+  intro q
+  induction q using Submodule.Quotient.induction_on with
+  | H a =>
+      exact stableUEA_OGPrimitiveComultiplication_counit_mk h a
+
+theorem stableUEA_OGPrimitiveComultiplication_comul_apply
+    (h : stableUEA_OGPrimitiveRespectsStableQuotient)
+    (q : PreLieDifferenceStableQuotient) :
+    (stableUEA_OGPrimitiveComultiplication h).comul q =
+      TensorProduct.tmul ℤ
+          (preLieDifferenceStableQuotientUEA_ι_linear q) 1 +
+        TensorProduct.tmul ℤ 1
+          (preLieDifferenceStableQuotientUEA_ι_linear q) := by
+  rw [stableUEA_OGPrimitiveComultiplication_comul_eq_fromStableQuotient h]
+  rfl
+
+@[simp] theorem stableUEA_OGPrimitiveComultiplication_counit_apply
+    (h : stableUEA_OGPrimitiveRespectsStableQuotient)
+    (q : PreLieDifferenceStableQuotient) :
+    (stableUEA_OGPrimitiveComultiplication h).counit q = 0 := by
+  rw [stableUEA_OGPrimitiveComultiplication_counit_eq_zero h]
+  rfl
+
+theorem stableUEA_OGPrimitiveComultiplicationCanonical_comul_eq_fromStableQuotient :
+    stableUEA_OGPrimitiveComultiplicationCanonical.comul =
+      stableUEA_OGPrimitiveComulFromStableQuotient := by
+  simpa [stableUEA_OGPrimitiveComultiplicationCanonical] using
+    stableUEA_OGPrimitiveComultiplication_comul_eq_fromStableQuotient
+      stableUEA_OGPrimitiveRespectsStableQuotient_proof
+
+theorem stableUEA_OGPrimitiveComultiplicationCanonical_counit_eq_zero :
+    stableUEA_OGPrimitiveComultiplicationCanonical.counit = 0 := by
+  simpa [stableUEA_OGPrimitiveComultiplicationCanonical] using
+    stableUEA_OGPrimitiveComultiplication_counit_eq_zero
+      stableUEA_OGPrimitiveRespectsStableQuotient_proof
+
+theorem stableUEA_OGPrimitiveComultiplicationCanonical_comul_apply
+    (q : PreLieDifferenceStableQuotient) :
+    stableUEA_OGPrimitiveComultiplicationCanonical.comul q =
+      TensorProduct.tmul ℤ
+          (preLieDifferenceStableQuotientUEA_ι_linear q) 1 +
+        TensorProduct.tmul ℤ 1
+          (preLieDifferenceStableQuotientUEA_ι_linear q) := by
+  simpa [stableUEA_OGPrimitiveComultiplicationCanonical] using
+    stableUEA_OGPrimitiveComultiplication_comul_apply
+      stableUEA_OGPrimitiveRespectsStableQuotient_proof q
+
+@[simp] theorem stableUEA_OGPrimitiveComultiplicationCanonical_counit_apply
+    (q : PreLieDifferenceStableQuotient) :
+    stableUEA_OGPrimitiveComultiplicationCanonical.counit q = 0 := by
+  simpa [stableUEA_OGPrimitiveComultiplicationCanonical] using
+    stableUEA_OGPrimitiveComultiplication_counit_apply
+      stableUEA_OGPrimitiveRespectsStableQuotient_proof q
 
 end OudomGuinPrimitiveGenerators
 
@@ -195,10 +469,795 @@ address-level proof.
 The GL coproduct kills every pre-Lie difference generator.
 (Pending proof of the underlying combinatorial bijection on addresses.)
 -/
+def CoproductSupportNodeCutDecompositionClaim : Prop :=
+  ∀ (r : RuleTag) (s : MultiSequent) (cs : List PTree)
+      (cut : List Address),
+    cut ∈ PTree.allAdmissibleCuts (PTree.node r s cs) →
+      ([] ∈ cut) ∨
+        ([] ∉ cut ∧
+          ∀ i (hi : i < cs.length),
+            PTree.restrictCut cut i ∈ PTree.allAdmissibleCuts cs[i])
+
+/--
+The validity component of node-cut decomposition.
+
+If `cut` is an admissible cut of a node and an address survives restriction to
+child `i`, then that restricted address is valid in child `i`.  This is the
+first formal part of the full admissible-cut decomposition; the remaining
+pieces are preservation of the `sublists` order witness and the antichain
+condition under `restrictCut`.
+-/
+def CoproductSupportNodeCutValidityDecompositionClaim : Prop :=
+  ∀ (r : RuleTag) (s : MultiSequent) (cs : List PTree)
+      (cut : List Address),
+    cut ∈ PTree.allAdmissibleCuts (PTree.node r s cs) →
+      ∀ i (hi : i < cs.length) addr,
+        addr ∈ PTree.restrictCut cut i →
+          PTree.ValidAddress cs[i] addr
+
+/-- The validity component of node-cut decomposition is already provable. -/
+theorem CoproductSupportNodeCutValidityDecompositionClaim.proof :
+    CoproductSupportNodeCutValidityDecompositionClaim := by
+  intro r s cs cut hcut i hi addr haddr
+  unfold PTree.allAdmissibleCuts at hcut
+  rcases List.mem_filter.mp hcut with ⟨_hsub, hbool⟩
+  have hall :
+      cut.all (fun a => PTree.validAddress (PTree.node r s cs) a) = true :=
+    by
+      cases hvalid :
+          cut.all (fun a => PTree.validAddress (PTree.node r s cs) a) <;>
+        simp [hvalid] at hbool
+      rfl
+  have hparentMem : i :: addr ∈ cut := by
+    simpa using
+      (PTree.mem_restrictCut_iff (cut := cut) (i := i) (addr := addr)).mp haddr
+  have hparentValid :
+      PTree.validAddress (PTree.node r s cs) (i :: addr) = true :=
+    List.all_eq_true.mp hall (i :: addr) hparentMem
+  unfold PTree.ValidAddress PTree.validAddress at hparentValid ⊢
+  simpa [PTree.subtreeAt, hi] using hparentValid
+
+/--
+Prop-level node-cut decomposition.
+
+This is the induction-ready form of the admissible-cut step.  Unlike the
+finite boolean enumeration in `allAdmissibleCuts`, it directly states the
+mathematical invariant used in the height induction: an admissible cut of a
+rule node restricts to admissible cuts of each premise subtree.
+-/
+def CoproductSupportNodeCutPropDecompositionClaim : Type :=
+  ∀ (r : RuleTag) (s : MultiSequent) (cs : List PTree)
+      (cut : PTree.IsAdmissibleCut (PTree.node r s cs)),
+    ∀ i (hi : i < cs.length),
+      PTree.IsAdmissibleCut cs[i]
+
+/-- The Prop-level node decomposition follows from address-prefix preservation. -/
+def CoproductSupportNodeCutPropDecompositionClaim.proof :
+    CoproductSupportNodeCutPropDecompositionClaim := by
+  intro r s cs cut i hi
+  exact PTree.isAdmissibleCut_restrictCut cut i hi
+
+/--
+Derivation-level cut decomposition target.
+
+This is the proof-theoretic version of the node decomposition claim: for an
+actual `NMMS` derivation tree, either the admissible cut removes the root, or it
+restricts to admissible cuts of the immediate premise subderivations.  The
+children are therefore not arbitrary examples: their number and labels come
+from the inference rule constructor used at the root.
+-/
+def NMMSDerivationCutDecompositionClaim (base : BaseRel) : Prop :=
+  ∀ (s : MultiSequent) (d : NMMS base s) (cut : List Address),
+    cut ∈ PTree.allAdmissibleCuts (NMMS.toTree d) →
+      IsBaseAdmissible base (NMMS.toTree d) cut →
+        ([] ∈ cut) ∨
+          ([] ∉ cut ∧
+            ∀ i (hi : i < (NMMS.toTree d).children.length),
+              PTree.restrictCut cut i ∈
+                PTree.allAdmissibleCuts ((NMMS.toTree d).children[i]))
+
+/--
+The generic node decomposition claim specializes to derivation trees.  The leaf
+case is vacuous; each non-leaf case is one of the labelled `NMMS` rule
+constructors, with the corresponding child list.
+-/
+theorem NMMSDerivationCutDecompositionClaim.of_node_claim
+    {base : BaseRel}
+    (hnode : CoproductSupportNodeCutDecompositionClaim) :
+    NMMSDerivationCutDecompositionClaim base := by
+  intro s d cut hcut _hbase
+  cases htree : NMMS.toTree d with
+  | leaf s0 =>
+      by_cases hroot : [] ∈ cut
+      · exact Or.inl hroot
+      · refine Or.inr ⟨hroot, ?_⟩
+        intro i hi
+        simp [PTree.children] at hi
+  | node r s0 cs =>
+      simpa [htree, PTree.children] using
+        hnode r s0 cs cut (by simpa [htree] using hcut)
+
+/--
+For derivation trees whose admissible cuts are base-compatible, every term in
+the GL coproduct is again proof-theoretic: the trunk is a derivation tree and
+each branch in the forest is a derivation tree.
+-/
+def NMMSCoproductTermsDerivable (base : BaseRel) : Prop :=
+  ∀ (s : MultiSequent) (d : NMMS base s),
+    (∀ cut, IsBaseAdmissible base (NMMS.toTree d) cut) →
+      ∀ (f : Forest) (r : PTree),
+        (f, r) ∈ PTree.coproductData (NMMS.toTree d) →
+          DerivableForest base f ∧ DerivableTree base r
+
+/-- Existing subtree/remainder lemmas prove the coproduct terms are derivable. -/
+theorem NMMSCoproductTermsDerivable.proof {base : BaseRel} :
+    NMMSCoproductTermsDerivable base := by
+  intro s d hbase f r hmem
+  have h := coproduct_terms_are_subderivations d hbase f r hmem
+  constructor
+  · intro t ht
+    rcases h.2 t ht with ⟨s'', d'', ht'⟩
+    rw [ht']
+    exact derivableTree_of_derivation d''
+  · rcases h.1 with ⟨s', d', hr⟩
+    rw [hr]
+    exact derivableTree_of_derivation d'
+
+/--
+Height-bounded form of the main GL/pre-Lie compatibility theorem.
+
+The induction parameter is the total height of the three trees in the
+pre-Lie associator difference.  This is the theorem shape we want to prove
+by decomposing admissible cuts of a node into cuts of its child subtrees.
+-/
+def CoproductKillsPreLieDifferenceHeightClaim (n : Nat) : Prop :=
+  ∀ x y z : PTree,
+    PTree.height x + PTree.height y + PTree.height z ≤ n →
+      coproductSupportSummary_comul_linear
+        (preLieDifferenceGenerators x y z) = 0
+
+/--
+Rule-arity-respecting version of the same height-bounded target.
+
+This is the proof-theoretically honest induction domain: every node's child
+list has the arity dictated by its rule tag.  Arbitrary `PTree.node r s cs`
+values remain useful as combinatorial test data, but actual `NMMS` proof trees
+land in this class.
+-/
+def CoproductKillsPreLieDifferenceRuleArityHeightClaim (n : Nat) : Prop :=
+  ∀ x y z : PTree,
+    PTree.RespectsRuleArity x →
+      PTree.RespectsRuleArity y →
+        PTree.RespectsRuleArity z →
+          PTree.height x + PTree.height y + PTree.height z ≤ n →
+            coproductSupportSummary_comul_linear
+              (preLieDifferenceGenerators x y z) = 0
+
+/--
+Derivable-tree specialization of the height-bounded target.  This is the
+version closest to proof theory: the arity invariant is inherited from
+`NMMS.toTree`.
+-/
+def CoproductKillsPreLieDifferenceDerivableHeightClaim
+    (base : BaseRel) (n : Nat) : Prop :=
+  ∀ x y z : PTree,
+    DerivableTree base x →
+      DerivableTree base y →
+        DerivableTree base z →
+          PTree.height x + PTree.height y + PTree.height z ≤ n →
+            coproductSupportSummary_comul_linear
+              (preLieDifferenceGenerators x y z) = 0
+
+/-- Every proof tree has positive height. -/
+theorem pTree_height_pos (t : PTree) : 0 < PTree.height t := by
+  cases t with
+  | leaf _ =>
+      simp [PTree.height]
+  | node _ _ cs =>
+      cases cs with
+      | nil =>
+          simp [PTree.height]
+      | cons _ _ =>
+          simp [PTree.height]
+
+/-- Every proof tree has height at least one. -/
+theorem pTree_one_le_height (t : PTree) : 1 ≤ PTree.height t :=
+  Nat.succ_le_of_lt (pTree_height_pos t)
+
+/-- The total height of any triple of proof trees is at least three. -/
+theorem pTree_total_height_ge_three (x y z : PTree) :
+    3 ≤ PTree.height x + PTree.height y + PTree.height z := by
+  have hx : 1 ≤ PTree.height x := pTree_one_le_height x
+  have hy : 1 ≤ PTree.height y := pTree_one_le_height y
+  have hz : 1 ≤ PTree.height z := pTree_one_le_height z
+  omega
+
+/-- The total height of any triple of derivation trees is at least three. -/
+theorem NMMS_toTree_total_height_ge_three
+    {base : BaseRel} {sx sy sz : MultiSequent}
+    (dx : NMMS base sx) (dy : NMMS base sy) (dz : NMMS base sz) :
+    3 ≤
+      PTree.height (NMMS.toTree dx) +
+        PTree.height (NMMS.toTree dy) +
+          PTree.height (NMMS.toTree dz) := by
+  exact pTree_total_height_ge_three
+    (NMMS.toTree dx) (NMMS.toTree dy) (NMMS.toTree dz)
+
+/--
+The total height of three proof trees is never below three, so the bounded
+coproduct/pre-Lie compatibility claim is vacuous for `n < 3`.
+-/
+theorem CoproductKillsPreLieDifferenceHeightClaim.vacuous_of_lt_three
+    {n : Nat} (hn : n < 3) :
+    CoproductKillsPreLieDifferenceHeightClaim n := by
+  intro x y z hheight
+  have hx : 1 ≤ PTree.height x := pTree_one_le_height x
+  have hy : 1 ≤ PTree.height y := pTree_one_le_height y
+  have hz : 1 ≤ PTree.height z := pTree_one_le_height z
+  exfalso
+  omega
+
+/-- Rule-arity version of the vacuous small-height claim. -/
+theorem CoproductKillsPreLieDifferenceRuleArityHeightClaim.vacuous_of_lt_three
+    {n : Nat} (hn : n < 3) :
+    CoproductKillsPreLieDifferenceRuleArityHeightClaim n := by
+  intro x y z _hx _hy _hz hheight
+  exact
+    CoproductKillsPreLieDifferenceHeightClaim.vacuous_of_lt_three hn
+      x y z hheight
+
+/-- Derivable-tree version of the vacuous small-height claim. -/
+theorem CoproductKillsPreLieDifferenceDerivableHeightClaim.vacuous_of_lt_three
+    {base : BaseRel} {n : Nat} (hn : n < 3) :
+    CoproductKillsPreLieDifferenceDerivableHeightClaim base n := by
+  intro x y z _hx _hy _hz hheight
+  exact
+    CoproductKillsPreLieDifferenceHeightClaim.vacuous_of_lt_three hn
+      x y z hheight
+
+/-- Height-zero specialization of the vacuous bound. -/
+theorem CoproductKillsPreLieDifferenceHeightClaim.zero :
+    CoproductKillsPreLieDifferenceHeightClaim 0 :=
+  CoproductKillsPreLieDifferenceHeightClaim.vacuous_of_lt_three (by norm_num)
+
+/-- Height-one specialization of the vacuous bound. -/
+theorem CoproductKillsPreLieDifferenceHeightClaim.one :
+    CoproductKillsPreLieDifferenceHeightClaim 1 :=
+  CoproductKillsPreLieDifferenceHeightClaim.vacuous_of_lt_three (by norm_num)
+
+/-- Height-two specialization of the vacuous bound. -/
+theorem CoproductKillsPreLieDifferenceHeightClaim.two :
+    CoproductKillsPreLieDifferenceHeightClaim 2 :=
+  CoproductKillsPreLieDifferenceHeightClaim.vacuous_of_lt_three (by norm_num)
+
+/-- Rule-arity height-zero specialization of the vacuous bound. -/
+theorem CoproductKillsPreLieDifferenceRuleArityHeightClaim.zero :
+    CoproductKillsPreLieDifferenceRuleArityHeightClaim 0 :=
+  CoproductKillsPreLieDifferenceRuleArityHeightClaim.vacuous_of_lt_three
+    (by norm_num)
+
+/-- Rule-arity height-one specialization of the vacuous bound. -/
+theorem CoproductKillsPreLieDifferenceRuleArityHeightClaim.one :
+    CoproductKillsPreLieDifferenceRuleArityHeightClaim 1 :=
+  CoproductKillsPreLieDifferenceRuleArityHeightClaim.vacuous_of_lt_three
+    (by norm_num)
+
+/-- Rule-arity height-two specialization of the vacuous bound. -/
+theorem CoproductKillsPreLieDifferenceRuleArityHeightClaim.two :
+    CoproductKillsPreLieDifferenceRuleArityHeightClaim 2 :=
+  CoproductKillsPreLieDifferenceRuleArityHeightClaim.vacuous_of_lt_three
+    (by norm_num)
+
+/-- Derivable-tree height-zero specialization of the vacuous bound. -/
+theorem CoproductKillsPreLieDifferenceDerivableHeightClaim.zero
+    {base : BaseRel} :
+    CoproductKillsPreLieDifferenceDerivableHeightClaim base 0 :=
+  CoproductKillsPreLieDifferenceDerivableHeightClaim.vacuous_of_lt_three
+    (by norm_num)
+
+/-- Derivable-tree height-one specialization of the vacuous bound. -/
+theorem CoproductKillsPreLieDifferenceDerivableHeightClaim.one
+    {base : BaseRel} :
+    CoproductKillsPreLieDifferenceDerivableHeightClaim base 1 :=
+  CoproductKillsPreLieDifferenceDerivableHeightClaim.vacuous_of_lt_three
+    (by norm_num)
+
+/-- Derivable-tree height-two specialization of the vacuous bound. -/
+theorem CoproductKillsPreLieDifferenceDerivableHeightClaim.two
+    {base : BaseRel} :
+    CoproductKillsPreLieDifferenceDerivableHeightClaim base 2 :=
+  CoproductKillsPreLieDifferenceDerivableHeightClaim.vacuous_of_lt_three
+    (by norm_num)
+
+/--
+The unrestricted height statement immediately implies the rule-arity
+specialization.  Keeping this as a theorem lets us later reverse the dependency
+if the actual proof is carried out on rule-correct proof trees first.
+-/
+theorem CoproductKillsPreLieDifferenceRuleArityHeightClaim.of_unrestricted
+    (n : Nat)
+    (h : CoproductKillsPreLieDifferenceHeightClaim n) :
+    CoproductKillsPreLieDifferenceRuleArityHeightClaim n := by
+  intro x y z _hx _hy _hz hheight
+  exact h x y z hheight
+
+/--
+Derivable proof trees are rule-arity-respecting, so any arity-aware height
+claim applies to trees produced by the sequent calculus.
+-/
+theorem CoproductKillsPreLieDifferenceRuleArityHeightClaim.to_derivable
+    {base : BaseRel} {n : Nat}
+    (h : CoproductKillsPreLieDifferenceRuleArityHeightClaim n) :
+    CoproductKillsPreLieDifferenceDerivableHeightClaim base n := by
+  intro x y z hx hy hz hheight
+  exact h x y z
+    (derivableTree_respectsRuleArity hx)
+    (derivableTree_respectsRuleArity hy)
+    (derivableTree_respectsRuleArity hz)
+    hheight
+
+/-- Apply an arity-aware height claim directly to three `NMMS` derivations. -/
+theorem CoproductKillsPreLieDifferenceRuleArityHeightClaim.apply_toTree
+    {base : BaseRel} {n : Nat}
+    (h : CoproductKillsPreLieDifferenceRuleArityHeightClaim n)
+    {sx sy sz : MultiSequent}
+    (dx : NMMS base sx) (dy : NMMS base sy) (dz : NMMS base sz)
+    (hheight :
+      PTree.height (NMMS.toTree dx) +
+          PTree.height (NMMS.toTree dy) +
+            PTree.height (NMMS.toTree dz) ≤ n) :
+    coproductSupportSummary_comul_linear
+        (preLieDifferenceGenerators
+          (NMMS.toTree dx) (NMMS.toTree dy) (NMMS.toTree dz)) = 0 := by
+  exact h (NMMS.toTree dx) (NMMS.toTree dy) (NMMS.toTree dz)
+    (toTree_respectsRuleArity dx)
+    (toTree_respectsRuleArity dy)
+    (toTree_respectsRuleArity dz)
+    hheight
+
+/-- Apply a derivable-tree height claim directly to three `NMMS` derivations. -/
+theorem CoproductKillsPreLieDifferenceDerivableHeightClaim.apply_toTree
+    {base : BaseRel} {n : Nat}
+    (h : CoproductKillsPreLieDifferenceDerivableHeightClaim base n)
+    {sx sy sz : MultiSequent}
+    (dx : NMMS base sx) (dy : NMMS base sy) (dz : NMMS base sz)
+    (hheight :
+      PTree.height (NMMS.toTree dx) +
+          PTree.height (NMMS.toTree dy) +
+            PTree.height (NMMS.toTree dz) ≤ n) :
+    coproductSupportSummary_comul_linear
+        (preLieDifferenceGenerators
+          (NMMS.toTree dx) (NMMS.toTree dy) (NMMS.toTree dz)) = 0 := by
+  exact h (NMMS.toTree dx) (NMMS.toTree dy) (NMMS.toTree dz)
+    (derivableTree_of_derivation dx)
+    (derivableTree_of_derivation dy)
+    (derivableTree_of_derivation dz)
+    hheight
+
+/--
+The intended strong-induction step for the main coproduct compatibility proof.
+
+For a fixed total height `n`, every smaller triple is assumed already known.
+The node case should use `CoproductSupportNodeCutDecompositionClaim` to
+rewrite cuts of a parent tree as root/empty cuts plus cuts of child subtrees.
+-/
+def CoproductKillsPreLieDifferenceHeightStep (n : Nat) : Prop :=
+  (∀ x y z : PTree,
+      PTree.height x + PTree.height y + PTree.height z < n →
+        coproductSupportSummary_comul_linear
+          (preLieDifferenceGenerators x y z) = 0) →
+    ∀ x y z : PTree,
+      PTree.height x + PTree.height y + PTree.height z = n →
+        coproductSupportSummary_comul_linear
+          (preLieDifferenceGenerators x y z) = 0
+
+/--
+Strong-induction step restricted to rule-correct proof trees.  This is the
+step we ultimately want to discharge from the cut decomposition plus the
+rule-specific child arities.
+-/
+def CoproductKillsPreLieDifferenceRuleArityHeightStep (n : Nat) : Prop :=
+  (∀ x y z : PTree,
+      PTree.RespectsRuleArity x →
+        PTree.RespectsRuleArity y →
+          PTree.RespectsRuleArity z →
+            PTree.height x + PTree.height y + PTree.height z < n →
+              coproductSupportSummary_comul_linear
+                (preLieDifferenceGenerators x y z) = 0) →
+    ∀ x y z : PTree,
+      PTree.RespectsRuleArity x →
+        PTree.RespectsRuleArity y →
+          PTree.RespectsRuleArity z →
+            PTree.height x + PTree.height y + PTree.height z = n →
+              coproductSupportSummary_comul_linear
+                (preLieDifferenceGenerators x y z) = 0
+
+/--
+Strong-induction step over actual `NMMS` derivations.
+
+This is stricter than the rule-arity tree step: the immediate subtrees are not
+merely arity-correct, but are the premise derivations of a labelled inference
+rule.  Its height measure is `NMMS.derivationHeight`, proved equal to
+`PTree.height (NMMS.toTree d)` in `GrossmanLarsson.lean`.
+-/
+def CoproductKillsPreLieDifferenceNMMSHeightStep
+    (base : BaseRel) (n : Nat) : Prop :=
+  (∀ (sx sy sz : MultiSequent)
+      (dx : NMMS base sx) (dy : NMMS base sy) (dz : NMMS base sz),
+      NMMS.derivationHeight dx +
+          NMMS.derivationHeight dy +
+            NMMS.derivationHeight dz < n →
+        coproductSupportSummary_comul_linear
+          (preLieDifferenceGenerators
+            (NMMS.toTree dx) (NMMS.toTree dy) (NMMS.toTree dz)) = 0) →
+    ∀ (sx sy sz : MultiSequent)
+      (dx : NMMS base sx) (dy : NMMS base sy) (dz : NMMS base sz),
+      NMMS.derivationHeight dx +
+          NMMS.derivationHeight dy +
+            NMMS.derivationHeight dz = n →
+        coproductSupportSummary_comul_linear
+          (preLieDifferenceGenerators
+            (NMMS.toTree dx) (NMMS.toTree dy) (NMMS.toTree dz)) = 0
+
+/--
+For total heights below three, the exact-height induction step is vacuous.
+This keeps the eventual induction proof focused on the first real cases.
+-/
+theorem CoproductKillsPreLieDifferenceHeightStep.vacuous_of_lt_three
+    {n : Nat} (hn : n < 3) :
+    CoproductKillsPreLieDifferenceHeightStep n := by
+  intro _ih x y z hheight
+  have hx : 1 ≤ PTree.height x := pTree_one_le_height x
+  have hy : 1 ≤ PTree.height y := pTree_one_le_height y
+  have hz : 1 ≤ PTree.height z := pTree_one_le_height z
+  exfalso
+  omega
+
+/-- Rule-arity version of the vacuous small exact-height induction step. -/
+theorem CoproductKillsPreLieDifferenceRuleArityHeightStep.vacuous_of_lt_three
+    {n : Nat} (hn : n < 3) :
+    CoproductKillsPreLieDifferenceRuleArityHeightStep n := by
+  intro _ih x y z _hx _hy _hz hheight
+  have hx : 1 ≤ PTree.height x := pTree_one_le_height x
+  have hy : 1 ≤ PTree.height y := pTree_one_le_height y
+  have hz : 1 ≤ PTree.height z := pTree_one_le_height z
+  exfalso
+  omega
+
+/-- NMMS-derivation version of the vacuous small exact-height induction step. -/
+theorem CoproductKillsPreLieDifferenceNMMSHeightStep.vacuous_of_lt_three
+    {base : BaseRel} {n : Nat} (hn : n < 3) :
+    CoproductKillsPreLieDifferenceNMMSHeightStep base n := by
+  intro _ih sx sy sz dx dy dz hheight
+  have hge : 3 ≤
+      NMMS.derivationHeight dx +
+        NMMS.derivationHeight dy +
+          NMMS.derivationHeight dz := by
+    rw [← NMMS.height_toTree_eq_derivationHeight dx,
+      ← NMMS.height_toTree_eq_derivationHeight dy,
+      ← NMMS.height_toTree_eq_derivationHeight dz]
+    exact NMMS_toTree_total_height_ge_three dx dy dz
+  exfalso
+  omega
+
+/--
+Strong induction wrapper for the unrestricted height statement.
+
+This proves the induction boilerplate once and for all: after the genuine
+node/leaf step is proved for every total height, the bounded theorem follows
+for all triples.  The only remaining mathematical content is therefore the
+`CoproductKillsPreLieDifferenceHeightStep` proof.
+-/
+theorem CoproductKillsPreLieDifferenceHeightClaim.of_steps
+    (hstep : ∀ n : Nat, CoproductKillsPreLieDifferenceHeightStep n) :
+    ∀ n : Nat, CoproductKillsPreLieDifferenceHeightClaim n := by
+  have h_exact :
+      ∀ n : Nat, ∀ x y z : PTree,
+        PTree.height x + PTree.height y + PTree.height z = n →
+          coproductSupportSummary_comul_linear
+            (preLieDifferenceGenerators x y z) = 0 := by
+    intro n
+    refine Nat.strong_induction_on n ?_
+    intro n ih x y z hheight
+    exact hstep n
+      (fun x' y' z' hlt =>
+        ih (PTree.height x' + PTree.height y' + PTree.height z') hlt
+          x' y' z' rfl)
+      x y z hheight
+  intro _n x y z _hheight
+  exact h_exact
+    (PTree.height x + PTree.height y + PTree.height z) x y z rfl
+
+/--
+Strong induction wrapper for the rule-arity-respecting height statement.
+
+This is the proof-theoretic version of the induction spine: the recursive
+calls stay inside `PTree.RespectsRuleArity`, exactly matching proof trees
+coming from the sequent calculus.
+-/
+theorem CoproductKillsPreLieDifferenceRuleArityHeightClaim.of_steps
+    (hstep : ∀ n : Nat, CoproductKillsPreLieDifferenceRuleArityHeightStep n) :
+    ∀ n : Nat, CoproductKillsPreLieDifferenceRuleArityHeightClaim n := by
+  have h_exact :
+      ∀ n : Nat, ∀ x y z : PTree,
+        PTree.RespectsRuleArity x →
+          PTree.RespectsRuleArity y →
+            PTree.RespectsRuleArity z →
+              PTree.height x + PTree.height y + PTree.height z = n →
+                coproductSupportSummary_comul_linear
+                  (preLieDifferenceGenerators x y z) = 0 := by
+    intro n
+    refine Nat.strong_induction_on n ?_
+    intro n ih x y z hx hy hz hheight
+    exact hstep n
+      (fun x' y' z' hx' hy' hz' hlt =>
+        ih (PTree.height x' + PTree.height y' + PTree.height z') hlt
+          x' y' z' hx' hy' hz' rfl)
+      x y z hx hy hz hheight
+  intro _n x y z hx hy hz _hheight
+  exact h_exact
+    (PTree.height x + PTree.height y + PTree.height z)
+    x y z hx hy hz rfl
+
+/--
+It suffices to prove the unrestricted induction step from total height three
+onward; the smaller exact-height steps are impossible.
+-/
+theorem CoproductKillsPreLieDifferenceHeightClaim.of_nonvacuous_steps
+    (hstep :
+      ∀ n : Nat, 3 ≤ n → CoproductKillsPreLieDifferenceHeightStep n) :
+    ∀ n : Nat, CoproductKillsPreLieDifferenceHeightClaim n :=
+  CoproductKillsPreLieDifferenceHeightClaim.of_steps
+    (fun n => by
+      by_cases hn : n < 3
+      · exact CoproductKillsPreLieDifferenceHeightStep.vacuous_of_lt_three hn
+      · exact hstep n (by omega))
+
+/--
+It suffices to prove the rule-arity induction step from total height three
+onward; the smaller exact-height steps are impossible.
+-/
+theorem CoproductKillsPreLieDifferenceRuleArityHeightClaim.of_nonvacuous_steps
+    (hstep :
+      ∀ n : Nat, 3 ≤ n →
+        CoproductKillsPreLieDifferenceRuleArityHeightStep n) :
+    ∀ n : Nat, CoproductKillsPreLieDifferenceRuleArityHeightClaim n :=
+  CoproductKillsPreLieDifferenceRuleArityHeightClaim.of_steps
+    (fun n => by
+      by_cases hn : n < 3
+      · exact
+          CoproductKillsPreLieDifferenceRuleArityHeightStep.vacuous_of_lt_three
+            hn
+      · exact hstep n (by omega))
+
+/--
+Derivable-tree height theorem obtained from the rule-correct induction steps.
+This is the form that should be fed by an actual induction over `NMMS.toTree`.
+-/
+theorem CoproductKillsPreLieDifferenceDerivableHeightClaim.of_ruleArity_steps
+    {base : BaseRel}
+    (hstep : ∀ n : Nat, CoproductKillsPreLieDifferenceRuleArityHeightStep n) :
+    ∀ n : Nat, CoproductKillsPreLieDifferenceDerivableHeightClaim base n := by
+  intro n
+  exact
+    CoproductKillsPreLieDifferenceRuleArityHeightClaim.to_derivable
+      (CoproductKillsPreLieDifferenceRuleArityHeightClaim.of_steps hstep n)
+
+/--
+Derivable-tree height theorem obtained from nonvacuous rule-correct induction
+steps.  This is the most precise current target for the proof-theoretic route:
+prove the genuine node/leaf step only for total height at least three.
+-/
+theorem CoproductKillsPreLieDifferenceDerivableHeightClaim.of_ruleArity_nonvacuous_steps
+    {base : BaseRel}
+    (hstep :
+      ∀ n : Nat, 3 ≤ n →
+        CoproductKillsPreLieDifferenceRuleArityHeightStep n) :
+    ∀ n : Nat, CoproductKillsPreLieDifferenceDerivableHeightClaim base n := by
+  intro n
+  exact
+    CoproductKillsPreLieDifferenceRuleArityHeightClaim.to_derivable
+      (CoproductKillsPreLieDifferenceRuleArityHeightClaim.of_nonvacuous_steps
+        hstep n)
+
+/--
+Derivable-tree height theorem obtained directly from induction steps over
+`NMMS` derivations.  This is the route that treats height-one as base axioms and
+height-two-plus cases as labelled inference-rule applications with fixed arity.
+-/
+theorem CoproductKillsPreLieDifferenceDerivableHeightClaim.of_nmms_steps
+    {base : BaseRel}
+    (hstep :
+      ∀ n : Nat, CoproductKillsPreLieDifferenceNMMSHeightStep base n) :
+    ∀ n : Nat, CoproductKillsPreLieDifferenceDerivableHeightClaim base n := by
+  have h_exact :
+      ∀ n : Nat,
+        ∀ (sx sy sz : MultiSequent)
+          (dx : NMMS base sx) (dy : NMMS base sy) (dz : NMMS base sz),
+          NMMS.derivationHeight dx +
+              NMMS.derivationHeight dy +
+                NMMS.derivationHeight dz = n →
+            coproductSupportSummary_comul_linear
+              (preLieDifferenceGenerators
+                (NMMS.toTree dx) (NMMS.toTree dy) (NMMS.toTree dz)) = 0 := by
+    intro n
+    refine Nat.strong_induction_on n ?_
+    intro n ih sx sy sz dx dy dz hheight
+    exact hstep n
+      (fun sx' sy' sz' dx' dy' dz' hlt =>
+        ih
+          (NMMS.derivationHeight dx' +
+            NMMS.derivationHeight dy' +
+              NMMS.derivationHeight dz')
+          hlt sx' sy' sz' dx' dy' dz' rfl)
+      sx sy sz dx dy dz hheight
+  intro _n x y z hx hy hz _hheight
+  rcases hx with ⟨sx, dx, hx⟩
+  rcases hy with ⟨sy, dy, hy⟩
+  rcases hz with ⟨sz, dz, hz⟩
+  rw [← hx, ← hy, ← hz]
+  exact h_exact
+    (NMMS.derivationHeight dx +
+      NMMS.derivationHeight dy +
+        NMMS.derivationHeight dz)
+    sx sy sz dx dy dz rfl
+
+/--
+It is enough to prove the `NMMS` derivation step from total derivation height
+three onward; smaller exact-height triples are impossible.
+-/
+theorem CoproductKillsPreLieDifferenceDerivableHeightClaim.of_nmms_nonvacuous_steps
+    {base : BaseRel}
+    (hstep :
+      ∀ n : Nat, 3 ≤ n →
+        CoproductKillsPreLieDifferenceNMMSHeightStep base n) :
+    ∀ n : Nat, CoproductKillsPreLieDifferenceDerivableHeightClaim base n :=
+  CoproductKillsPreLieDifferenceDerivableHeightClaim.of_nmms_steps
+    (fun n => by
+      by_cases hn : n < 3
+      · exact CoproductKillsPreLieDifferenceNMMSHeightStep.vacuous_of_lt_three hn
+      · exact hstep n (by omega))
+
+/--
+The actual general-induction target for the GL coproduct compatibility theorem.
+
+This is deliberately the new home of the remaining combinatorial `sorry`:
+the proof should be a strong induction on total height, with the node case
+discharging the cut bijection by child-cut decomposition rather than by
+accumulating finite examples.
+-/
+theorem coproductSupportSummary_comul_linear_preLieDifferenceGenerators_height_induction :
+    ∀ n : Nat, CoproductKillsPreLieDifferenceHeightClaim n := by
+  exact
+    CoproductKillsPreLieDifferenceHeightClaim.of_steps
+      (fun _n => by
+        -- Remaining hard case: decompose admissible cuts of a node into
+        -- root cuts and child cuts, then match the two pre-Lie associator
+        -- sides by the address-level bijection.
+        sorry)
+
+theorem coproductSupportSummary_comul_linear_preLieDifferenceGenerators_ruleArity_height_induction
+    (hstep : ∀ n : Nat, CoproductKillsPreLieDifferenceRuleArityHeightStep n) :
+    ∀ n : Nat, CoproductKillsPreLieDifferenceRuleArityHeightClaim n :=
+  CoproductKillsPreLieDifferenceRuleArityHeightClaim.of_steps hstep
+
+theorem coproductSupportSummary_comul_linear_preLieDifferenceGenerators_derivable_height_induction
+    {base : BaseRel}
+    (hstep : ∀ n : Nat, CoproductKillsPreLieDifferenceRuleArityHeightStep n) :
+    ∀ n : Nat, CoproductKillsPreLieDifferenceDerivableHeightClaim base n :=
+  CoproductKillsPreLieDifferenceDerivableHeightClaim.of_ruleArity_steps hstep
+
+theorem coproductSupportSummary_comul_linear_preLieDifferenceGenerators_nmms_height_induction
+    {base : BaseRel}
+    (hstep :
+      ∀ n : Nat, CoproductKillsPreLieDifferenceNMMSHeightStep base n) :
+    ∀ n : Nat, CoproductKillsPreLieDifferenceDerivableHeightClaim base n :=
+  CoproductKillsPreLieDifferenceDerivableHeightClaim.of_nmms_steps hstep
+
+theorem coproductSupportSummary_comul_linear_preLieDifferenceGenerators_ruleArity_of_nonvacuous_steps
+    (hstep :
+      ∀ n : Nat, 3 ≤ n →
+        CoproductKillsPreLieDifferenceRuleArityHeightStep n)
+    (x y z : PTree)
+    (hx : PTree.RespectsRuleArity x)
+    (hy : PTree.RespectsRuleArity y)
+    (hz : PTree.RespectsRuleArity z) :
+    coproductSupportSummary_comul_linear
+        (preLieDifferenceGenerators x y z) = 0 := by
+  exact
+    CoproductKillsPreLieDifferenceRuleArityHeightClaim.of_nonvacuous_steps
+      hstep
+      (PTree.height x + PTree.height y + PTree.height z)
+      x y z hx hy hz le_rfl
+
+theorem coproductSupportSummary_comul_linear_preLieDifferenceGenerators_toTree_of_nonvacuous_steps
+    {base : BaseRel}
+    (hstep :
+      ∀ n : Nat, 3 ≤ n →
+        CoproductKillsPreLieDifferenceRuleArityHeightStep n)
+    {sx sy sz : MultiSequent}
+    (dx : NMMS base sx) (dy : NMMS base sy) (dz : NMMS base sz) :
+    coproductSupportSummary_comul_linear
+        (preLieDifferenceGenerators
+          (NMMS.toTree dx) (NMMS.toTree dy) (NMMS.toTree dz)) = 0 := by
+  exact
+    coproductSupportSummary_comul_linear_preLieDifferenceGenerators_ruleArity_of_nonvacuous_steps
+      hstep
+      (NMMS.toTree dx) (NMMS.toTree dy) (NMMS.toTree dz)
+      (toTree_respectsRuleArity dx)
+      (toTree_respectsRuleArity dy)
+      (toTree_respectsRuleArity dz)
+
+theorem coproductSupportSummary_comul_linear_preLieDifferenceGenerators_derivable_of_nonvacuous_steps
+    {base : BaseRel}
+    (hstep :
+      ∀ n : Nat, 3 ≤ n →
+        CoproductKillsPreLieDifferenceRuleArityHeightStep n)
+    (x y z : PTree)
+    (hx : DerivableTree base x)
+    (hy : DerivableTree base y)
+    (hz : DerivableTree base z) :
+    coproductSupportSummary_comul_linear
+        (preLieDifferenceGenerators x y z) = 0 := by
+  exact
+    CoproductKillsPreLieDifferenceDerivableHeightClaim.of_ruleArity_nonvacuous_steps
+      hstep
+    (PTree.height x + PTree.height y + PTree.height z)
+    x y z hx hy hz le_rfl
+
+theorem coproductSupportSummary_comul_linear_preLieDifferenceGenerators_toTree_of_nmms_nonvacuous_steps
+    {base : BaseRel}
+    (hstep :
+      ∀ n : Nat, 3 ≤ n →
+        CoproductKillsPreLieDifferenceNMMSHeightStep base n)
+    {sx sy sz : MultiSequent}
+    (dx : NMMS base sx) (dy : NMMS base sy) (dz : NMMS base sz) :
+    coproductSupportSummary_comul_linear
+        (preLieDifferenceGenerators
+          (NMMS.toTree dx) (NMMS.toTree dy) (NMMS.toTree dz)) = 0 := by
+  exact
+    CoproductKillsPreLieDifferenceDerivableHeightClaim.of_nmms_nonvacuous_steps
+      hstep
+      (PTree.height (NMMS.toTree dx) +
+        PTree.height (NMMS.toTree dy) +
+          PTree.height (NMMS.toTree dz))
+      (NMMS.toTree dx) (NMMS.toTree dy) (NMMS.toTree dz)
+      (derivableTree_of_derivation dx)
+      (derivableTree_of_derivation dy)
+      (derivableTree_of_derivation dz)
+      le_rfl
+
+theorem coproductSupportSummary_comul_linear_preLieDifferenceGenerators_derivable_of_nmms_nonvacuous_steps
+    {base : BaseRel}
+    (hstep :
+      ∀ n : Nat, 3 ≤ n →
+        CoproductKillsPreLieDifferenceNMMSHeightStep base n)
+    (x y z : PTree)
+    (hx : DerivableTree base x)
+    (hy : DerivableTree base y)
+    (hz : DerivableTree base z) :
+    coproductSupportSummary_comul_linear
+        (preLieDifferenceGenerators x y z) = 0 := by
+  exact
+    CoproductKillsPreLieDifferenceDerivableHeightClaim.of_nmms_nonvacuous_steps
+      hstep
+      (PTree.height x + PTree.height y + PTree.height z)
+      x y z hx hy hz le_rfl
+
+theorem coproductSupportSummary_comul_linear_preLieDifferenceGenerators_of_height_induction
+    (x y z : PTree) :
+    coproductSupportSummary_comul_linear
+      (preLieDifferenceGenerators x y z) = 0 := by
+  exact
+    coproductSupportSummary_comul_linear_preLieDifferenceGenerators_height_induction
+      (PTree.height x + PTree.height y + PTree.height z) x y z le_rfl
+
 theorem coproductSupportSummary_comul_linear_preLieDifferenceGenerators
     (x y z : PTree) :
     coproductSupportSummary_comul_linear (preLieDifferenceGenerators x y z) = 0 := by
-  sorry
+  exact
+    coproductSupportSummary_comul_linear_preLieDifferenceGenerators_of_height_induction
+      x y z
 
 /-!
 ### 2b. Stability: the kernel of comul_linear is stable under grafting
@@ -527,7 +1586,12 @@ theorem comul_quot_coassoc_tensor_nil (r : PTree) :
           (TensorProduct.tmul ℤ 0 (treeGen r)) = 0 := by
     simp
   rw [hmk]
-  simp [LinearMap.map_zero]
+  rw [LinearMap.map_zero, LinearMap.map_zero]
+  exact
+    (TensorProduct.assoc ℤ
+      PreLieDifferenceStableQuotient
+      PreLieDifferenceStableQuotient
+      PreLieDifferenceStableQuotient).map_zero.symm
 
 /--
 Linearity in the forest variable: if cut-tensor coassociativity holds for the
@@ -779,6 +1843,48 @@ theorem SingleTreeCutTensorCoassociativeWitness.tensor
   exact hw.toCutTensorCoassociative f r
 
 /--
+Assumption-driven tensor-level coassociativity: a full forest-level cut-tensor
+coassociativity hypothesis immediately yields the concrete tensor identity.
+-/
+theorem comul_quot_coassoc_tensor_of_cutTensorCoassociative
+    (hcut : CutTensorCoassociative) (f : Forest) (r : PTree) :
+    (LinearMap.lTensor PreLieDifferenceStableQuotient Δ_quot)
+        (mkPreLieDifferenceStableQuotient_tensor
+          (TensorProduct.tmul ℤ (forestGen f) (treeGen r))) =
+      (TensorProduct.assoc ℤ
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor PreLieDifferenceStableQuotient Δ_quot)
+          (mkPreLieDifferenceStableQuotient_tensor
+            (TensorProduct.tmul ℤ (forestGen f) (treeGen r)))) := by
+  exact hcut f r
+
+/--
+Assumption-driven tensor-level coassociativity from the reduced singleton-tree
+input.
+
+This packages the conceptual route used throughout the file: first prove the
+local singleton case, then upgrade to arbitrary forests by linearity.
+-/
+theorem comul_quot_coassoc_tensor_of_singleTreeCutTensorCoassociative
+    (hsing : SingleTreeCutTensorCoassociative)
+    (f : Forest) (r : PTree) :
+    (LinearMap.lTensor PreLieDifferenceStableQuotient Δ_quot)
+        (mkPreLieDifferenceStableQuotient_tensor
+          (TensorProduct.tmul ℤ (forestGen f) (treeGen r))) =
+      (TensorProduct.assoc ℤ
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient).toLinearMap
+        ((LinearMap.rTensor PreLieDifferenceStableQuotient Δ_quot)
+          (mkPreLieDifferenceStableQuotient_tensor
+            (TensorProduct.tmul ℤ (forestGen f) (treeGen r)))) := by
+  exact
+    comul_quot_coassoc_tensor_of_cutTensorCoassociative
+      (cutTensorCoassociative_of_singleTreeCutTensorCoassociative hsing) f r
+
+/--
 Coassociativity at the level of a single admissible-cut tensor `mk(fg f) ⊗ mk(tg r)`:
 applying `lTensor Δ` (id ⊗ Δ) gives the same result as applying
 `assoc ∘ rTensor Δ` (assoc ∘ (Δ ⊗ id)).
@@ -953,7 +2059,1577 @@ theorem coproductSupportSummary_comul_quot_coassoc :
 
 end Coassociativity
 
-/-! ## 6. Instantiation of the coalgebra axioms structure
+/-! ## 6. Honest coassociative quotient-comultiplication package
+
+At this stage of the development, the comultiplication side is much further
+along than the counit side:
+
+- the quotient comultiplication is defined;
+- its coassociativity reduces to the cut-tensor theorem, and can therefore be
+  packaged under explicit witnesses;
+- the currently bundled counit is still the placeholder zero map, so the full
+  coalgebra laws are not yet honestly available.
+
+To avoid over-packaging, we isolate the part that is already mathematically
+sound: a descended quotient comultiplication together with its coassociativity.
+-/
+
+section CoassociativeComulPackage
+
+/--
+Minimal honest package currently available in the quotient-first development:
+the descended quotient comultiplication together with its coassociativity.
+
+This avoids claiming counit axioms before the counit definition is repaired.
+-/
+structure CoproductSupportQuotientCoassociativeComul where
+  h : CoproductSupportCoalgebraRespectsStableQuotient
+    coproductSupportSummary_coalgebraData
+  coassoc :
+    LinearMap.comp
+        (LinearMap.comp
+          (TensorProduct.assoc ℤ
+            PreLieDifferenceStableQuotient
+            PreLieDifferenceStableQuotient
+            PreLieDifferenceStableQuotient).toLinearMap
+          (LinearMap.rTensor
+            PreLieDifferenceStableQuotient
+            (coproductSupportSummary_comul_quot h)))
+        (coproductSupportSummary_comul_quot h) =
+      LinearMap.comp
+        (LinearMap.lTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot h))
+        (coproductSupportSummary_comul_quot h)
+
+noncomputable def CoproductSupportQuotientCoassociativeComul.comul
+    (H : CoproductSupportQuotientCoassociativeComul) :
+    LinearMap (RingHom.id ℤ) PreLieDifferenceStableQuotient
+      (TensorProduct ℤ PreLieDifferenceStableQuotient PreLieDifferenceStableQuotient) :=
+  coproductSupportSummary_comul_quot H.h
+
+@[simp] theorem CoproductSupportQuotientCoassociativeComul.comul_apply
+    (H : CoproductSupportQuotientCoassociativeComul)
+    (a : PreLieDifferenceStableQuotient) :
+    H.comul a = coproductSupportSummary_comul_quot H.h a := by
+  rfl
+
+@[simp] theorem CoproductSupportQuotientCoassociativeComul.comul_mk
+    (H : CoproductSupportQuotientCoassociativeComul)
+    (a : linearProofTreeCarrier) :
+    H.comul (mkPreLieDifferenceStableQuotient a) =
+      mkPreLieDifferenceStableQuotient_tensor
+        (coproductSupportSummary_comul_linear a) := by
+  simp [CoproductSupportQuotientCoassociativeComul.comul,
+    coproductSupportSummary_comul_quot_mk]
+
+theorem CoproductSupportQuotientCoassociativeComul.coassoc_apply
+    (H : CoproductSupportQuotientCoassociativeComul)
+    (a : PreLieDifferenceStableQuotient) :
+    (LinearMap.comp
+        (LinearMap.comp
+          (TensorProduct.assoc ℤ
+            PreLieDifferenceStableQuotient
+            PreLieDifferenceStableQuotient
+            PreLieDifferenceStableQuotient).toLinearMap
+          (LinearMap.rTensor
+            PreLieDifferenceStableQuotient
+            (coproductSupportSummary_comul_quot H.h)))
+        (coproductSupportSummary_comul_quot H.h)) a =
+      (LinearMap.comp
+        (LinearMap.lTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot H.h))
+        (coproductSupportSummary_comul_quot H.h)) a := by
+  simpa using congrArg (fun f => f a) H.coassoc
+
+theorem CoproductSupportQuotientCoassociativeComul.coassoc_shorthand_apply
+    (H : CoproductSupportQuotientCoassociativeComul)
+    (a : PreLieDifferenceStableQuotient) :
+    coproductSupportSummary_comul_quot_left_assoc H.h a =
+      coproductSupportSummary_comul_quot_left H.h a := by
+  simpa [coproductSupportSummary_comul_quot_left_assoc,
+    coproductSupportSummary_comul_quot_left,
+    coproductSupportSummary_comul_quot_right,
+    LinearMap.comp_apply] using
+    (H.coassoc_apply a)
+
+theorem CoproductSupportQuotientCoassociativeComul.coassoc_shorthand
+    (H : CoproductSupportQuotientCoassociativeComul) :
+    coproductSupportSummary_comul_quot_left_assoc H.h =
+      coproductSupportSummary_comul_quot_left H.h := by
+  apply LinearMap.ext
+  intro a
+  simpa using H.coassoc_shorthand_apply a
+
+theorem CoproductSupportQuotientCoassociativeComul.coassoc_treeGen
+    (H : CoproductSupportQuotientCoassociativeComul)
+    (x : PTree) :
+    coproductSupportSummary_comul_quot_left_assoc H.h
+        (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      coproductSupportSummary_comul_quot_left H.h
+        (mkPreLieDifferenceStableQuotient (treeGen x)) := by
+  simpa using
+    (H.coassoc_shorthand_apply
+      (mkPreLieDifferenceStableQuotient (treeGen x)))
+
+/--
+Assumption-driven coassociativity axiom for the quotient comultiplication,
+under the full forest-level cut-tensor theorem.
+-/
+theorem coproductSupportSummary_quotientComulCoassoc_of_cutTensorCoassociative
+    (hcut : CutTensorCoassociative) :
+    LinearMap.comp
+        (LinearMap.comp
+          (TensorProduct.assoc ℤ
+            PreLieDifferenceStableQuotient
+            PreLieDifferenceStableQuotient
+            PreLieDifferenceStableQuotient).toLinearMap
+          (LinearMap.rTensor
+            PreLieDifferenceStableQuotient
+            (coproductSupportSummary_comul_quot h_respects)))
+        (coproductSupportSummary_comul_quot h_respects) =
+      LinearMap.comp
+        (LinearMap.lTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot h_respects))
+        (coproductSupportSummary_comul_quot h_respects) := by
+  change coproductSupportSummary_comul_quot_left_assoc h_respects =
+    coproductSupportSummary_comul_quot_left h_respects
+  exact
+    (coproductSupportSummary_comul_quot_coassoc_of_cutTensorCoassociative hcut).symm
+
+/--
+Singleton-tree witness version of the same honest coassociativity package.
+-/
+theorem coproductSupportSummary_quotientComulCoassoc_of_singleTreeCutTensorCoassociative
+    (hsing : SingleTreeCutTensorCoassociative) :
+    LinearMap.comp
+        (LinearMap.comp
+          (TensorProduct.assoc ℤ
+            PreLieDifferenceStableQuotient
+            PreLieDifferenceStableQuotient
+            PreLieDifferenceStableQuotient).toLinearMap
+          (LinearMap.rTensor
+            PreLieDifferenceStableQuotient
+            (coproductSupportSummary_comul_quot h_respects)))
+        (coproductSupportSummary_comul_quot h_respects) =
+      LinearMap.comp
+        (LinearMap.lTensor
+          PreLieDifferenceStableQuotient
+          (coproductSupportSummary_comul_quot h_respects))
+        (coproductSupportSummary_comul_quot h_respects) := by
+  exact
+    coproductSupportSummary_quotientComulCoassoc_of_cutTensorCoassociative
+      (cutTensorCoassociative_of_singleTreeCutTensorCoassociative hsing)
+
+/--
+Construct the honest quotient-level coassociative-comultiplication package from
+a singleton-tree cut-tensor witness.
+-/
+noncomputable def SingleTreeCutTensorCoassociativeWitness.toQuotientCoassociativeComul
+    (hw : SingleTreeCutTensorCoassociativeWitness) :
+    CoproductSupportQuotientCoassociativeComul where
+  h := h_respects
+  coassoc :=
+    coproductSupportSummary_quotientComulCoassoc_of_singleTreeCutTensorCoassociative
+      hw.singleTreeCutTensorCoassociative
+
+/--
+If a full quotient coalgebra bundle is available, it forgets to the honest
+coassociative-comultiplication package defined above.
+-/
+noncomputable def CoproductSupportQuotientCoalgebra.toCoassociativeComul
+    (H : CoproductSupportQuotientCoalgebra) :
+    CoproductSupportQuotientCoassociativeComul where
+  h := H.h
+  coassoc := H.coassoc
+
+end CoassociativeComulPackage
+
+/-! ## 7. Oudom-Guin bridge target
+
+The quotient GL comultiplication is useful combinatorial evidence, but the
+Hopf carrier should be the stable UEA.  The theorem shape below records the
+missing Oudom-Guin bridge explicitly: after applying the UEA inclusion on both
+tensor factors, the GL coproduct should agree with the primitive UEA
+comultiplication.
+-/
+
+section OudomGuinBridgeTarget
+
+/-- The canonical linear inclusion of the stable quotient into its UEA. -/
+noncomputable abbrev stableUEACanonicalIota :
+    PreLieDifferenceStableQuotient →ₗ[ℤ]
+      preLieDifferenceStableQuotientUEA :=
+  preLieDifferenceStableQuotientUEA_ι_linear
+
+/-! ### Proof-theoretic stable quotients -/
+
+/--
+The stable pre-Lie relation restricted to the submodule generated by proof trees
+derivable over a fixed primitive base relation.
+
+This is the quotient relation for the proof-theoretic carrier: we first restrict
+to reachable proof trees, then impose exactly the stable pre-Lie equations
+visible inside that reachable submodule.
+-/
+def derivablePreLieStableRelation (base : BaseRel) :
+    Submodule ℤ (derivableTreeSubmodule base) :=
+  preLieDifferenceStableSubmodule.comap
+    (derivableTreeSubmodule base).subtype
+
+/-- Quotients by submodules of the reachable proof-tree carrier. -/
+instance derivableTreeSubmoduleHasQuotient
+    (base : BaseRel) :
+    HasQuotient (derivableTreeSubmodule base)
+      (Submodule ℤ (derivableTreeSubmodule base)) :=
+  Submodule.hasQuotient
+
+/--
+The proof-theoretic stable quotient over a primitive base relation.
+
+Unlike `PreLieDifferenceStableQuotient`, this remembers that the carrier was
+generated by actual `NMMS` proof trees over `base`.
+-/
+abbrev DerivablePreLieStableQuotient (base : BaseRel) :=
+  derivableTreeSubmodule base ⧸ derivablePreLieStableRelation base
+
+/-- The canonical quotient map from reachable proof-tree combinations. -/
+noncomputable def mkDerivablePreLieStableQuotient (base : BaseRel) :
+    derivableTreeSubmodule base →ₗ[ℤ]
+      DerivablePreLieStableQuotient base :=
+  Submodule.mkQ (derivablePreLieStableRelation base)
+
+/-- The class of a derivable tree generator in the proof-theoretic quotient. -/
+noncomputable def derivableStableTreeGen
+    {base : BaseRel} {t : PTree}
+    (ht : DerivableTree base t) :
+    DerivablePreLieStableQuotient base :=
+  mkDerivablePreLieStableQuotient base
+    ⟨treeGen t, treeGen_mem_derivableTreeSubmodule ht⟩
+
+/--
+The canonical map from the proof-theoretic stable quotient into the global
+stable quotient.
+-/
+noncomputable def derivableStableQuotientToStableQuotient
+    (base : BaseRel) :
+    DerivablePreLieStableQuotient base →ₗ[ℤ]
+      PreLieDifferenceStableQuotient :=
+  Submodule.mapQ
+    (derivablePreLieStableRelation base)
+    preLieDifferenceStableSubmodule
+    (derivableTreeSubmodule base).subtype
+    (by
+      intro x hx
+      exact hx)
+
+@[simp] theorem derivableStableQuotientToStableQuotient_mk
+    (base : BaseRel) (a : derivableTreeSubmodule base) :
+    derivableStableQuotientToStableQuotient base
+        (mkDerivablePreLieStableQuotient base a) =
+      mkPreLieDifferenceStableQuotient a.1 := by
+  rfl
+
+@[simp] theorem derivableStableQuotientToStableQuotient_treeGen
+    {base : BaseRel} {t : PTree}
+    (ht : DerivableTree base t) :
+    derivableStableQuotientToStableQuotient base
+        (derivableStableTreeGen ht) =
+      mkPreLieDifferenceStableQuotient (treeGen t) := by
+  rfl
+
+/--
+Base extension functorially maps proof-theoretic stable quotients.
+-/
+noncomputable def derivableStableQuotientMapBase
+    {base base' : BaseRel}
+    (h : BaseRelExtends base base') :
+    DerivablePreLieStableQuotient base →ₗ[ℤ]
+      DerivablePreLieStableQuotient base' :=
+  Submodule.mapQ
+    (derivablePreLieStableRelation base)
+    (derivablePreLieStableRelation base')
+    (derivableTreeSubmoduleInclusion h)
+    (by
+      intro x hx
+      change ((derivableTreeSubmoduleInclusion h x).1) ∈
+        preLieDifferenceStableSubmodule
+      simpa [derivableTreeSubmoduleInclusion_apply,
+        derivablePreLieStableRelation] using hx)
+
+@[simp] theorem derivableStableQuotientMapBase_treeGen
+    {base base' : BaseRel}
+    (h : BaseRelExtends base base')
+    {t : PTree}
+    (ht : DerivableTree base t) :
+    derivableStableQuotientMapBase h (derivableStableTreeGen ht) =
+      derivableStableTreeGen (derivableTree_mono h ht) := by
+  rfl
+
+/--
+The global stable-quotient image is invariant under base-extension transport.
+-/
+theorem derivableStableQuotientToStableQuotient_mapBase
+    {base base' : BaseRel}
+    (h : BaseRelExtends base base')
+    (q : DerivablePreLieStableQuotient base) :
+    derivableStableQuotientToStableQuotient base'
+        (derivableStableQuotientMapBase h q) =
+      derivableStableQuotientToStableQuotient base q := by
+  induction q using Submodule.Quotient.induction_on with
+  | H a =>
+      rfl
+
+/--
+The proof-theoretic stable quotient inserted into the stable UEA.
+-/
+noncomputable def derivableStableUEAIota (base : BaseRel) :
+    DerivablePreLieStableQuotient base →ₗ[ℤ]
+      preLieDifferenceStableQuotientUEA :=
+  stableUEACanonicalIota.comp
+    (derivableStableQuotientToStableQuotient base)
+
+@[simp] theorem derivableStableUEAIota_treeGen
+    {base : BaseRel} {t : PTree}
+    (ht : DerivableTree base t) :
+    derivableStableUEAIota base (derivableStableTreeGen ht) =
+      stableUEA_treeGen t := by
+  rfl
+
+theorem derivableStableUEAIota_mapBase
+    {base base' : BaseRel}
+    (h : BaseRelExtends base base')
+    (q : DerivablePreLieStableQuotient base) :
+    derivableStableUEAIota base'
+        (derivableStableQuotientMapBase h q) =
+      derivableStableUEAIota base q := by
+  simp [derivableStableUEAIota,
+    derivableStableQuotientToStableQuotient_mapBase h q]
+
+theorem stableUEA_OGPrimitiveComultiplicationCanonical_comul_derivable
+    {base : BaseRel}
+    (q : DerivablePreLieStableQuotient base) :
+    stableUEA_OGPrimitiveComultiplicationCanonical.comul
+        (derivableStableQuotientToStableQuotient base q) =
+      TensorProduct.tmul ℤ (derivableStableUEAIota base q) 1 +
+        TensorProduct.tmul ℤ 1 (derivableStableUEAIota base q) := by
+  simpa [derivableStableUEAIota, stableUEACanonicalIota] using
+    stableUEA_OGPrimitiveComultiplicationCanonical_comul_apply
+      (derivableStableQuotientToStableQuotient base q)
+
+@[simp] theorem stableUEA_OGPrimitiveComultiplicationCanonical_counit_derivable
+    {base : BaseRel}
+    (q : DerivablePreLieStableQuotient base) :
+    stableUEA_OGPrimitiveComultiplicationCanonical.counit
+        (derivableStableQuotientToStableQuotient base q) = 0 := by
+  simpa using
+    stableUEA_OGPrimitiveComultiplicationCanonical_counit_apply
+      (derivableStableQuotientToStableQuotient base q)
+
+theorem stableUEA_OGPrimitiveComultiplicationCanonical_comul_derivable_treeGen
+    {base : BaseRel} {t : PTree}
+    (ht : DerivableTree base t) :
+    stableUEA_OGPrimitiveComultiplicationCanonical.comul
+        (derivableStableQuotientToStableQuotient base
+          (derivableStableTreeGen ht)) =
+      TensorProduct.tmul ℤ
+          (derivableStableUEAIota base (derivableStableTreeGen ht)) 1 +
+        TensorProduct.tmul ℤ 1
+          (derivableStableUEAIota base (derivableStableTreeGen ht)) := by
+  exact stableUEA_OGPrimitiveComultiplicationCanonical_comul_derivable
+    (derivableStableTreeGen ht)
+
+@[simp] theorem stableUEA_OGPrimitiveComultiplicationCanonical_counit_derivable_treeGen
+    {base : BaseRel} {t : PTree}
+    (ht : DerivableTree base t) :
+    stableUEA_OGPrimitiveComultiplicationCanonical.counit
+        (derivableStableQuotientToStableQuotient base
+          (derivableStableTreeGen ht)) = 0 := by
+  exact stableUEA_OGPrimitiveComultiplicationCanonical_counit_derivable
+    (derivableStableTreeGen ht)
+
+theorem stableUEA_OGPrimitiveComultiplicationCanonical_comul_derivable_mapBase
+    {base base' : BaseRel}
+    (h : BaseRelExtends base base')
+    (q : DerivablePreLieStableQuotient base) :
+    stableUEA_OGPrimitiveComultiplicationCanonical.comul
+        (derivableStableQuotientToStableQuotient base'
+          (derivableStableQuotientMapBase h q)) =
+      stableUEA_OGPrimitiveComultiplicationCanonical.comul
+        (derivableStableQuotientToStableQuotient base q) := by
+  rw [derivableStableQuotientToStableQuotient_mapBase h q]
+
+@[simp] theorem stableUEA_OGPrimitiveComultiplicationCanonical_counit_derivable_mapBase
+    {base base' : BaseRel}
+    (h : BaseRelExtends base base')
+    (q : DerivablePreLieStableQuotient base) :
+    stableUEA_OGPrimitiveComultiplicationCanonical.counit
+        (derivableStableQuotientToStableQuotient base'
+          (derivableStableQuotientMapBase h q)) =
+      stableUEA_OGPrimitiveComultiplicationCanonical.counit
+        (derivableStableQuotientToStableQuotient base q) := by
+  rw [derivableStableQuotientToStableQuotient_mapBase h q]
+
+/--
+The UEA-valued primitive comultiplication carried by the proof-theoretic stable
+quotient over a base relation.
+
+This is the fiberwise coalgebra shadow: the source remembers derivability over
+`base`, while the target is the stable UEA tensor where the actual coalgebra
+carrier lives.
+-/
+noncomputable def derivableStableOGPrimitiveComul (base : BaseRel) :
+    DerivablePreLieStableQuotient base →ₗ[ℤ] stableUEATensor :=
+  stableUEA_OGPrimitiveComultiplicationCanonical.comul.comp
+    (derivableStableQuotientToStableQuotient base)
+
+/-- The induced primitive counit on the proof-theoretic stable quotient. -/
+noncomputable def derivableStableOGPrimitiveCounit (base : BaseRel) :
+    DerivablePreLieStableQuotient base →ₗ[ℤ] ℤ :=
+  stableUEA_OGPrimitiveComultiplicationCanonical.counit.comp
+    (derivableStableQuotientToStableQuotient base)
+
+/-- A named pair of UEA-valued primitive maps on the derivable quotient fiber. -/
+structure DerivableStableOGPrimitiveComultiplication (base : BaseRel) where
+  comul : DerivablePreLieStableQuotient base →ₗ[ℤ] stableUEATensor
+  counit : DerivablePreLieStableQuotient base →ₗ[ℤ] ℤ
+
+/-- The canonical primitive maps on the derivable quotient fiber. -/
+noncomputable def derivableStableOGPrimitiveComultiplication
+    (base : BaseRel) :
+    DerivableStableOGPrimitiveComultiplication base where
+  comul := derivableStableOGPrimitiveComul base
+  counit := derivableStableOGPrimitiveCounit base
+
+@[simp] theorem derivableStableOGPrimitiveComultiplication_comul
+    (base : BaseRel) :
+    (derivableStableOGPrimitiveComultiplication base).comul =
+      derivableStableOGPrimitiveComul base := by
+  rfl
+
+@[simp] theorem derivableStableOGPrimitiveComultiplication_counit
+    (base : BaseRel) :
+    (derivableStableOGPrimitiveComultiplication base).counit =
+      derivableStableOGPrimitiveCounit base := by
+  rfl
+
+theorem derivableStableOGPrimitiveComul_apply
+    {base : BaseRel}
+    (q : DerivablePreLieStableQuotient base) :
+    derivableStableOGPrimitiveComul base q =
+      TensorProduct.tmul ℤ (derivableStableUEAIota base q) 1 +
+        TensorProduct.tmul ℤ 1 (derivableStableUEAIota base q) := by
+  exact stableUEA_OGPrimitiveComultiplicationCanonical_comul_derivable q
+
+@[simp] theorem derivableStableOGPrimitiveCounit_apply
+    {base : BaseRel}
+    (q : DerivablePreLieStableQuotient base) :
+    derivableStableOGPrimitiveCounit base q = 0 := by
+  exact stableUEA_OGPrimitiveComultiplicationCanonical_counit_derivable q
+
+theorem derivableStableOGPrimitiveComul_treeGen
+    {base : BaseRel} {t : PTree}
+    (ht : DerivableTree base t) :
+    derivableStableOGPrimitiveComul base (derivableStableTreeGen ht) =
+      TensorProduct.tmul ℤ (stableUEA_treeGen t) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen t) := by
+  simpa using
+    derivableStableOGPrimitiveComul_apply
+      (base := base) (derivableStableTreeGen ht)
+
+@[simp] theorem derivableStableOGPrimitiveCounit_treeGen
+    {base : BaseRel} {t : PTree}
+    (ht : DerivableTree base t) :
+    derivableStableOGPrimitiveCounit base (derivableStableTreeGen ht) = 0 := by
+  exact derivableStableOGPrimitiveCounit_apply
+    (base := base) (derivableStableTreeGen ht)
+
+theorem derivableStableOGPrimitiveComul_mapBase
+    {base base' : BaseRel}
+    (h : BaseRelExtends base base')
+    (q : DerivablePreLieStableQuotient base) :
+    derivableStableOGPrimitiveComul base'
+        (derivableStableQuotientMapBase h q) =
+      derivableStableOGPrimitiveComul base q := by
+  change
+    stableUEA_OGPrimitiveComultiplicationCanonical.comul
+        (derivableStableQuotientToStableQuotient base'
+          (derivableStableQuotientMapBase h q)) =
+      stableUEA_OGPrimitiveComultiplicationCanonical.comul
+        (derivableStableQuotientToStableQuotient base q)
+  rw [derivableStableQuotientToStableQuotient_mapBase h q]
+
+@[simp] theorem derivableStableOGPrimitiveCounit_mapBase
+    {base base' : BaseRel}
+    (h : BaseRelExtends base base')
+    (q : DerivablePreLieStableQuotient base) :
+    derivableStableOGPrimitiveCounit base'
+        (derivableStableQuotientMapBase h q) =
+      derivableStableOGPrimitiveCounit base q := by
+  change
+    stableUEA_OGPrimitiveComultiplicationCanonical.counit
+        (derivableStableQuotientToStableQuotient base'
+          (derivableStableQuotientMapBase h q)) =
+      stableUEA_OGPrimitiveComultiplicationCanonical.counit
+        (derivableStableQuotientToStableQuotient base q)
+  rw [derivableStableQuotientToStableQuotient_mapBase h q]
+
+/-- Tensoring a quotient-to-UEA linear map with itself. -/
+noncomputable def stableUEATensorMapFromStableQuotient
+    (iota : PreLieDifferenceStableQuotient →ₗ[ℤ]
+      preLieDifferenceStableQuotientUEA) :
+    TensorProduct ℤ PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient →ₗ[ℤ] stableUEATensor :=
+  TensorProduct.map iota iota
+
+/--
+Generator-level primitive formula expected of the UEA-side Oudom-Guin
+comultiplication.
+-/
+def OudomGuinPrimitiveUEAComultiplicationOnGenerators
+    (DeltaOG :
+      preLieDifferenceStableQuotientUEA →ₗ[ℤ] stableUEATensor) : Prop :=
+  ∀ x : PTree,
+    DeltaOG (stableUEA_treeGen x) =
+      TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen x)
+
+/--
+The UEA-side Oudom-Guin comultiplication extends the quotient-level primitive
+map, not merely the named tree-generator cases.
+
+This is the quotient-wide bridge between the proof-tree quotient and the actual
+UEA coalgebra carrier.
+-/
+def OudomGuinUEAExtendsStableQuotientPrimitive
+    (DeltaOG :
+      preLieDifferenceStableQuotientUEA →ₗ[ℤ] stableUEATensor) : Prop :=
+  ∀ q : PreLieDifferenceStableQuotient,
+    DeltaOG (stableUEACanonicalIota q) =
+      stableUEA_OGPrimitiveComulFromStableQuotient q
+
+theorem OudomGuinUEAExtendsStableQuotientPrimitive_iff_linearMap
+    (DeltaOG :
+      preLieDifferenceStableQuotientUEA →ₗ[ℤ] stableUEATensor) :
+    OudomGuinUEAExtendsStableQuotientPrimitive DeltaOG ↔
+      LinearMap.comp DeltaOG stableUEACanonicalIota =
+        stableUEA_OGPrimitiveComulFromStableQuotient := by
+  constructor
+  · intro h
+    apply LinearMap.ext
+    intro q
+    simpa [LinearMap.comp_apply] using h q
+  · intro h q
+    have happ := congrArg (fun f => f q) h
+    simpa [LinearMap.comp_apply] using happ
+
+theorem OudomGuinUEAExtendsStableQuotientPrimitive.apply
+    {DeltaOG :
+      preLieDifferenceStableQuotientUEA →ₗ[ℤ] stableUEATensor}
+    (h : OudomGuinUEAExtendsStableQuotientPrimitive DeltaOG)
+    (q : PreLieDifferenceStableQuotient) :
+    DeltaOG (stableUEACanonicalIota q) =
+      TensorProduct.tmul ℤ (stableUEACanonicalIota q) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEACanonicalIota q) := by
+  rw [h q]
+  rfl
+
+theorem OudomGuinUEAExtendsStableQuotientPrimitive.apply_derivable
+    {DeltaOG :
+      preLieDifferenceStableQuotientUEA →ₗ[ℤ] stableUEATensor}
+    (h : OudomGuinUEAExtendsStableQuotientPrimitive DeltaOG)
+    (base : BaseRel)
+    (q : DerivablePreLieStableQuotient base) :
+    DeltaOG (derivableStableUEAIota base q) =
+      stableUEA_OGPrimitiveComultiplicationCanonical.comul
+        (derivableStableQuotientToStableQuotient base q) := by
+  rw [show derivableStableUEAIota base q =
+      stableUEACanonicalIota
+        (derivableStableQuotientToStableQuotient base q) by rfl]
+  rw [h]
+  rw [stableUEA_OGPrimitiveComultiplicationCanonical_comul_eq_fromStableQuotient]
+
+theorem OudomGuinUEAExtendsStableQuotientPrimitive.apply_derivable_formula
+    {DeltaOG :
+      preLieDifferenceStableQuotientUEA →ₗ[ℤ] stableUEATensor}
+    (h : OudomGuinUEAExtendsStableQuotientPrimitive DeltaOG)
+    (base : BaseRel)
+    (q : DerivablePreLieStableQuotient base) :
+    DeltaOG (derivableStableUEAIota base q) =
+      TensorProduct.tmul ℤ (derivableStableUEAIota base q) 1 +
+        TensorProduct.tmul ℤ 1 (derivableStableUEAIota base q) := by
+  rw [show derivableStableUEAIota base q =
+      stableUEACanonicalIota
+        (derivableStableQuotientToStableQuotient base q) by rfl]
+  exact h.apply (derivableStableQuotientToStableQuotient base q)
+
+/--
+The left-hand GL side of the GL/OG bridge already agrees with the quotient-level
+primitive map after inserting both tensor factors into the UEA.
+
+This isolates the remaining unit-completed GL obligation from the UEA
+coalgebra-extension obligation.
+-/
+def GrossmanLarssonUnitCompletedAgreesWithOGPrimitive
+    (DeltaGL :
+      PreLieDifferenceStableQuotient →ₗ[ℤ]
+        TensorProduct ℤ PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient) : Prop :=
+  LinearMap.comp
+      (stableUEATensorMapFromStableQuotient stableUEACanonicalIota)
+      DeltaGL =
+    stableUEA_OGPrimitiveComulFromStableQuotient
+
+theorem GrossmanLarssonUnitCompletedAgreesWithOGPrimitive.apply
+    {DeltaGL :
+      PreLieDifferenceStableQuotient →ₗ[ℤ]
+        TensorProduct ℤ PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient}
+    (h : GrossmanLarssonUnitCompletedAgreesWithOGPrimitive DeltaGL)
+    (q : PreLieDifferenceStableQuotient) :
+    stableUEATensorMapFromStableQuotient stableUEACanonicalIota
+        (DeltaGL q) =
+      stableUEA_OGPrimitiveComulFromStableQuotient q := by
+  have happ := congrArg (fun f => f q) h
+  simpa [GrossmanLarssonUnitCompletedAgreesWithOGPrimitive,
+    LinearMap.comp_apply] using happ
+
+/--
+The precise GL/OG intertwining statement.
+
+This is the target theorem:
+`(iota ⊗ iota) ∘ DeltaGL = DeltaOG ∘ iota`.
+The final `DeltaGL` should be the unit-completed GL coproduct; the current
+`Delta_quot` remains useful as the quotient-level diagnostic approximation.
+-/
+def OudomGuinGrossmanLarssonIntertwiningTarget
+    (DeltaGL :
+      PreLieDifferenceStableQuotient →ₗ[ℤ]
+        TensorProduct ℤ PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient)
+    (iota : PreLieDifferenceStableQuotient →ₗ[ℤ]
+      preLieDifferenceStableQuotientUEA)
+    (DeltaOG :
+      preLieDifferenceStableQuotientUEA →ₗ[ℤ] stableUEATensor) : Prop :=
+  LinearMap.comp (stableUEATensorMapFromStableQuotient iota) DeltaGL =
+    LinearMap.comp DeltaOG iota
+
+theorem OudomGuinGrossmanLarssonIntertwiningTarget.apply_mk
+    {DeltaGL :
+      PreLieDifferenceStableQuotient →ₗ[ℤ]
+        TensorProduct ℤ PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient}
+    {iota : PreLieDifferenceStableQuotient →ₗ[ℤ]
+      preLieDifferenceStableQuotientUEA}
+    {DeltaOG :
+      preLieDifferenceStableQuotientUEA →ₗ[ℤ] stableUEATensor}
+    (h :
+      OudomGuinGrossmanLarssonIntertwiningTarget DeltaGL iota DeltaOG)
+    (a : linearProofTreeCarrier) :
+    stableUEATensorMapFromStableQuotient iota
+        (DeltaGL (mkPreLieDifferenceStableQuotient a)) =
+      DeltaOG (iota (mkPreLieDifferenceStableQuotient a)) := by
+  have happ := congrArg
+    (fun f => f (mkPreLieDifferenceStableQuotient a)) h
+  simpa [OudomGuinGrossmanLarssonIntertwiningTarget,
+    LinearMap.comp_apply] using happ
+
+/--
+The GL/OG bridge pulled back along the proof-theoretic stable quotient.
+
+This is the carrier-correct version of the intertwining equation: start with an
+actual derivable proof-tree class, forget only to the global stable quotient, and
+then compare with the UEA primitive coproduct.
+-/
+theorem OudomGuinGrossmanLarssonIntertwiningTarget.apply_derivable
+    {DeltaGL :
+      PreLieDifferenceStableQuotient →ₗ[ℤ]
+        TensorProduct ℤ PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient}
+    {iota : PreLieDifferenceStableQuotient →ₗ[ℤ]
+      preLieDifferenceStableQuotientUEA}
+    {DeltaOG :
+      preLieDifferenceStableQuotientUEA →ₗ[ℤ] stableUEATensor}
+    (h :
+      OudomGuinGrossmanLarssonIntertwiningTarget DeltaGL iota DeltaOG)
+    (base : BaseRel)
+    (q : DerivablePreLieStableQuotient base) :
+    stableUEATensorMapFromStableQuotient iota
+        (DeltaGL (derivableStableQuotientToStableQuotient base q)) =
+      DeltaOG
+        (iota (derivableStableQuotientToStableQuotient base q)) := by
+  have happ := congrArg
+    (fun f => f (derivableStableQuotientToStableQuotient base q)) h
+  simpa [OudomGuinGrossmanLarssonIntertwiningTarget,
+    LinearMap.comp_apply] using happ
+
+theorem OudomGuinGrossmanLarssonIntertwiningTarget.extendsStableQuotientPrimitive
+    {DeltaGL :
+      PreLieDifferenceStableQuotient →ₗ[ℤ]
+        TensorProduct ℤ PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient}
+    {DeltaOG :
+      preLieDifferenceStableQuotientUEA →ₗ[ℤ] stableUEATensor}
+    (hintertwining :
+      OudomGuinGrossmanLarssonIntertwiningTarget
+        DeltaGL stableUEACanonicalIota DeltaOG)
+    (hleft :
+      GrossmanLarssonUnitCompletedAgreesWithOGPrimitive DeltaGL) :
+    OudomGuinUEAExtendsStableQuotientPrimitive DeltaOG := by
+  rw [OudomGuinUEAExtendsStableQuotientPrimitive_iff_linearMap]
+  have hcomp :
+      LinearMap.comp DeltaOG stableUEACanonicalIota =
+        LinearMap.comp
+          (stableUEATensorMapFromStableQuotient stableUEACanonicalIota)
+          DeltaGL := by
+    simpa [OudomGuinGrossmanLarssonIntertwiningTarget] using hintertwining.symm
+  exact hcomp.trans hleft
+
+/--
+The UEA-side Hopf carrier target.  This is intentionally not a structure on
+`PreLieDifferenceStableQuotient`: the missing unit and counit live naturally in
+the UEA, while the quotient appears through the inclusion `stableUEACanonicalIota`.
+-/
+structure OudomGuinUEAHopfCarrierTarget where
+  DeltaGL_unitCompleted :
+    PreLieDifferenceStableQuotient →ₗ[ℤ]
+      TensorProduct ℤ PreLieDifferenceStableQuotient
+        PreLieDifferenceStableQuotient
+  DeltaOG :
+    preLieDifferenceStableQuotientUEA →ₗ[ℤ] stableUEATensor
+  epsilonOG :
+    preLieDifferenceStableQuotientUEA →ₗ[ℤ] ℤ
+  primitive_on_treeGen :
+    OudomGuinPrimitiveUEAComultiplicationOnGenerators DeltaOG
+  counit_on_treeGen :
+    ∀ x : PTree, epsilonOG (stableUEA_treeGen x) = 0
+  counit_one :
+    epsilonOG (1 : preLieDifferenceStableQuotientUEA) = 1
+  uea_coalgebra_axioms :
+    StableUEACoalgebraAxioms
+      ({ comul := DeltaOG, counit := epsilonOG } :
+        StableUEAComultiplication)
+  gl_og_intertwining :
+    OudomGuinGrossmanLarssonIntertwiningTarget
+      DeltaGL_unitCompleted stableUEACanonicalIota DeltaOG
+
+/-- Forget the bridge data and keep the actual UEA coalgebra. -/
+noncomputable def OudomGuinUEAHopfCarrierTarget.toCoalgebraData
+    (H : OudomGuinUEAHopfCarrierTarget) :
+    StableUEACoalgebraData where
+  Δ := { comul := H.DeltaOG, counit := H.epsilonOG }
+  axioms := H.uea_coalgebra_axioms
+
+/--
+Build the carrier-correct UEA target from honest UEA coalgebra data, together
+with the two proof-theoretic compatibility obligations we still care about:
+primitive generators and the GL/OG intertwining equation.
+-/
+noncomputable def OudomGuinUEAHopfCarrierTarget.ofCoalgebraData
+    (DeltaGL_unitCompleted :
+      PreLieDifferenceStableQuotient →ₗ[ℤ]
+        TensorProduct ℤ PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient)
+    (D : StableUEACoalgebraData)
+    (hprim :
+      OudomGuinPrimitiveUEAComultiplicationOnGenerators D.Δ.comul)
+    (hcounit_on_treeGen :
+      ∀ x : PTree, D.Δ.counit (stableUEA_treeGen x) = 0)
+    (hcounit_one :
+      D.Δ.counit (1 : preLieDifferenceStableQuotientUEA) = 1)
+    (hintertwining :
+      OudomGuinGrossmanLarssonIntertwiningTarget
+        DeltaGL_unitCompleted stableUEACanonicalIota D.Δ.comul) :
+    OudomGuinUEAHopfCarrierTarget where
+  DeltaGL_unitCompleted := DeltaGL_unitCompleted
+  DeltaOG := D.Δ.comul
+  epsilonOG := D.Δ.counit
+  primitive_on_treeGen := hprim
+  counit_on_treeGen := hcounit_on_treeGen
+  counit_one := hcounit_one
+  uea_coalgebra_axioms := D.axioms
+  gl_og_intertwining := hintertwining
+
+@[simp] theorem OudomGuinUEAHopfCarrierTarget.ofCoalgebraData_DeltaOG
+    (DeltaGL_unitCompleted :
+      PreLieDifferenceStableQuotient →ₗ[ℤ]
+        TensorProduct ℤ PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient)
+    (D : StableUEACoalgebraData)
+    (hprim :
+      OudomGuinPrimitiveUEAComultiplicationOnGenerators D.Δ.comul)
+    (hcounit_on_treeGen :
+      ∀ x : PTree, D.Δ.counit (stableUEA_treeGen x) = 0)
+    (hcounit_one :
+      D.Δ.counit (1 : preLieDifferenceStableQuotientUEA) = 1)
+    (hintertwining :
+      OudomGuinGrossmanLarssonIntertwiningTarget
+        DeltaGL_unitCompleted stableUEACanonicalIota D.Δ.comul) :
+    (OudomGuinUEAHopfCarrierTarget.ofCoalgebraData
+      DeltaGL_unitCompleted D hprim hcounit_on_treeGen hcounit_one
+      hintertwining).DeltaOG = D.Δ.comul := by
+  rfl
+
+@[simp] theorem OudomGuinUEAHopfCarrierTarget.ofCoalgebraData_epsilonOG
+    (DeltaGL_unitCompleted :
+      PreLieDifferenceStableQuotient →ₗ[ℤ]
+        TensorProduct ℤ PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient)
+    (D : StableUEACoalgebraData)
+    (hprim :
+      OudomGuinPrimitiveUEAComultiplicationOnGenerators D.Δ.comul)
+    (hcounit_on_treeGen :
+      ∀ x : PTree, D.Δ.counit (stableUEA_treeGen x) = 0)
+    (hcounit_one :
+      D.Δ.counit (1 : preLieDifferenceStableQuotientUEA) = 1)
+    (hintertwining :
+      OudomGuinGrossmanLarssonIntertwiningTarget
+        DeltaGL_unitCompleted stableUEACanonicalIota D.Δ.comul) :
+    (OudomGuinUEAHopfCarrierTarget.ofCoalgebraData
+      DeltaGL_unitCompleted D hprim hcounit_on_treeGen hcounit_one
+      hintertwining).epsilonOG = D.Δ.counit := by
+  rfl
+
+theorem oudomGuinUEAHopfCarrierTarget_exists_of_coalgebraData
+    (DeltaGL_unitCompleted :
+      PreLieDifferenceStableQuotient →ₗ[ℤ]
+        TensorProduct ℤ PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient)
+    (D : StableUEACoalgebraData)
+    (hprim :
+      OudomGuinPrimitiveUEAComultiplicationOnGenerators D.Δ.comul)
+    (hcounit_on_treeGen :
+      ∀ x : PTree, D.Δ.counit (stableUEA_treeGen x) = 0)
+    (hcounit_one :
+      D.Δ.counit (1 : preLieDifferenceStableQuotientUEA) = 1)
+    (hintertwining :
+      OudomGuinGrossmanLarssonIntertwiningTarget
+        DeltaGL_unitCompleted stableUEACanonicalIota D.Δ.comul) :
+    ∃ H : OudomGuinUEAHopfCarrierTarget,
+      H.DeltaOG = D.Δ.comul ∧ H.epsilonOG = D.Δ.counit := by
+  refine ⟨
+    OudomGuinUEAHopfCarrierTarget.ofCoalgebraData
+      DeltaGL_unitCompleted D hprim hcounit_on_treeGen hcounit_one
+      hintertwining, ?_, ?_⟩
+  · rfl
+  · rfl
+
+/--
+Turn the project-level UEA coalgebra bundle into mathlib's actual coalgebra
+class.  This is the formal handoff point from our quotient/UEA construction to
+the standard algebraic API.
+-/
+noncomputable def StableUEACoalgebraData.toMathlibCoalgebra
+    (D : StableUEACoalgebraData) :
+    Coalgebra ℤ preLieDifferenceStableQuotientUEA where
+  comul := D.Δ.comul
+  counit := D.Δ.counit
+  coassoc := D.axioms.coassoc
+  rTensor_counit_comp_comul := D.axioms.rTensor_counit_comp_comul
+  lTensor_counit_comp_comul := D.axioms.lTensor_counit_comp_comul
+
+@[simp] theorem StableUEACoalgebraData.toMathlibCoalgebra_comul
+    (D : StableUEACoalgebraData) :
+    (StableUEACoalgebraData.toMathlibCoalgebra D).comul = D.Δ.comul := by
+  rfl
+
+@[simp] theorem StableUEACoalgebraData.toMathlibCoalgebra_counit
+    (D : StableUEACoalgebraData) :
+    (StableUEACoalgebraData.toMathlibCoalgebra D).counit = D.Δ.counit := by
+  rfl
+
+/--
+The UEA Hopf-carrier target therefore supplies an honest mathlib coalgebra on
+the UEA carrier, not merely a bespoke record of maps.
+-/
+noncomputable def OudomGuinUEAHopfCarrierTarget.toMathlibCoalgebra
+    (H : OudomGuinUEAHopfCarrierTarget) :
+    Coalgebra ℤ preLieDifferenceStableQuotientUEA :=
+  StableUEACoalgebraData.toMathlibCoalgebra H.toCoalgebraData
+
+@[simp] theorem OudomGuinUEAHopfCarrierTarget.toMathlibCoalgebra_comul
+    (H : OudomGuinUEAHopfCarrierTarget) :
+    H.toMathlibCoalgebra.comul = H.DeltaOG := by
+  change (StableUEACoalgebraData.toMathlibCoalgebra H.toCoalgebraData).comul = H.DeltaOG
+  rw [StableUEACoalgebraData.toMathlibCoalgebra_comul]
+  rfl
+
+@[simp] theorem OudomGuinUEAHopfCarrierTarget.toMathlibCoalgebra_counit
+    (H : OudomGuinUEAHopfCarrierTarget) :
+    H.toMathlibCoalgebra.counit = H.epsilonOG := by
+  change (StableUEACoalgebraData.toMathlibCoalgebra H.toCoalgebraData).counit = H.epsilonOG
+  rw [StableUEACoalgebraData.toMathlibCoalgebra_counit]
+  rfl
+
+theorem OudomGuinUEAHopfCarrierTarget.asMathlibCoalgebra_comul
+    (H : OudomGuinUEAHopfCarrierTarget) :
+    letI : Coalgebra ℤ preLieDifferenceStableQuotientUEA :=
+      H.toMathlibCoalgebra
+    Coalgebra.comul (R := ℤ) (A := preLieDifferenceStableQuotientUEA) =
+      H.DeltaOG := by
+  simp
+
+theorem OudomGuinUEAHopfCarrierTarget.asMathlibCoalgebra_counit
+    (H : OudomGuinUEAHopfCarrierTarget) :
+    letI : Coalgebra ℤ preLieDifferenceStableQuotientUEA :=
+      H.toMathlibCoalgebra
+    Coalgebra.counit (R := ℤ) (A := preLieDifferenceStableQuotientUEA) =
+      H.epsilonOG := by
+  simp
+
+theorem OudomGuinUEAHopfCarrierTarget.toMathlibCoalgebra_primitive_treeGen
+    (H : OudomGuinUEAHopfCarrierTarget) (x : PTree) :
+    H.toMathlibCoalgebra.comul (stableUEA_treeGen x) =
+      TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen x) := by
+  simpa using H.primitive_on_treeGen x
+
+theorem OudomGuinUEAHopfCarrierTarget.toMathlibCoalgebra_counit_treeGen
+    (H : OudomGuinUEAHopfCarrierTarget) (x : PTree) :
+    H.toMathlibCoalgebra.counit (stableUEA_treeGen x) = 0 := by
+  simpa using H.counit_on_treeGen x
+
+theorem OudomGuinUEAHopfCarrierTarget.toMathlibCoalgebra_counit_one
+    (H : OudomGuinUEAHopfCarrierTarget) :
+    H.toMathlibCoalgebra.counit
+        (1 : preLieDifferenceStableQuotientUEA) = 1 := by
+  simpa using H.counit_one
+
+theorem OudomGuinUEAHopfCarrierTarget.asMathlibCoalgebra_primitive_treeGen
+    (H : OudomGuinUEAHopfCarrierTarget) (x : PTree) :
+    letI : Coalgebra ℤ preLieDifferenceStableQuotientUEA :=
+      H.toMathlibCoalgebra
+    Coalgebra.comul (R := ℤ) (A := preLieDifferenceStableQuotientUEA)
+        (stableUEA_treeGen x) =
+      TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen x) := by
+  simpa using H.toMathlibCoalgebra_primitive_treeGen x
+
+theorem OudomGuinUEAHopfCarrierTarget.asMathlibCoalgebra_counit_treeGen
+    (H : OudomGuinUEAHopfCarrierTarget) (x : PTree) :
+    letI : Coalgebra ℤ preLieDifferenceStableQuotientUEA :=
+      H.toMathlibCoalgebra
+    Coalgebra.counit (R := ℤ) (A := preLieDifferenceStableQuotientUEA)
+        (stableUEA_treeGen x) = 0 := by
+  simpa using H.toMathlibCoalgebra_counit_treeGen x
+
+theorem OudomGuinUEAHopfCarrierTarget.asMathlibCoalgebra_counit_one
+    (H : OudomGuinUEAHopfCarrierTarget) :
+    letI : Coalgebra ℤ preLieDifferenceStableQuotientUEA :=
+      H.toMathlibCoalgebra
+    Coalgebra.counit (R := ℤ) (A := preLieDifferenceStableQuotientUEA)
+        (1 : preLieDifferenceStableQuotientUEA) = 1 := by
+  simpa using H.toMathlibCoalgebra_counit_one
+
+theorem OudomGuinUEAHopfCarrierTarget.toMathlibCoalgebra_primitive_derivableStableTreeGen
+    (H : OudomGuinUEAHopfCarrierTarget)
+    {base : BaseRel} {t : PTree}
+    (ht : DerivableTree base t) :
+    H.toMathlibCoalgebra.comul
+        (derivableStableUEAIota base (derivableStableTreeGen ht)) =
+      TensorProduct.tmul ℤ
+          (derivableStableUEAIota base (derivableStableTreeGen ht)) 1 +
+        TensorProduct.tmul ℤ 1
+          (derivableStableUEAIota base (derivableStableTreeGen ht)) := by
+  simpa using H.toMathlibCoalgebra_primitive_treeGen t
+
+theorem OudomGuinUEAHopfCarrierTarget.toMathlibCoalgebra_counit_derivableStableTreeGen
+    (H : OudomGuinUEAHopfCarrierTarget)
+    {base : BaseRel} {t : PTree}
+    (ht : DerivableTree base t) :
+    H.toMathlibCoalgebra.counit
+        (derivableStableUEAIota base (derivableStableTreeGen ht)) = 0 := by
+  simpa using H.toMathlibCoalgebra_counit_treeGen t
+
+theorem OudomGuinUEAHopfCarrierTarget.toMathlibCoalgebra_primitive_derivableStableTreeGen_mapBase
+    (H : OudomGuinUEAHopfCarrierTarget)
+    {base base' : BaseRel}
+    (h : BaseRelExtends base base')
+    {t : PTree}
+    (ht : DerivableTree base t) :
+    H.toMathlibCoalgebra.comul
+        (derivableStableUEAIota base'
+          (derivableStableQuotientMapBase h (derivableStableTreeGen ht))) =
+      TensorProduct.tmul ℤ
+          (derivableStableUEAIota base'
+            (derivableStableQuotientMapBase h (derivableStableTreeGen ht))) 1 +
+        TensorProduct.tmul ℤ 1
+          (derivableStableUEAIota base'
+            (derivableStableQuotientMapBase h (derivableStableTreeGen ht))) := by
+  simpa using
+    H.toMathlibCoalgebra_primitive_derivableStableTreeGen
+      (derivableTree_mono h ht)
+
+theorem OudomGuinUEAHopfCarrierTarget.toMathlibCoalgebra_counit_derivableStableTreeGen_mapBase
+    (H : OudomGuinUEAHopfCarrierTarget)
+    {base base' : BaseRel}
+    (h : BaseRelExtends base base')
+    {t : PTree}
+    (ht : DerivableTree base t) :
+    H.toMathlibCoalgebra.counit
+        (derivableStableUEAIota base'
+          (derivableStableQuotientMapBase h (derivableStableTreeGen ht))) = 0 := by
+  simpa using
+    H.toMathlibCoalgebra_counit_derivableStableTreeGen
+      (derivableTree_mono h ht)
+
+theorem OudomGuinUEAHopfCarrierTarget.intertwining_mk
+    (H : OudomGuinUEAHopfCarrierTarget)
+    (a : linearProofTreeCarrier) :
+    stableUEATensorMapFromStableQuotient stableUEACanonicalIota
+        (H.DeltaGL_unitCompleted (mkPreLieDifferenceStableQuotient a)) =
+      H.DeltaOG
+        (stableUEACanonicalIota (mkPreLieDifferenceStableQuotient a)) := by
+  exact
+    OudomGuinGrossmanLarssonIntertwiningTarget.apply_mk
+      H.gl_og_intertwining a
+
+/-- The GL/OG bridge for an arbitrary element of a derivable stable quotient. -/
+theorem OudomGuinUEAHopfCarrierTarget.intertwining_derivable
+    (H : OudomGuinUEAHopfCarrierTarget)
+    (base : BaseRel)
+    (q : DerivablePreLieStableQuotient base) :
+    stableUEATensorMapFromStableQuotient stableUEACanonicalIota
+        (H.DeltaGL_unitCompleted
+          (derivableStableQuotientToStableQuotient base q)) =
+      H.DeltaOG (derivableStableUEAIota base q) := by
+  simpa [derivableStableUEAIota] using
+    OudomGuinGrossmanLarssonIntertwiningTarget.apply_derivable
+      H.gl_og_intertwining base q
+
+/--
+The bridge equation specialized to an actual derivable tree generator.
+This is the theorem shape we should use when threading proof trees into the UEA
+coalgebra, instead of dropping back to arbitrary raw trees.
+-/
+theorem OudomGuinUEAHopfCarrierTarget.intertwining_derivableStableTreeGen
+    (H : OudomGuinUEAHopfCarrierTarget)
+    {base : BaseRel} {t : PTree}
+    (ht : DerivableTree base t) :
+    stableUEATensorMapFromStableQuotient stableUEACanonicalIota
+        (H.DeltaGL_unitCompleted
+          (mkPreLieDifferenceStableQuotient (treeGen t))) =
+      H.DeltaOG
+        (derivableStableUEAIota base (derivableStableTreeGen ht)) := by
+  simpa using
+    H.intertwining_derivable base (derivableStableTreeGen ht)
+
+/--
+The derivable bridge is invariant under extension of the primitive base
+relation.
+-/
+theorem OudomGuinUEAHopfCarrierTarget.intertwining_derivable_mapBase
+    (H : OudomGuinUEAHopfCarrierTarget)
+    {base base' : BaseRel}
+    (h : BaseRelExtends base base')
+    (q : DerivablePreLieStableQuotient base) :
+    stableUEATensorMapFromStableQuotient stableUEACanonicalIota
+        (H.DeltaGL_unitCompleted
+          (derivableStableQuotientToStableQuotient base'
+            (derivableStableQuotientMapBase h q))) =
+      H.DeltaOG
+        (derivableStableUEAIota base'
+          (derivableStableQuotientMapBase h q)) := by
+  exact H.intertwining_derivable base'
+    (derivableStableQuotientMapBase h q)
+
+/--
+Once the unit-completed GL side is known to match the quotient primitive map,
+the UEA-side comultiplication extends that primitive map on every stable
+quotient class.
+-/
+theorem OudomGuinUEAHopfCarrierTarget.extendsStableQuotientPrimitive
+    (H : OudomGuinUEAHopfCarrierTarget)
+    (hleft :
+      GrossmanLarssonUnitCompletedAgreesWithOGPrimitive
+        H.DeltaGL_unitCompleted) :
+    OudomGuinUEAExtendsStableQuotientPrimitive H.DeltaOG :=
+  OudomGuinGrossmanLarssonIntertwiningTarget.extendsStableQuotientPrimitive
+    H.gl_og_intertwining hleft
+
+theorem OudomGuinUEAHopfCarrierTarget.extendsStableQuotientPrimitive_apply
+    (H : OudomGuinUEAHopfCarrierTarget)
+    (hleft :
+      GrossmanLarssonUnitCompletedAgreesWithOGPrimitive
+        H.DeltaGL_unitCompleted)
+    (q : PreLieDifferenceStableQuotient) :
+    H.DeltaOG (stableUEACanonicalIota q) =
+      stableUEA_OGPrimitiveComulFromStableQuotient q :=
+  H.extendsStableQuotientPrimitive hleft q
+
+theorem OudomGuinUEAHopfCarrierTarget.extendsStableQuotientPrimitive_derivable
+    (H : OudomGuinUEAHopfCarrierTarget)
+    (hleft :
+      GrossmanLarssonUnitCompletedAgreesWithOGPrimitive
+        H.DeltaGL_unitCompleted)
+    (base : BaseRel)
+    (q : DerivablePreLieStableQuotient base) :
+    H.DeltaOG (derivableStableUEAIota base q) =
+      stableUEA_OGPrimitiveComultiplicationCanonical.comul
+        (derivableStableQuotientToStableQuotient base q) :=
+  OudomGuinUEAExtendsStableQuotientPrimitive.apply_derivable
+    (H.extendsStableQuotientPrimitive hleft) base q
+
+theorem OudomGuinUEAHopfCarrierTarget.toMathlibCoalgebra_extendsStableQuotientPrimitive_derivable
+    (H : OudomGuinUEAHopfCarrierTarget)
+    (hleft :
+      GrossmanLarssonUnitCompletedAgreesWithOGPrimitive
+        H.DeltaGL_unitCompleted)
+    (base : BaseRel)
+    (q : DerivablePreLieStableQuotient base) :
+    H.toMathlibCoalgebra.comul (derivableStableUEAIota base q) =
+      stableUEA_OGPrimitiveComultiplicationCanonical.comul
+        (derivableStableQuotientToStableQuotient base q) := by
+  simpa using
+    H.extendsStableQuotientPrimitive_derivable hleft base q
+
+/--
+The UEA coalgebra target induces a UEA-valued comultiplication on each
+proof-theoretic derivable quotient fiber.
+-/
+noncomputable def OudomGuinUEAHopfCarrierTarget.derivableComul
+    (H : OudomGuinUEAHopfCarrierTarget)
+    (base : BaseRel) :
+    DerivablePreLieStableQuotient base →ₗ[ℤ] stableUEATensor :=
+  H.DeltaOG.comp (derivableStableUEAIota base)
+
+/--
+The UEA coalgebra target induces a counit on each proof-theoretic derivable
+quotient fiber.
+-/
+noncomputable def OudomGuinUEAHopfCarrierTarget.derivableCounit
+    (H : OudomGuinUEAHopfCarrierTarget)
+    (base : BaseRel) :
+    DerivablePreLieStableQuotient base →ₗ[ℤ] ℤ :=
+  H.epsilonOG.comp (derivableStableUEAIota base)
+
+theorem OudomGuinUEAHopfCarrierTarget.derivableComul_mapBase
+    (H : OudomGuinUEAHopfCarrierTarget)
+    {base base' : BaseRel}
+    (h : BaseRelExtends base base')
+    (q : DerivablePreLieStableQuotient base) :
+    H.derivableComul base' (derivableStableQuotientMapBase h q) =
+      H.derivableComul base q := by
+  simp [OudomGuinUEAHopfCarrierTarget.derivableComul,
+    derivableStableUEAIota_mapBase h q]
+
+theorem OudomGuinUEAHopfCarrierTarget.derivableCounit_mapBase
+    (H : OudomGuinUEAHopfCarrierTarget)
+    {base base' : BaseRel}
+    (h : BaseRelExtends base base')
+    (q : DerivablePreLieStableQuotient base) :
+    H.derivableCounit base' (derivableStableQuotientMapBase h q) =
+      H.derivableCounit base q := by
+  simp [OudomGuinUEAHopfCarrierTarget.derivableCounit,
+    derivableStableUEAIota_mapBase h q]
+
+theorem OudomGuinUEAHopfCarrierTarget.derivableComul_eq_primitive
+    (H : OudomGuinUEAHopfCarrierTarget)
+    (hleft :
+      GrossmanLarssonUnitCompletedAgreesWithOGPrimitive
+        H.DeltaGL_unitCompleted)
+    (base : BaseRel) :
+    H.derivableComul base =
+      derivableStableOGPrimitiveComul base := by
+  apply LinearMap.ext
+  intro q
+  exact H.extendsStableQuotientPrimitive_derivable hleft base q
+
+theorem OudomGuinUEAHopfCarrierTarget.derivableComul_apply
+    (H : OudomGuinUEAHopfCarrierTarget)
+    (hleft :
+      GrossmanLarssonUnitCompletedAgreesWithOGPrimitive
+        H.DeltaGL_unitCompleted)
+    {base : BaseRel}
+    (q : DerivablePreLieStableQuotient base) :
+    H.derivableComul base q =
+      TensorProduct.tmul ℤ (derivableStableUEAIota base q) 1 +
+        TensorProduct.tmul ℤ 1 (derivableStableUEAIota base q) := by
+  rw [H.derivableComul_eq_primitive hleft base]
+  exact derivableStableOGPrimitiveComul_apply q
+
+theorem OudomGuinUEAHopfCarrierTarget.toMathlibCoalgebra_intertwining_mk
+    (H : OudomGuinUEAHopfCarrierTarget)
+    (a : linearProofTreeCarrier) :
+    stableUEATensorMapFromStableQuotient stableUEACanonicalIota
+        (H.DeltaGL_unitCompleted (mkPreLieDifferenceStableQuotient a)) =
+      H.toMathlibCoalgebra.comul
+        (stableUEACanonicalIota (mkPreLieDifferenceStableQuotient a)) := by
+  simpa using H.intertwining_mk a
+
+theorem OudomGuinUEAHopfCarrierTarget.toMathlibCoalgebra_intertwining_derivable
+    (H : OudomGuinUEAHopfCarrierTarget)
+    (base : BaseRel)
+    (q : DerivablePreLieStableQuotient base) :
+    stableUEATensorMapFromStableQuotient stableUEACanonicalIota
+        (H.DeltaGL_unitCompleted
+          (derivableStableQuotientToStableQuotient base q)) =
+      H.toMathlibCoalgebra.comul (derivableStableUEAIota base q) := by
+  simpa using H.intertwining_derivable base q
+
+theorem OudomGuinUEAHopfCarrierTarget.toMathlibCoalgebra_intertwining_derivableStableTreeGen
+    (H : OudomGuinUEAHopfCarrierTarget)
+    {base : BaseRel} {t : PTree}
+    (ht : DerivableTree base t) :
+    stableUEATensorMapFromStableQuotient stableUEACanonicalIota
+        (H.DeltaGL_unitCompleted
+          (mkPreLieDifferenceStableQuotient (treeGen t))) =
+      H.toMathlibCoalgebra.comul
+        (derivableStableUEAIota base (derivableStableTreeGen ht)) := by
+  simpa using H.intertwining_derivableStableTreeGen ht
+
+theorem OudomGuinUEAHopfCarrierTarget.toMathlibCoalgebra_intertwining_derivable_mapBase
+    (H : OudomGuinUEAHopfCarrierTarget)
+    {base base' : BaseRel}
+    (h : BaseRelExtends base base')
+    (q : DerivablePreLieStableQuotient base) :
+    stableUEATensorMapFromStableQuotient stableUEACanonicalIota
+        (H.DeltaGL_unitCompleted
+          (derivableStableQuotientToStableQuotient base'
+            (derivableStableQuotientMapBase h q))) =
+      H.toMathlibCoalgebra.comul
+        (derivableStableUEAIota base'
+          (derivableStableQuotientMapBase h q)) := by
+  simpa using H.intertwining_derivable_mapBase h q
+
+theorem OudomGuinUEAHopfCarrierTarget.asMathlibCoalgebra_intertwining_mk
+    (H : OudomGuinUEAHopfCarrierTarget)
+    (a : linearProofTreeCarrier) :
+    letI : Coalgebra ℤ preLieDifferenceStableQuotientUEA :=
+      H.toMathlibCoalgebra
+    stableUEATensorMapFromStableQuotient stableUEACanonicalIota
+        (H.DeltaGL_unitCompleted (mkPreLieDifferenceStableQuotient a)) =
+      Coalgebra.comul (R := ℤ) (A := preLieDifferenceStableQuotientUEA)
+        (stableUEACanonicalIota (mkPreLieDifferenceStableQuotient a)) := by
+  simpa using H.toMathlibCoalgebra_intertwining_mk a
+
+theorem OudomGuinUEAHopfCarrierTarget.asMathlibCoalgebra_intertwining_derivable
+    (H : OudomGuinUEAHopfCarrierTarget)
+    (base : BaseRel)
+    (q : DerivablePreLieStableQuotient base) :
+    letI : Coalgebra ℤ preLieDifferenceStableQuotientUEA :=
+      H.toMathlibCoalgebra
+    stableUEATensorMapFromStableQuotient stableUEACanonicalIota
+        (H.DeltaGL_unitCompleted
+          (derivableStableQuotientToStableQuotient base q)) =
+      Coalgebra.comul (R := ℤ) (A := preLieDifferenceStableQuotientUEA)
+        (derivableStableUEAIota base q) := by
+  simpa using H.toMathlibCoalgebra_intertwining_derivable base q
+
+theorem OudomGuinUEAHopfCarrierTarget.asMathlibCoalgebra_intertwining_derivableStableTreeGen
+    (H : OudomGuinUEAHopfCarrierTarget)
+    {base : BaseRel} {t : PTree}
+    (ht : DerivableTree base t) :
+    letI : Coalgebra ℤ preLieDifferenceStableQuotientUEA :=
+      H.toMathlibCoalgebra
+    stableUEATensorMapFromStableQuotient stableUEACanonicalIota
+        (H.DeltaGL_unitCompleted
+          (mkPreLieDifferenceStableQuotient (treeGen t))) =
+      Coalgebra.comul (R := ℤ) (A := preLieDifferenceStableQuotientUEA)
+        (derivableStableUEAIota base (derivableStableTreeGen ht)) := by
+  simpa using H.toMathlibCoalgebra_intertwining_derivableStableTreeGen ht
+
+theorem OudomGuinUEAHopfCarrierTarget.asMathlibCoalgebra_intertwining_derivable_mapBase
+    (H : OudomGuinUEAHopfCarrierTarget)
+    {base base' : BaseRel}
+    (h : BaseRelExtends base base')
+    (q : DerivablePreLieStableQuotient base) :
+    letI : Coalgebra ℤ preLieDifferenceStableQuotientUEA :=
+      H.toMathlibCoalgebra
+    stableUEATensorMapFromStableQuotient stableUEACanonicalIota
+        (H.DeltaGL_unitCompleted
+          (derivableStableQuotientToStableQuotient base'
+            (derivableStableQuotientMapBase h q))) =
+      Coalgebra.comul (R := ℤ) (A := preLieDifferenceStableQuotientUEA)
+        (derivableStableUEAIota base'
+          (derivableStableQuotientMapBase h q)) := by
+  simpa using H.toMathlibCoalgebra_intertwining_derivable_mapBase h q
+
+theorem OudomGuinUEAHopfCarrierTarget.primitive_treeGen
+    (H : OudomGuinUEAHopfCarrierTarget) (x : PTree) :
+    H.DeltaOG (stableUEA_treeGen x) =
+      TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen x) :=
+  H.primitive_on_treeGen x
+
+theorem OudomGuinUEAHopfCarrierTarget.primitive_derivableStableTreeGen
+    (H : OudomGuinUEAHopfCarrierTarget)
+    {base : BaseRel} {t : PTree}
+    (ht : DerivableTree base t) :
+    H.DeltaOG (derivableStableUEAIota base (derivableStableTreeGen ht)) =
+      TensorProduct.tmul ℤ
+          (derivableStableUEAIota base (derivableStableTreeGen ht)) 1 +
+        TensorProduct.tmul ℤ 1
+          (derivableStableUEAIota base (derivableStableTreeGen ht)) := by
+  simpa using H.primitive_treeGen t
+
+theorem OudomGuinUEAHopfCarrierTarget.counit_derivableStableTreeGen
+    (H : OudomGuinUEAHopfCarrierTarget)
+    {base : BaseRel} {t : PTree}
+    (ht : DerivableTree base t) :
+    H.epsilonOG (derivableStableUEAIota base (derivableStableTreeGen ht)) = 0 := by
+  simpa using H.counit_on_treeGen t
+
+theorem OudomGuinUEAHopfCarrierTarget.coassoc
+    (H : OudomGuinUEAHopfCarrierTarget) :
+    (TensorProduct.assoc ℤ
+        preLieDifferenceStableQuotientUEA
+        preLieDifferenceStableQuotientUEA
+        preLieDifferenceStableQuotientUEA).toLinearMap ∘ₗ
+        (H.DeltaOG.rTensor preLieDifferenceStableQuotientUEA) ∘ₗ
+          H.DeltaOG =
+      (H.DeltaOG.lTensor preLieDifferenceStableQuotientUEA) ∘ₗ
+        H.DeltaOG :=
+  H.uea_coalgebra_axioms.coassoc
+
+theorem OudomGuinUEAHopfCarrierTarget.rTensor_counit_comp_comul
+    (H : OudomGuinUEAHopfCarrierTarget) :
+    (H.epsilonOG.rTensor preLieDifferenceStableQuotientUEA) ∘ₗ
+        H.DeltaOG =
+      TensorProduct.mk ℤ _ _ 1 :=
+  H.uea_coalgebra_axioms.rTensor_counit_comp_comul
+
+theorem OudomGuinUEAHopfCarrierTarget.lTensor_counit_comp_comul
+    (H : OudomGuinUEAHopfCarrierTarget) :
+    (H.epsilonOG.lTensor preLieDifferenceStableQuotientUEA) ∘ₗ
+        H.DeltaOG =
+      (TensorProduct.mk ℤ _ _).flip 1 :=
+  H.uea_coalgebra_axioms.lTensor_counit_comp_comul
+
+theorem OudomGuinUEAHopfCarrierTarget.toMathlibCoalgebra_coassoc
+    (H : OudomGuinUEAHopfCarrierTarget) :
+    (TensorProduct.assoc ℤ
+        preLieDifferenceStableQuotientUEA
+        preLieDifferenceStableQuotientUEA
+        preLieDifferenceStableQuotientUEA).toLinearMap ∘ₗ
+        (H.toMathlibCoalgebra.comul.rTensor
+          preLieDifferenceStableQuotientUEA) ∘ₗ
+          H.toMathlibCoalgebra.comul =
+      (H.toMathlibCoalgebra.comul.lTensor
+          preLieDifferenceStableQuotientUEA) ∘ₗ
+        H.toMathlibCoalgebra.comul := by
+  simpa using H.coassoc
+
+theorem OudomGuinUEAHopfCarrierTarget.toMathlibCoalgebra_rTensor_counit_comp_comul
+    (H : OudomGuinUEAHopfCarrierTarget) :
+    (H.toMathlibCoalgebra.counit.rTensor
+        preLieDifferenceStableQuotientUEA) ∘ₗ
+        H.toMathlibCoalgebra.comul =
+      TensorProduct.mk ℤ _ _ 1 := by
+  simpa using H.rTensor_counit_comp_comul
+
+theorem OudomGuinUEAHopfCarrierTarget.toMathlibCoalgebra_lTensor_counit_comp_comul
+    (H : OudomGuinUEAHopfCarrierTarget) :
+    (H.toMathlibCoalgebra.counit.lTensor
+        preLieDifferenceStableQuotientUEA) ∘ₗ
+        H.toMathlibCoalgebra.comul =
+      (TensorProduct.mk ℤ _ _).flip 1 := by
+  simpa using H.lTensor_counit_comp_comul
+
+theorem OudomGuinUEAHopfCarrierTarget.asMathlibCoalgebra_coassoc
+    (H : OudomGuinUEAHopfCarrierTarget) :
+    letI : Coalgebra ℤ preLieDifferenceStableQuotientUEA :=
+      H.toMathlibCoalgebra
+    (TensorProduct.assoc ℤ
+        preLieDifferenceStableQuotientUEA
+        preLieDifferenceStableQuotientUEA
+        preLieDifferenceStableQuotientUEA).toLinearMap ∘ₗ
+        ((Coalgebra.comul (R := ℤ)
+          (A := preLieDifferenceStableQuotientUEA)).rTensor
+          preLieDifferenceStableQuotientUEA) ∘ₗ
+          Coalgebra.comul (R := ℤ)
+            (A := preLieDifferenceStableQuotientUEA) =
+      ((Coalgebra.comul (R := ℤ)
+          (A := preLieDifferenceStableQuotientUEA)).lTensor
+          preLieDifferenceStableQuotientUEA) ∘ₗ
+        Coalgebra.comul (R := ℤ)
+          (A := preLieDifferenceStableQuotientUEA) := by
+  simpa using H.toMathlibCoalgebra_coassoc
+
+theorem OudomGuinUEAHopfCarrierTarget.asMathlibCoalgebra_rTensor_counit_comp_comul
+    (H : OudomGuinUEAHopfCarrierTarget) :
+    letI : Coalgebra ℤ preLieDifferenceStableQuotientUEA :=
+      H.toMathlibCoalgebra
+    ((Coalgebra.counit (R := ℤ)
+        (A := preLieDifferenceStableQuotientUEA)).rTensor
+        preLieDifferenceStableQuotientUEA) ∘ₗ
+        Coalgebra.comul (R := ℤ)
+          (A := preLieDifferenceStableQuotientUEA) =
+      TensorProduct.mk ℤ _ _ 1 := by
+  simpa using H.toMathlibCoalgebra_rTensor_counit_comp_comul
+
+theorem OudomGuinUEAHopfCarrierTarget.asMathlibCoalgebra_lTensor_counit_comp_comul
+    (H : OudomGuinUEAHopfCarrierTarget) :
+    letI : Coalgebra ℤ preLieDifferenceStableQuotientUEA :=
+      H.toMathlibCoalgebra
+    ((Coalgebra.counit (R := ℤ)
+        (A := preLieDifferenceStableQuotientUEA)).lTensor
+        preLieDifferenceStableQuotientUEA) ∘ₗ
+        Coalgebra.comul (R := ℤ)
+          (A := preLieDifferenceStableQuotientUEA) =
+      (TensorProduct.mk ℤ _ _).flip 1 := by
+  simpa using H.toMathlibCoalgebra_lTensor_counit_comp_comul
+
+/--
+Construct the UEA Hopf-carrier target from an actual mathlib coalgebra
+instance on the UEA carrier, plus the primitive-generator and GL/OG bridge
+conditions.  This is the cleanest endpoint for the coalgebra part: the carrier
+is the UEA, and the remaining proof-theoretic information is explicit data.
+-/
+noncomputable def OudomGuinUEAHopfCarrierTarget.ofMathlibCoalgebra
+    [Coalgebra ℤ preLieDifferenceStableQuotientUEA]
+    (DeltaGL_unitCompleted :
+      PreLieDifferenceStableQuotient →ₗ[ℤ]
+        TensorProduct ℤ PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient)
+    (hprim :
+      OudomGuinPrimitiveUEAComultiplicationOnGenerators
+        (Coalgebra.comul (R := ℤ)
+          (A := preLieDifferenceStableQuotientUEA)))
+    (hcounit_on_treeGen :
+      ∀ x : PTree,
+        Coalgebra.counit (R := ℤ)
+          (A := preLieDifferenceStableQuotientUEA)
+          (stableUEA_treeGen x) = 0)
+    (hcounit_one :
+      Coalgebra.counit (R := ℤ)
+          (A := preLieDifferenceStableQuotientUEA)
+          (1 : preLieDifferenceStableQuotientUEA) = 1)
+    (hintertwining :
+      OudomGuinGrossmanLarssonIntertwiningTarget
+        DeltaGL_unitCompleted stableUEACanonicalIota
+        (Coalgebra.comul (R := ℤ)
+          (A := preLieDifferenceStableQuotientUEA))) :
+    OudomGuinUEAHopfCarrierTarget :=
+  OudomGuinUEAHopfCarrierTarget.ofCoalgebraData
+    DeltaGL_unitCompleted
+    stableUEACoalgebraData_ofCoalgebra
+    (by
+      simpa [stableUEACoalgebraData_ofCoalgebra,
+        stableUEAComultiplication_ofCoalgebra] using hprim)
+    (by
+      simpa [stableUEACoalgebraData_ofCoalgebra,
+        stableUEAComultiplication_ofCoalgebra] using hcounit_on_treeGen)
+    (by
+      simpa [stableUEACoalgebraData_ofCoalgebra,
+        stableUEAComultiplication_ofCoalgebra] using hcounit_one)
+    (by
+      simpa [stableUEACoalgebraData_ofCoalgebra,
+        stableUEAComultiplication_ofCoalgebra] using hintertwining)
+
+@[simp] theorem OudomGuinUEAHopfCarrierTarget.ofMathlibCoalgebra_DeltaOG
+    [Coalgebra ℤ preLieDifferenceStableQuotientUEA]
+    (DeltaGL_unitCompleted :
+      PreLieDifferenceStableQuotient →ₗ[ℤ]
+        TensorProduct ℤ PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient)
+    (hprim :
+      OudomGuinPrimitiveUEAComultiplicationOnGenerators
+        (Coalgebra.comul (R := ℤ)
+          (A := preLieDifferenceStableQuotientUEA)))
+    (hcounit_on_treeGen :
+      ∀ x : PTree,
+        Coalgebra.counit (R := ℤ)
+          (A := preLieDifferenceStableQuotientUEA)
+          (stableUEA_treeGen x) = 0)
+    (hcounit_one :
+      Coalgebra.counit (R := ℤ)
+          (A := preLieDifferenceStableQuotientUEA)
+          (1 : preLieDifferenceStableQuotientUEA) = 1)
+    (hintertwining :
+      OudomGuinGrossmanLarssonIntertwiningTarget
+        DeltaGL_unitCompleted stableUEACanonicalIota
+        (Coalgebra.comul (R := ℤ)
+          (A := preLieDifferenceStableQuotientUEA))) :
+    (OudomGuinUEAHopfCarrierTarget.ofMathlibCoalgebra
+      DeltaGL_unitCompleted hprim hcounit_on_treeGen hcounit_one
+      hintertwining).DeltaOG =
+        Coalgebra.comul (R := ℤ)
+          (A := preLieDifferenceStableQuotientUEA) := by
+  rfl
+
+@[simp] theorem OudomGuinUEAHopfCarrierTarget.ofMathlibCoalgebra_epsilonOG
+    [Coalgebra ℤ preLieDifferenceStableQuotientUEA]
+    (DeltaGL_unitCompleted :
+      PreLieDifferenceStableQuotient →ₗ[ℤ]
+        TensorProduct ℤ PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient)
+    (hprim :
+      OudomGuinPrimitiveUEAComultiplicationOnGenerators
+        (Coalgebra.comul (R := ℤ)
+          (A := preLieDifferenceStableQuotientUEA)))
+    (hcounit_on_treeGen :
+      ∀ x : PTree,
+        Coalgebra.counit (R := ℤ)
+          (A := preLieDifferenceStableQuotientUEA)
+          (stableUEA_treeGen x) = 0)
+    (hcounit_one :
+      Coalgebra.counit (R := ℤ)
+          (A := preLieDifferenceStableQuotientUEA)
+          (1 : preLieDifferenceStableQuotientUEA) = 1)
+    (hintertwining :
+      OudomGuinGrossmanLarssonIntertwiningTarget
+        DeltaGL_unitCompleted stableUEACanonicalIota
+        (Coalgebra.comul (R := ℤ)
+          (A := preLieDifferenceStableQuotientUEA))) :
+    (OudomGuinUEAHopfCarrierTarget.ofMathlibCoalgebra
+      DeltaGL_unitCompleted hprim hcounit_on_treeGen hcounit_one
+      hintertwining).epsilonOG =
+        Coalgebra.counit (R := ℤ)
+          (A := preLieDifferenceStableQuotientUEA) := by
+  rfl
+
+theorem oudomGuinUEAHopfCarrierTarget_exists_of_mathlibCoalgebra
+    [Coalgebra ℤ preLieDifferenceStableQuotientUEA]
+    (DeltaGL_unitCompleted :
+      PreLieDifferenceStableQuotient →ₗ[ℤ]
+        TensorProduct ℤ PreLieDifferenceStableQuotient
+          PreLieDifferenceStableQuotient)
+    (hprim :
+      OudomGuinPrimitiveUEAComultiplicationOnGenerators
+        (Coalgebra.comul (R := ℤ)
+          (A := preLieDifferenceStableQuotientUEA)))
+    (hcounit_on_treeGen :
+      ∀ x : PTree,
+        Coalgebra.counit (R := ℤ)
+          (A := preLieDifferenceStableQuotientUEA)
+          (stableUEA_treeGen x) = 0)
+    (hcounit_one :
+      Coalgebra.counit (R := ℤ)
+          (A := preLieDifferenceStableQuotientUEA)
+          (1 : preLieDifferenceStableQuotientUEA) = 1)
+    (hintertwining :
+      OudomGuinGrossmanLarssonIntertwiningTarget
+        DeltaGL_unitCompleted stableUEACanonicalIota
+        (Coalgebra.comul (R := ℤ)
+          (A := preLieDifferenceStableQuotientUEA))) :
+    ∃ H : OudomGuinUEAHopfCarrierTarget,
+      H.DeltaOG =
+          Coalgebra.comul (R := ℤ)
+            (A := preLieDifferenceStableQuotientUEA) ∧
+        H.epsilonOG =
+          Coalgebra.counit (R := ℤ)
+            (A := preLieDifferenceStableQuotientUEA) := by
+  refine ⟨
+    OudomGuinUEAHopfCarrierTarget.ofMathlibCoalgebra
+      DeltaGL_unitCompleted hprim hcounit_on_treeGen hcounit_one
+      hintertwining, ?_, ?_⟩
+  · rfl
+  · rfl
+
+/--
+Main UEA Hopf-carrier existence target.  This is the architectural replacement
+for further quotient-counit obstruction examples.
+-/
+theorem oudomGuinUEAHopfCarrierTarget_exists :
+    ∃ _H : OudomGuinUEAHopfCarrierTarget, True := by
+  sorry
+
+end OudomGuinBridgeTarget
+
+/-! ## 7. Instantiation of the coalgebra axioms structure
 
 We package the coassociativity result (and placeholder counit axioms) into
 `CoproductSupportQuotientCoalgebraAxioms`.
@@ -6304,4170 +8980,4 @@ theorem CoproductSupportQuotientCoalgebra.coassoc_treeGen_sum_nine_explicit
 
 end SumNineExpansions
 
-/-! ## 17. Oudom–Guin isomorphism scaffolding
-
-The Oudom–Guin theorem states that the Grossman–Larsson Hopf algebra on rooted
-forests is isomorphic to the universal enveloping algebra of the free pre-Lie
-algebra on one generator (in the graded/completed sense).
-
-In our setting this translates to: the descended comultiplication on
-`PreLieDifferenceStableQuotient` corresponds exactly to the primitive-element
-comultiplication `Δ_OG(x) = x ⊗ 1 + 1 ⊗ x` in the stable UEA.
-
-The main gate theorem `stableUEA_OGPrimitiveRespectsStableQuotient` (from
-Section 0) expresses the well-definedness of this descended comultiplication.
-In this section we build the associated scaffolding.
--/
-
-section OudomGuinScaffolding
-
-/--
-For the OG primitive generator data, the only genuine descent problem is the
-comultiplication. The counit part is automatic, since the primitive generator
-counit is identically zero.
--/
-def stableUEA_OGPrimitiveComulRespectsStableQuotient : Prop :=
-  ∀ a : linearProofTreeCarrier,
-    a ∈ preLieDifferenceStableSubmodule →
-      stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData a = 0
-
-/-- The OG primitive counit linear map is identically zero. -/
-theorem stableUEA_OGPrimitive_counit_linear_eq_zero :
-    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData = 0 := by
-  apply LinearMap.ext
-  intro a
-  rw [stableUEA_counit_linear_apply, LinearMap.zero_apply]
-  classical
-  simp [stableUEA_OGPrimitiveGeneratorComulData]
-
-/--
-Hence the OG primitive counit kills the stable submodule without any further
-combinatorics.
--/
-theorem stableUEA_OGPrimitive_counit_kills_stableSubmodule
-    (a : linearProofTreeCarrier)
-    (ha : a ∈ preLieDifferenceStableSubmodule) :
-    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData a = 0 := by
-  exact congrFun (congrArg DFunLike.coe stableUEA_OGPrimitive_counit_linear_eq_zero) a
-
-noncomputable def stableUEA_rawToUEALinear :
-    LinearMap (RingHom.id Int) linearProofTreeCarrier
-      preLieDifferenceStableQuotientUEA :=
-  Finsupp.lsum Int (fun x : PTree =>
-    (LinearMap.id : LinearMap (RingHom.id Int) Int Int).smulRight
-      (stableUEA_treeGen x))
-
-@[simp] theorem stableUEA_rawToUEALinear_treeGen
-    (x : PTree) :
-    stableUEA_rawToUEALinear (treeGen x) = stableUEA_treeGen x := by
-  classical
-  simp only [stableUEA_rawToUEALinear, treeGen, Finsupp.lsum_single,
-    LinearMap.smulRight_apply, LinearMap.id_apply]
-  exact one_smul Int _
-
-theorem stableUEA_rawToUEALinear_apply
-    (a : linearProofTreeCarrier) :
-    stableUEA_rawToUEALinear a =
-      a.sum (fun x c => c • stableUEA_treeGen x) := by
-  change
-      Finsupp.sum a (fun x c =>
-        ((LinearMap.id : LinearMap (RingHom.id Int) Int Int).smulRight
-          (stableUEA_treeGen x)) c) =
-    Finsupp.sum a (fun x c => c • stableUEA_treeGen x)
-  simp [LinearMap.smulRight_apply, LinearMap.id_apply]
-  rfl
-
-@[simp] theorem stableUEA_rawToUEALinear_zero :
-    stableUEA_rawToUEALinear 0 = 0 := by
-  simpa using stableUEA_rawToUEALinear.map_zero
-
-@[simp] theorem stableUEA_rawToUEALinear_add
-    (a b : linearProofTreeCarrier) :
-    stableUEA_rawToUEALinear (a + b) =
-      stableUEA_rawToUEALinear a + stableUEA_rawToUEALinear b := by
-  simpa using stableUEA_rawToUEALinear.map_add a b
-
-@[simp] theorem stableUEA_rawToUEALinear_smul
-    (n : Int) (a : linearProofTreeCarrier) :
-    stableUEA_rawToUEALinear (n • a) =
-      n • stableUEA_rawToUEALinear a := by
-  simpa using stableUEA_rawToUEALinear.map_smul n a
-
-theorem stableUEA_OGPrimitive_comul_linear_formula_linear
-    (a : linearProofTreeCarrier) :
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData a =
-      TensorProduct.tmul Int (stableUEA_rawToUEALinear a) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_rawToUEALinear a) := by
-  classical
-  rw [stableUEA_comul_linear_apply, stableUEA_rawToUEALinear_apply]
-  simp only [stableUEA_OGPrimitiveGeneratorComulData_comulGen]
-  have hsplit :
-      (a.sum fun x c =>
-        c • (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-          TensorProduct.tmul Int 1 (stableUEA_treeGen x))) =
-        a.sum (fun x c =>
-          c • TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-            c • TensorProduct.tmul Int 1 (stableUEA_treeGen x)) := by
-    simp only [Finsupp.sum]
-    refine Finset.sum_congr rfl ?_
-    intro x hx
-    exact smul_add (a x)
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1)
-      (TensorProduct.tmul Int 1 (stableUEA_treeGen x))
-  rw [hsplit]
-  simp only [Finsupp.sum, Finset.sum_add_distrib]
-  congr 1
-  · simpa using
-      (TensorProduct.sum_tmul
-        (R := Int)
-        (s := a.support)
-        (m := fun x => a x • stableUEA_treeGen x)
-        (n := (1 : preLieDifferenceStableQuotientUEA))).symm
-  · have hright :
-        ∑ x ∈ a.support, a x •
-            ((1 : preLieDifferenceStableQuotientUEA) ⊗ₜ[ℤ] stableUEA_treeGen x) =
-          ∑ x ∈ a.support, (1 : preLieDifferenceStableQuotientUEA) ⊗ₜ[ℤ]
-            (a x • stableUEA_treeGen x) := by
-        refine Finset.sum_congr rfl ?_
-        intro x hx
-        exact
-          (TensorProduct.tmul_smul
-            (R := Int)
-            (r := a x)
-            (x := (1 : preLieDifferenceStableQuotientUEA))
-            (y := stableUEA_treeGen x)).symm
-    calc
-      ∑ x ∈ a.support, a x •
-          ((1 : preLieDifferenceStableQuotientUEA) ⊗ₜ[ℤ] stableUEA_treeGen x)
-          =
-        ∑ x ∈ a.support, (1 : preLieDifferenceStableQuotientUEA) ⊗ₜ[ℤ]
-          (a x • stableUEA_treeGen x) := hright
-      _ = TensorProduct.tmul Int (1 : preLieDifferenceStableQuotientUEA)
-            (∑ x ∈ a.support, a x • stableUEA_treeGen x) := by
-          simpa using
-            (TensorProduct.tmul_sum
-              (R := Int)
-              (m := (1 : preLieDifferenceStableQuotientUEA))
-              (s := a.support)
-              (n := fun x => a x • stableUEA_treeGen x)).symm
-
-/--
-The explicit linear raw-to-UEA map agrees with the older quotient-then-UEA
-function on all raw tree combinations.
--/
-
-theorem stableUEA_rawToUEALinear_eq_preLieDifferenceStableQuotientToUEA
-    (a : linearProofTreeCarrier) :
-    stableUEA_rawToUEALinear a = preLieDifferenceStableQuotientToUEA a := by
-  classical
-  induction a using Finsupp.induction_linear with
-  | zero =>
-      rw [stableUEA_rawToUEALinear_zero, preLieDifferenceStableQuotientToUEA_zero]
-  | add f g hf hg =>
-      rw [stableUEA_rawToUEALinear_add, hf, hg, ← preLieDifferenceStableQuotientToUEA_add]
-  | single x n =>
-      rw [show (Finsupp.single x n : linearProofTreeCarrier) = n • treeGen x by
-        simp [treeGen]]
-      rw [stableUEA_rawToUEALinear_smul, stableUEA_rawToUEALinear_treeGen,
-        preLieDifferenceStableQuotientToUEA_smul, stableUEA_treeGen]
-
-@[simp] theorem preLieDifferenceStableQuotientToUEA_treeGen
-    (x : PTree) :
-    preLieDifferenceStableQuotientToUEA (treeGen x) = stableUEA_treeGen x := by
-  simp [preLieDifferenceStableQuotientToUEA, stableUEA_treeGen]
-
-/--
-For the OG primitive datum, the raw linear comultiplication depends only on the
-quotient class of the input, mapped into the stable UEA.
--/
-theorem stableUEA_OGPrimitive_comul_linear_formula_quot
-    (a : linearProofTreeCarrier) :
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData a =
-      TensorProduct.tmul Int (preLieDifferenceStableQuotientToUEA a) 1 +
-        TensorProduct.tmul Int 1 (preLieDifferenceStableQuotientToUEA a) := by
-  rw [stableUEA_OGPrimitive_comul_linear_formula_linear a]
-  simp_rw [stableUEA_rawToUEALinear_eq_preLieDifferenceStableQuotientToUEA]
-
-/--
-For the OG primitive datum, the raw linear comultiplication depends only on the
-linear image of the input combination in the stable UEA.
-
-This is the clean formula available without any further quotient-to-UEA
-coherence lemmas.
--/
-theorem stableUEA_OGPrimitive_comul_linear_formula
-    (a : linearProofTreeCarrier) :
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData a =
-      TensorProduct.tmul Int (stableUEA_rawToUEALinear a) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_rawToUEALinear a) := by
-  exact stableUEA_OGPrimitive_comul_linear_formula_linear a
-
-/--
-The full OG quotient-respect condition is equivalent to the comultiplication
-descent condition alone, because the counit half is already zero.
--/
-theorem stableUEA_OGPrimitiveRespectsStableQuotient_iff_comul :
-    stableUEA_OGPrimitiveRespectsStableQuotient ↔
-      stableUEA_OGPrimitiveComulRespectsStableQuotient := by
-  constructor
-  · intro h a ha
-    exact (h a ha).1
-  · intro h
-    intro a ha
-    exact ⟨h a ha, stableUEA_OGPrimitive_counit_kills_stableSubmodule a ha⟩
-
-/--
-The OG primitive comultiplication data defines a map on the stable quotient
-IF it respects the stable submodule.  The gate theorem certifies this.
-
-This is now discharged directly from the explicit primitive formula:
-if `a` lies in the stable submodule, then `mkPreLieDifferenceStableQuotient a = 0`,
-so its image in the stable UEA is also zero, and the primitive tensor formula
-collapses to zero.
--/
-theorem stableUEA_OGPrimitive_comul_respectsStableQuotient_axiom :
-    stableUEA_OGPrimitiveComulRespectsStableQuotient := by
-  intro a ha
-  have hmk : mkPreLieDifferenceStableQuotient a = 0 := by
-    exact
-      (Submodule.Quotient.mk_eq_zero preLieDifferenceStableSubmodule).2 ha
-  have hUEA : preLieDifferenceStableQuotientToUEA a = 0 := by
-    calc
-      preLieDifferenceStableQuotientToUEA a
-          = preLieDifferenceStableQuotientToUEA 0 := by
-              simp [preLieDifferenceStableQuotientToUEA, hmk]
-      _ = 0 := preLieDifferenceStableQuotientToUEA_zero
-  rw [stableUEA_OGPrimitive_comul_linear_formula_quot, hUEA]
-  simp
-
-theorem stableUEA_OGPrimitive_respectsStableQuotient_axiom :
-    stableUEA_OGPrimitiveRespectsStableQuotient := by
-  rw [stableUEA_OGPrimitiveRespectsStableQuotient_iff_comul]
-  exact stableUEA_OGPrimitive_comul_respectsStableQuotient_axiom
-
-theorem stableUEA_OGPrimitive_respectsStableQuotient_axiom_apply
-    (a : linearProofTreeCarrier)
-    (ha : a ∈ preLieDifferenceStableSubmodule) :
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData a = 0 ∧
-      stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData a = 0 := by
-  exact stableUEA_OGPrimitive_respectsStableQuotient_axiom a ha
-
-theorem stableUEA_OGPrimitive_respectsStableQuotient_axiom_comul
-    (a : linearProofTreeCarrier)
-    (ha : a ∈ preLieDifferenceStableSubmodule) :
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData a = 0 := by
-  exact (stableUEA_OGPrimitive_respectsStableQuotient_axiom a ha).1
-
-theorem stableUEA_OGPrimitive_respectsStableQuotient_axiom_counit
-    (a : linearProofTreeCarrier)
-    (ha : a ∈ preLieDifferenceStableSubmodule) :
-    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData a = 0 := by
-  exact (stableUEA_OGPrimitive_respectsStableQuotient_axiom a ha).2
-
-theorem stableUEA_OGPrimitive_respectsStableQuotient_axiom_iff :
-    stableUEA_OGPrimitiveRespectsStableQuotient ↔
-      stableUEA_OGPrimitiveComulRespectsStableQuotient := by
-  exact stableUEA_OGPrimitiveRespectsStableQuotient_iff_comul
-
-theorem stableUEA_OGPrimitive_remaining_goal :
-    stableUEA_OGPrimitiveComulRespectsStableQuotient := by
-  exact stableUEA_OGPrimitive_comul_respectsStableQuotient_axiom
-
-/-- The descended OG primitive comultiplication (from the gate theorem). -/
-noncomputable def OGPrimitiveComul :
-    StableQuotientComultiplication :=
-  stableUEA_OGPrimitiveComultiplication stableUEA_OGPrimitive_respectsStableQuotient_axiom
-
-/-- The descended OG primitive comultiplication pack. -/
-noncomputable def OGPrimitiveComulPack :
-    StableQuotientComultiplicationPack :=
-  stableUEA_OGPrimitiveComultiplicationPack
-    stableUEA_OGPrimitive_respectsStableQuotient_axiom
-
-/--
-On an arbitrary raw linear combination of proof trees, the descended OG
-primitive comultiplication is the standard primitive formula after mapping into
-the stable UEA.
--/
-theorem OGPrimitiveComul_comul_mk
-    (a : linearProofTreeCarrier) :
-    OGPrimitiveComul.comul (mkPreLieDifferenceStableQuotient a) =
-      TensorProduct.tmul Int (preLieDifferenceStableQuotientToUEA a) 1 +
-        TensorProduct.tmul Int 1 (preLieDifferenceStableQuotientToUEA a) := by
-  calc
-    OGPrimitiveComul.comul (mkPreLieDifferenceStableQuotient a)
-        =
-      stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData a := by
-          change
-            stableUEA_comul_descend
-                stableUEA_OGPrimitiveGeneratorComulData
-                stableUEA_OGPrimitive_respectsStableQuotient_axiom
-                (mkPreLieDifferenceStableQuotient a) =
-              stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData a
-          simpa [OGPrimitiveComul, stableUEA_OGPrimitiveComultiplication] using
-            (stableUEA_comul_descend_mk
-              stableUEA_OGPrimitiveGeneratorComulData
-              stableUEA_OGPrimitive_respectsStableQuotient_axiom a)
-    _ =
-      TensorProduct.tmul Int (preLieDifferenceStableQuotientToUEA a) 1 +
-        TensorProduct.tmul Int 1 (preLieDifferenceStableQuotientToUEA a) :=
-          stableUEA_OGPrimitive_comul_linear_formula_quot a
-
-/--
-On an arbitrary raw linear combination of proof trees, the descended OG
-primitive counit vanishes.
--/
-theorem OGPrimitiveComul_counit_mk
-    (a : linearProofTreeCarrier) :
-    OGPrimitiveComul.counit (mkPreLieDifferenceStableQuotient a) = 0 := by
-  have hzero :
-      stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData a = 0 := by
-    exact congrFun
-      (congrArg DFunLike.coe stableUEA_OGPrimitive_counit_linear_eq_zero) a
-  simpa [OGPrimitiveComul, stableUEA_OGPrimitiveComultiplication] using
-    (stableUEA_counit_descend_mk
-      stableUEA_OGPrimitiveGeneratorComulData
-      stableUEA_OGPrimitive_respectsStableQuotient_axiom a).trans hzero
-
-/--
-The packaged OG primitive comultiplication has the expected primitive formula
-when viewed through the canonical quotient-to-UEA lift.
--/
-theorem OGPrimitiveComulPack_comul_on_treeGen_via_canonicalLift
-    (x : PTree) :
-    OGPrimitiveComulPack.comul
-        (mkPreLieDifferenceStableQuotient (treeGen x)) =
-      TensorProduct.tmul Int
-        (stableUEA_canonicalLiftData.lift
-          (mkPreLieDifferenceStableQuotient (treeGen x))) 1 +
-        TensorProduct.tmul Int 1
-          (stableUEA_canonicalLiftData.lift
-            (mkPreLieDifferenceStableQuotient (treeGen x))) := by
-  simpa using
-    (StableQuotientComultiplicationPack_comul_on_treeGen_via
-      OGPrimitiveComulPack stableUEA_canonicalLiftData x)
-
-/--
-Likewise, the packaged OG primitive counit is zero on generators when viewed
-through the canonical lift interface.
--/
-theorem OGPrimitiveComulPack_counit_on_treeGen_via_canonicalLift
-    (x : PTree) :
-    OGPrimitiveComulPack.counit
-        (mkPreLieDifferenceStableQuotient (treeGen x)) = 0 := by
-  simpa using
-    (StableQuotientComultiplicationPack_counit_on_treeGen_via
-      OGPrimitiveComulPack stableUEA_canonicalLiftData x)
-
-/--
-On tree generators, the OG comultiplication gives the primitive formula
-`Δ(mk(tg x)) = stableUEA_treeGen x ⊗ 1 + 1 ⊗ stableUEA_treeGen x`.
--/
-@[simp] theorem OGPrimitiveComul_comul_treeGen (x : PTree) :
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient (treeGen x)) =
-      TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul ℤ 1 (stableUEA_treeGen x) :=
-  stableUEA_OGPrimitiveComultiplication_comul_treeGen
-    stableUEA_OGPrimitive_respectsStableQuotient_axiom x
-
-/--
-On tree generators, the OG counit is zero.
--/
-@[simp] theorem OGPrimitiveComul_counit_treeGen (x : PTree) :
-    OGPrimitiveComul.counit
-        (mkPreLieDifferenceStableQuotient (treeGen x)) = 0 :=
-  stableUEA_OGPrimitiveComultiplication_counit_treeGen
-    stableUEA_OGPrimitive_respectsStableQuotient_axiom x
-
-/--
-Linear maps out of `PreLieDifferenceStableQuotient` are determined by their
-values on the tree-generator classes.
--/
-theorem PreLieDifferenceStableQuotient_linearMap_ext_treeGen
-    {M : Type*} [AddCommMonoid M] [Module Int M]
-    {f g : PreLieDifferenceStableQuotient →ₗ[Int] M}
-    (hgen : ∀ x : PTree,
-      f (mkPreLieDifferenceStableQuotient (treeGen x)) =
-        g (mkPreLieDifferenceStableQuotient (treeGen x))) :
-    f = g := by
-  apply LinearMap.ext
-  intro q
-  induction q using Submodule.Quotient.induction_on with
-  | H a =>
-      induction a using Finsupp.induction_linear with
-      | zero =>
-          simp
-      | add a b ha hb =>
-          simpa [mkPreLieDifferenceStableQuotient.map_add] using congrArg₂ (· + ·) ha hb
-      | single x n =>
-          have hq :
-              mkPreLieDifferenceStableQuotient (Finsupp.single x n) =
-                n • mkPreLieDifferenceStableQuotient (treeGen x) := by
-            simpa [treeGen] using
-              (mkPreLieDifferenceStableQuotient.map_smul n (treeGen x))
-          change
-            f (mkPreLieDifferenceStableQuotient (Finsupp.single x n)) =
-              g (mkPreLieDifferenceStableQuotient (Finsupp.single x n))
-          rw [hq, LinearMap.map_smul, LinearMap.map_smul, hgen x]
-
-/--
-Any quotient comultiplication with the primitive generator formula has the same
-comultiplication map as `OGPrimitiveComul`.
--/
-theorem stableQuotientComultiplication_comul_eq_OGPrimitive_of_generator_formula
-    (Δ : StableQuotientComultiplication)
-    (hcomul : ∀ x : PTree,
-      Δ.comul (mkPreLieDifferenceStableQuotient (treeGen x)) =
-        TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-          TensorProduct.tmul Int 1 (stableUEA_treeGen x)) :
-    Δ.comul = OGPrimitiveComul.comul := by
-  apply PreLieDifferenceStableQuotient_linearMap_ext_treeGen
-  intro x
-  rw [hcomul x, OGPrimitiveComul_comul_treeGen]
-
-/--
-Any quotient comultiplication with zero generator counit has the same counit
-map as `OGPrimitiveComul`.
--/
-theorem stableQuotientComultiplication_counit_eq_OGPrimitive_of_generator_formula
-    (Δ : StableQuotientComultiplication)
-    (hcounit : ∀ x : PTree,
-      Δ.counit (mkPreLieDifferenceStableQuotient (treeGen x)) = 0) :
-    Δ.counit = OGPrimitiveComul.counit := by
-  apply PreLieDifferenceStableQuotient_linearMap_ext_treeGen
-  intro x
-  rw [hcounit x, OGPrimitiveComul_counit_treeGen]
-
-/--
-The OG primitive quotient comultiplication is canonical: any quotient
-comultiplication with the expected primitive generator formula and zero
-generator counit agrees with it on both structure maps.
--/
-theorem stableQuotientComultiplication_eq_OGPrimitive_of_generator_formula
-    (Δ : StableQuotientComultiplication)
-    (hcomul : ∀ x : PTree,
-      Δ.comul (mkPreLieDifferenceStableQuotient (treeGen x)) =
-        TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-          TensorProduct.tmul Int 1 (stableUEA_treeGen x))
-    (hcounit : ∀ x : PTree,
-      Δ.counit (mkPreLieDifferenceStableQuotient (treeGen x)) = 0) :
-    Δ.comul = OGPrimitiveComul.comul ∧
-      Δ.counit = OGPrimitiveComul.counit := by
-  exact
-    ⟨stableQuotientComultiplication_comul_eq_OGPrimitive_of_generator_formula
-        Δ hcomul,
-      stableQuotientComultiplication_counit_eq_OGPrimitive_of_generator_formula
-        Δ hcounit⟩
-
-/--
-Any packaged quotient comultiplication data agrees with the OG primitive
-quotient comultiplication on both structure maps.
--/
-theorem StableQuotientComultiplicationData_eq_OGPrimitive
-    (D : StableQuotientComultiplicationData) :
-    D.comul = OGPrimitiveComul.comul ∧
-      D.counit = OGPrimitiveComul.counit := by
-  exact
-    stableQuotientComultiplication_eq_OGPrimitive_of_generator_formula
-      D.Δ D.comul_on_generators D.counit_on_generators
-
-/--
-Likewise, any quotient comultiplication pack with the generator axioms agrees
-with the OG primitive pack on both structure maps.
--/
-theorem StableQuotientComultiplicationPack_eq_OGPrimitive
-    (D : StableQuotientComultiplicationPack) :
-    D.comul = OGPrimitiveComulPack.comul ∧
-      D.counit = OGPrimitiveComulPack.counit := by
-  constructor
-  · apply PreLieDifferenceStableQuotient_linearMap_ext_treeGen
-    intro x
-    rw [D.comul_on_treeGen, OGPrimitiveComulPack.comul_on_treeGen]
-  · apply PreLieDifferenceStableQuotient_linearMap_ext_treeGen
-    intro x
-    rw [D.counit_on_treeGen, OGPrimitiveComulPack.counit_on_treeGen]
-
-/--
-Any quotient comultiplication satisfying the primitive generator formula already
-obeys the full primitive formula on arbitrary raw linear combinations.
--/
-theorem stableQuotientComultiplication_comul_mk_eq_primitive_formula_of_generator_formula
-    (Δ : StableQuotientComultiplication)
-    (hcomul : ∀ x : PTree,
-      Δ.comul (mkPreLieDifferenceStableQuotient (treeGen x)) =
-        TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-          TensorProduct.tmul Int 1 (stableUEA_treeGen x))
-    (a : linearProofTreeCarrier) :
-    Δ.comul (mkPreLieDifferenceStableQuotient a) =
-      TensorProduct.tmul Int (preLieDifferenceStableQuotientToUEA a) 1 +
-        TensorProduct.tmul Int 1 (preLieDifferenceStableQuotientToUEA a) := by
-  rw [stableQuotientComultiplication_comul_eq_OGPrimitive_of_generator_formula
-    Δ hcomul]
-  exact OGPrimitiveComul_comul_mk a
-
-/--
-Likewise, any quotient comultiplication with zero generator counit has
-identically zero counit on arbitrary raw linear combinations.
--/
-theorem stableQuotientComultiplication_counit_mk_eq_zero_of_generator_formula
-    (Δ : StableQuotientComultiplication)
-    (hcounit : ∀ x : PTree,
-      Δ.counit (mkPreLieDifferenceStableQuotient (treeGen x)) = 0)
-    (a : linearProofTreeCarrier) :
-    Δ.counit (mkPreLieDifferenceStableQuotient a) = 0 := by
-  rw [stableQuotientComultiplication_counit_eq_OGPrimitive_of_generator_formula
-    Δ hcounit]
-  exact OGPrimitiveComul_counit_mk a
-
-/--
-Packaged quotient comultiplication data already satisfies the full primitive
-formula on arbitrary raw linear combinations.
--/
-theorem StableQuotientComultiplicationData_comul_mk_eq_primitive_formula
-    (D : StableQuotientComultiplicationData)
-    (a : linearProofTreeCarrier) :
-    D.comul (mkPreLieDifferenceStableQuotient a) =
-      TensorProduct.tmul Int (preLieDifferenceStableQuotientToUEA a) 1 +
-        TensorProduct.tmul Int 1 (preLieDifferenceStableQuotientToUEA a) := by
-  exact
-    stableQuotientComultiplication_comul_mk_eq_primitive_formula_of_generator_formula
-      D.Δ D.comul_on_generators a
-
-/--
-Packaged quotient comultiplication data has identically zero counit on
-arbitrary raw linear combinations.
--/
-theorem StableQuotientComultiplicationData_counit_mk_eq_zero
-    (D : StableQuotientComultiplicationData)
-    (a : linearProofTreeCarrier) :
-    D.counit (mkPreLieDifferenceStableQuotient a) = 0 := by
-  exact
-    stableQuotientComultiplication_counit_mk_eq_zero_of_generator_formula
-      D.Δ D.counit_on_generators a
-
-/--
-Likewise for quotient comultiplication packs: the primitive generator law
-forces the full primitive formula on arbitrary raw linear combinations.
--/
-theorem StableQuotientComultiplicationPack_comul_mk_eq_primitive_formula
-    (D : StableQuotientComultiplicationPack)
-    (a : linearProofTreeCarrier) :
-    D.comul (mkPreLieDifferenceStableQuotient a) =
-      TensorProduct.tmul Int (preLieDifferenceStableQuotientToUEA a) 1 +
-        TensorProduct.tmul Int 1 (preLieDifferenceStableQuotientToUEA a) := by
-  exact
-    stableQuotientComultiplication_comul_mk_eq_primitive_formula_of_generator_formula
-      D.Δ D.comul_on_treeGen a
-
-/--
-Likewise, every quotient comultiplication pack with the generator axioms has
-identically zero counit.
--/
-theorem StableQuotientComultiplicationPack_counit_mk_eq_zero
-    (D : StableQuotientComultiplicationPack)
-    (a : linearProofTreeCarrier) :
-    D.counit (mkPreLieDifferenceStableQuotient a) = 0 := by
-  exact
-    stableQuotientComultiplication_counit_mk_eq_zero_of_generator_formula
-      D.Δ D.counit_on_treeGen a
-
-/-!
-### Conditional UEA lifts of the primitive OG formulas
-
-When the tensor square of the stable UEA carries the expected algebra
-structure, the primitive quotient formulas upgrade to honest algebra
-morphisms out of the stable UEA by the universal property of
-`UniversalEnvelopingAlgebra`.
-
-This is the algebra-side half of the expected bialgebra package: the target
-coalgebra axioms are still tracked separately, but the multiplicative lifts are
-now canonical rather than only informally described.
--/
-
-section OGPrimitiveUEALifts
-
-variable [Ring stableUEATensor] [Algebra ℤ stableUEATensor]
-
-noncomputable local instance (priority := 1000) :
-    LieRing PreLieDifferenceStableQuotient :=
-  preLieDifferenceStableQuotientLieRing
-
-local instance (priority := 1000) : LieRing stableUEATensor :=
-  LieRing.ofAssociativeRing
-
-local instance (priority := 1000) : LieAlgebra ℤ stableUEATensor :=
-  LieAlgebra.ofAssociativeAlgebra
-
-/--
-Two algebra homomorphisms out of the stable UEA are equal as soon as they agree
-on the canonical Lie insertion `ι`.
--/
-theorem stableUEA_algHom_ext_ι
-    (Φ Ψ : preLieDifferenceStableQuotientUEA →ₐ[ℤ] stableUEATensor)
-    (hι : ∀ q : PreLieDifferenceStableQuotient,
-      Φ (preLieDifferenceStableQuotientUEA_ι q) =
-        Ψ (preLieDifferenceStableQuotientUEA_ι q)) :
-    Φ = Ψ := by
-  apply UniversalEnvelopingAlgebra.hom_ext (R := ℤ)
-  ext q
-  exact hι q
-
-/--
-Likewise for algebra homomorphisms from the stable UEA to `ℤ`.
--/
-theorem stableUEA_counitAlgHom_ext_ι
-    (ε₁ ε₂ : preLieDifferenceStableQuotientUEA →ₐ[ℤ] ℤ)
-    (hι : ∀ q : PreLieDifferenceStableQuotient,
-      ε₁ (preLieDifferenceStableQuotientUEA_ι q) =
-        ε₂ (preLieDifferenceStableQuotientUEA_ι q)) :
-    ε₁ = ε₂ := by
-  apply UniversalEnvelopingAlgebra.hom_ext (R := ℤ)
-  ext q
-  exact hι q
-
-/--
-Any two multiplicative comultiplication candidates whose restrictions to the
-Lie generators agree with `OGPrimitiveComul.comul` must coincide.
--/
-theorem stableUEA_comulAlgHom_unique_of_ι_formula
-    (Φ Ψ : preLieDifferenceStableQuotientUEA →ₐ[ℤ] stableUEATensor)
-    (hΦ : ∀ q : PreLieDifferenceStableQuotient,
-      Φ (preLieDifferenceStableQuotientUEA_ι q) = OGPrimitiveComul.comul q)
-    (hΨ : ∀ q : PreLieDifferenceStableQuotient,
-      Ψ (preLieDifferenceStableQuotientUEA_ι q) = OGPrimitiveComul.comul q) :
-    Φ = Ψ := by
-  apply stableUEA_algHom_ext_ι
-  intro q
-  rw [hΦ q, hΨ q]
-
-/--
-Likewise, any two multiplicative counit candidates whose restrictions to the
-Lie generators agree with `OGPrimitiveComul.counit` must coincide.
--/
-theorem stableUEA_counitAlgHom_unique_of_ι_formula
-    (ε₁ ε₂ : preLieDifferenceStableQuotientUEA →ₐ[ℤ] ℤ)
-    (hε₁ : ∀ q : PreLieDifferenceStableQuotient,
-      ε₁ (preLieDifferenceStableQuotientUEA_ι q) = OGPrimitiveComul.counit q)
-    (hε₂ : ∀ q : PreLieDifferenceStableQuotient,
-      ε₂ (preLieDifferenceStableQuotientUEA_ι q) = OGPrimitiveComul.counit q) :
-    ε₁ = ε₂ := by
-  apply stableUEA_counitAlgHom_ext_ι
-  intro q
-  rw [hε₁ q, hε₂ q]
-
-/--
-Any algebra hom out of the stable UEA with the OG primitive formula on `ι`
-automatically satisfies the corresponding tree-generator formula.
--/
-theorem stableUEA_comulAlgHom_treeGen_formula_of_ι_formula
-    (Φ : preLieDifferenceStableQuotientUEA →ₐ[ℤ] stableUEATensor)
-    (hΦ : ∀ q : PreLieDifferenceStableQuotient,
-      Φ (preLieDifferenceStableQuotientUEA_ι q) = OGPrimitiveComul.comul q) :
-    ∀ x : PTree,
-      Φ (stableUEA_treeGen x) =
-        TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
-          TensorProduct.tmul ℤ 1 (stableUEA_treeGen x) := by
-  intro x
-  simpa [stableUEA_treeGen_eq_ι] using
-    congrArg id (hΦ (mkPreLieDifferenceStableQuotient (treeGen x)))
-
-/--
-Likewise, the OG counit formula on `ι` implies the expected tree-generator
-vanishing formula.
--/
-theorem stableUEA_counitAlgHom_treeGen_formula_of_ι_formula
-    (ε : preLieDifferenceStableQuotientUEA →ₐ[ℤ] ℤ)
-    (hε : ∀ q : PreLieDifferenceStableQuotient,
-      ε (preLieDifferenceStableQuotientUEA_ι q) = OGPrimitiveComul.counit q) :
-    ∀ x : PTree, ε (stableUEA_treeGen x) = 0 := by
-  intro x
-  simpa [stableUEA_treeGen_eq_ι] using
-    congrArg id (hε (mkPreLieDifferenceStableQuotient (treeGen x)))
-
-end OGPrimitiveUEALifts
-
-section OGPrimitiveUEABialgebraRigidity
-
-variable [Ring stableUEATensor] [Algebra ℤ stableUEATensor]
-
-/--
-Bundled stable-UEA bialgebra data has the OG primitive comultiplication formula
-on the canonical Lie insertion `ι`.
--/
-def StableUEABialgebraData.OGPrimitiveComulOnIota
-    (D : StableUEABialgebraData) : Prop :=
-  ∀ q : PreLieDifferenceStableQuotient,
-    D.comulAlgHom (preLieDifferenceStableQuotientUEA_ι q) =
-      OGPrimitiveComul.comul q
-
-/--
-Bundled stable-UEA bialgebra data has the OG primitive counit formula on the
-canonical Lie insertion `ι`.
--/
-def StableUEABialgebraData.OGPrimitiveCounitOnIota
-    (D : StableUEABialgebraData) : Prop :=
-  ∀ q : PreLieDifferenceStableQuotient,
-    D.counitAlgHom (preLieDifferenceStableQuotientUEA_ι q) =
-      OGPrimitiveComul.counit q
-
-/--
-Combined OG primitive `ι`-formula for bundled stable-UEA bialgebra data.
--/
-def StableUEABialgebraData.OGPrimitiveOnIota
-    (D : StableUEABialgebraData) : Prop :=
-  StableUEABialgebraData.OGPrimitiveComulOnIota D ∧
-    StableUEABialgebraData.OGPrimitiveCounitOnIota D
-
-/--
-Any two packaged stable-UEA bialgebra candidates with the same OG primitive
-formula on `ι` have the same multiplicative comultiplication map.
--/
-theorem StableUEABialgebraData_comulAlgHom_eq_of_ι_formula
-    (D E : StableUEABialgebraData)
-    (hD : StableUEABialgebraData.OGPrimitiveComulOnIota D)
-    (hE : StableUEABialgebraData.OGPrimitiveComulOnIota E) :
-    D.comulAlgHom = E.comulAlgHom := by
-  exact stableUEA_comulAlgHom_unique_of_ι_formula D.comulAlgHom E.comulAlgHom hD hE
-
-/--
-Likewise for the multiplicative counit maps in bundled stable-UEA bialgebra
-data.
--/
-theorem StableUEABialgebraData_counitAlgHom_eq_of_ι_formula
-    (D E : StableUEABialgebraData)
-    (hD : StableUEABialgebraData.OGPrimitiveCounitOnIota D)
-    (hE : StableUEABialgebraData.OGPrimitiveCounitOnIota E) :
-    D.counitAlgHom = E.counitAlgHom := by
-  exact
-    stableUEA_counitAlgHom_unique_of_ι_formula
-      D.counitAlgHom E.counitAlgHom hD hE
-
-/--
-Any two bundled stable-UEA bialgebra candidates with the OG primitive
-behavior on `ι` also agree on their underlying UEA-level comultiplication maps.
--/
-theorem StableUEABialgebraData_comul_eq_of_ι_formula
-    (D E : StableUEABialgebraData)
-    (hD : StableUEABialgebraData.OGPrimitiveComulOnIota D)
-    (hE : StableUEABialgebraData.OGPrimitiveComulOnIota E) :
-    D.comul = E.comul := by
-  have hAlg :
-      D.comulAlgHom = E.comulAlgHom :=
-    StableUEABialgebraData_comulAlgHom_eq_of_ι_formula D E hD hE
-  ext x
-  rw [← D.comulAlgHom_apply_simp, ← E.comulAlgHom_apply_simp, hAlg]
-
-/--
-Likewise for the underlying UEA-level counit maps.
--/
-theorem StableUEABialgebraData_counit_eq_of_ι_formula
-    (D E : StableUEABialgebraData)
-    (hD : StableUEABialgebraData.OGPrimitiveCounitOnIota D)
-    (hE : StableUEABialgebraData.OGPrimitiveCounitOnIota E) :
-    D.counit = E.counit := by
-  have hAlg :
-      D.counitAlgHom = E.counitAlgHom :=
-    StableUEABialgebraData_counitAlgHom_eq_of_ι_formula D E hD hE
-  ext x
-  rw [← D.counitAlgHom_apply_simp, ← E.counitAlgHom_apply_simp, hAlg]
-
-/--
-Hence any two bundled stable-UEA bialgebra candidates with the OG primitive
-behavior on `ι` agree on both multiplicative maps and on the induced UEA-level
-coalgebra structure maps.
--/
-theorem StableUEABialgebraData_eq_on_structure_maps_of_ι_formula
-    (D E : StableUEABialgebraData)
-    (hDcomul : StableUEABialgebraData.OGPrimitiveComulOnIota D)
-    (hEcomul : StableUEABialgebraData.OGPrimitiveComulOnIota E)
-    (hDcounit : StableUEABialgebraData.OGPrimitiveCounitOnIota D)
-    (hEcounit : StableUEABialgebraData.OGPrimitiveCounitOnIota E) :
-    D.comulAlgHom = E.comulAlgHom ∧
-      D.counitAlgHom = E.counitAlgHom ∧
-      D.comul = E.comul ∧
-      D.counit = E.counit := by
-  have hAlgComul :
-      D.comulAlgHom = E.comulAlgHom :=
-    StableUEABialgebraData_comulAlgHom_eq_of_ι_formula D E hDcomul hEcomul
-  have hAlgCounit :
-      D.counitAlgHom = E.counitAlgHom :=
-    StableUEABialgebraData_counitAlgHom_eq_of_ι_formula D E hDcounit hEcounit
-  have hComul :
-      D.comul = E.comul := by
-    exact StableUEABialgebraData_comul_eq_of_ι_formula D E hDcomul hEcomul
-  have hCounit :
-      D.counit = E.counit := by
-    exact StableUEABialgebraData_counit_eq_of_ι_formula D E hDcounit hEcounit
-  exact ⟨hAlgComul, hAlgCounit, hComul, hCounit⟩
-
-/--
-Under the OG primitive `ι`-formula, two bundled stable-UEA bialgebra
-candidates agree pointwise on the Lie-generator image.
--/
-theorem StableUEABialgebraData_eq_on_ι_of_ι_formula
-    (D E : StableUEABialgebraData)
-    (hDcomul : StableUEABialgebraData.OGPrimitiveComulOnIota D)
-    (hEcomul : StableUEABialgebraData.OGPrimitiveComulOnIota E)
-    (hDcounit : StableUEABialgebraData.OGPrimitiveCounitOnIota D)
-    (hEcounit : StableUEABialgebraData.OGPrimitiveCounitOnIota E) :
-    (∀ q : PreLieDifferenceStableQuotient,
-      D.comul (preLieDifferenceStableQuotientUEA_ι q) =
-        E.comul (preLieDifferenceStableQuotientUEA_ι q)) ∧
-    (∀ q : PreLieDifferenceStableQuotient,
-      D.counit (preLieDifferenceStableQuotientUEA_ι q) =
-        E.counit (preLieDifferenceStableQuotientUEA_ι q)) := by
-  have hMaps :=
-    StableUEABialgebraData_eq_on_structure_maps_of_ι_formula
-      D E hDcomul hEcomul hDcounit hEcounit
-  rcases hMaps with ⟨_, _, hComul, hCounit⟩
-  constructor
-  · intro q
-    rw [hComul]
-  · intro q
-    rw [hCounit]
-
-/--
-In particular, the same rigidity holds on the UEA images of tree generators.
--/
-theorem StableUEABialgebraData_eq_on_treeGen_of_ι_formula
-    (D E : StableUEABialgebraData)
-    (hDcomul : StableUEABialgebraData.OGPrimitiveComulOnIota D)
-    (hEcomul : StableUEABialgebraData.OGPrimitiveComulOnIota E)
-    (hDcounit : StableUEABialgebraData.OGPrimitiveCounitOnIota D)
-    (hEcounit : StableUEABialgebraData.OGPrimitiveCounitOnIota E) :
-    (∀ x : PTree, D.comul (stableUEA_treeGen x) = E.comul (stableUEA_treeGen x)) ∧
-    (∀ x : PTree, D.counit (stableUEA_treeGen x) = E.counit (stableUEA_treeGen x)) := by
-  have hι :=
-    StableUEABialgebraData_eq_on_ι_of_ι_formula
-      D E hDcomul hEcomul hDcounit hEcounit
-  rcases hι with ⟨hComul, hCounit⟩
-  constructor
-  · intro x
-    simpa [stableUEA_treeGen_eq_ι] using
-      hComul (mkPreLieDifferenceStableQuotient (treeGen x))
-  · intro x
-    simpa [stableUEA_treeGen_eq_ι] using
-      hCounit (mkPreLieDifferenceStableQuotient (treeGen x))
-
-/--
-A bundled stable-UEA bialgebra candidate with the OG primitive formula on `ι`
-already has the expected primitive tree-generator comultiplication formula.
--/
-theorem StableUEABialgebraData_comul_on_treeGen_of_ι_formula
-    (D : StableUEABialgebraData)
-    (hDcomul : StableUEABialgebraData.OGPrimitiveComulOnIota D) :
-    ∀ x : PTree,
-      D.comul (stableUEA_treeGen x) =
-        TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
-          TensorProduct.tmul ℤ 1 (stableUEA_treeGen x) := by
-  intro x
-  rw [← D.comulAlgHom_apply_simp]
-  exact stableUEA_comulAlgHom_treeGen_formula_of_ι_formula D.comulAlgHom hDcomul x
-
-/--
-Likewise, the OG counit formula on `ι` implies the expected vanishing on tree
-generators for bundled stable-UEA bialgebra data.
--/
-theorem StableUEABialgebraData_counit_on_treeGen_of_ι_formula
-    (D : StableUEABialgebraData)
-    (hDcounit : StableUEABialgebraData.OGPrimitiveCounitOnIota D) :
-    ∀ x : PTree, D.counit (stableUEA_treeGen x) = 0 := by
-  intro x
-  rw [← D.counitAlgHom_apply_simp]
-  exact stableUEA_counitAlgHom_treeGen_formula_of_ι_formula D.counitAlgHom hDcounit x
-
-/--
-The combined OG primitive `ι`-formula immediately yields the standard
-tree-generator formulas for bundled stable-UEA bialgebra data.
--/
-theorem StableUEABialgebraData_on_treeGen_of_OGPrimitiveOnIota
-    (D : StableUEABialgebraData)
-    (hD : StableUEABialgebraData.OGPrimitiveOnIota D) :
-    (∀ x : PTree,
-      D.comul (stableUEA_treeGen x) =
-        TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
-          TensorProduct.tmul ℤ 1 (stableUEA_treeGen x)) ∧
-    (∀ x : PTree, D.counit (stableUEA_treeGen x) = 0) := by
-  exact
-    ⟨StableUEABialgebraData_comul_on_treeGen_of_ι_formula D hD.1,
-      StableUEABialgebraData_counit_on_treeGen_of_ι_formula D hD.2⟩
-
-/--
-The OG primitive `ι`-formula for a bundled stable-UEA bialgebra candidate
-forces the full primitive comultiplication formula on arbitrary raw linear
-combinations.
--/
-theorem StableUEABialgebraData_comul_mk_eq_primitive_formula_of_ι_formula
-    (D : StableUEABialgebraData)
-    (hD : StableUEABialgebraData.OGPrimitiveComulOnIota D)
-    (a : linearProofTreeCarrier) :
-    D.comul (preLieDifferenceStableQuotientToUEA a) =
-      TensorProduct.tmul ℤ (preLieDifferenceStableQuotientToUEA a) 1 +
-        TensorProduct.tmul ℤ 1 (preLieDifferenceStableQuotientToUEA a) := by
-  rw [← D.comulAlgHom_apply_simp]
-  simpa [preLieDifferenceStableQuotientToUEA] using
-    (hD (mkPreLieDifferenceStableQuotient a)).trans (OGPrimitiveComul_comul_mk a)
-
-/--
-Likewise, the OG primitive `ι`-formula forces identically zero counit on
-arbitrary raw linear combinations.
--/
-theorem StableUEABialgebraData_counit_mk_eq_zero_of_ι_formula
-    (D : StableUEABialgebraData)
-    (hD : StableUEABialgebraData.OGPrimitiveCounitOnIota D)
-    (a : linearProofTreeCarrier) :
-    D.counit (preLieDifferenceStableQuotientToUEA a) = 0 := by
-  rw [← D.counitAlgHom_apply_simp]
-  simpa [preLieDifferenceStableQuotientToUEA] using
-    (hD (mkPreLieDifferenceStableQuotient a)).trans (OGPrimitiveComul_counit_mk a)
-
-/--
-Forest-level form of the bundled UEA-side primitive comultiplication formula.
--/
-theorem StableUEABialgebraData_comul_forestGen_of_ι_formula
-    (D : StableUEABialgebraData)
-    (hD : StableUEABialgebraData.OGPrimitiveComulOnIota D)
-    (f : Forest) :
-    D.comul (preLieDifferenceStableQuotientToUEA (forestGen f)) =
-      TensorProduct.tmul ℤ (preLieDifferenceStableQuotientToUEA (forestGen f)) 1 +
-        TensorProduct.tmul ℤ 1 (preLieDifferenceStableQuotientToUEA (forestGen f)) := by
-  simpa using
-    StableUEABialgebraData_comul_mk_eq_primitive_formula_of_ι_formula
-      D hD (forestGen f)
-
-/--
-Forest-level form of the bundled UEA-side primitive counit formula.
--/
-theorem StableUEABialgebraData_counit_forestGen_of_ι_formula
-    (D : StableUEABialgebraData)
-    (hD : StableUEABialgebraData.OGPrimitiveCounitOnIota D)
-    (f : Forest) :
-    D.counit (preLieDifferenceStableQuotientToUEA (forestGen f)) = 0 := by
-  exact
-    StableUEABialgebraData_counit_mk_eq_zero_of_ι_formula
-      D hD (forestGen f)
-
-/--
-Combined forest-level OG primitive formula for bundled stable-UEA bialgebra
-data.
--/
-theorem StableUEABialgebraData_on_forestGen_of_OGPrimitiveOnIota
-    (D : StableUEABialgebraData)
-    (hD : StableUEABialgebraData.OGPrimitiveOnIota D)
-    (f : Forest) :
-    D.comul (preLieDifferenceStableQuotientToUEA (forestGen f)) =
-      TensorProduct.tmul ℤ (preLieDifferenceStableQuotientToUEA (forestGen f)) 1 +
-        TensorProduct.tmul ℤ 1 (preLieDifferenceStableQuotientToUEA (forestGen f)) ∧
-    D.counit (preLieDifferenceStableQuotientToUEA (forestGen f)) = 0 := by
-  exact
-    ⟨StableUEABialgebraData_comul_forestGen_of_ι_formula D hD.1 f,
-      StableUEABialgebraData_counit_forestGen_of_ι_formula D hD.2 f⟩
-
-/--
-If a bundled stable-UEA bialgebra candidate is OG primitive on `ι`, then its
-UEA-level comultiplication agrees with `OGPrimitiveComul.comul` on every raw
-linear combination.
--/
-theorem StableUEABialgebraData_comul_mk_eq_OGPrimitive_of_ι_formula
-    (D : StableUEABialgebraData)
-    (hD : StableUEABialgebraData.OGPrimitiveComulOnIota D)
-    (a : linearProofTreeCarrier) :
-    D.comul (preLieDifferenceStableQuotientToUEA a) =
-      OGPrimitiveComul.comul (mkPreLieDifferenceStableQuotient a) := by
-  rw [← D.comulAlgHom_apply_simp]
-  simpa [preLieDifferenceStableQuotientToUEA] using
-    hD (mkPreLieDifferenceStableQuotient a)
-
-/--
-Likewise for the counit.
--/
-theorem StableUEABialgebraData_counit_mk_eq_OGPrimitive_of_ι_formula
-    (D : StableUEABialgebraData)
-    (hD : StableUEABialgebraData.OGPrimitiveCounitOnIota D)
-    (a : linearProofTreeCarrier) :
-    D.counit (preLieDifferenceStableQuotientToUEA a) =
-      OGPrimitiveComul.counit (mkPreLieDifferenceStableQuotient a) := by
-  rw [← D.counitAlgHom_apply_simp]
-  simpa [preLieDifferenceStableQuotientToUEA] using
-    hD (mkPreLieDifferenceStableQuotient a)
-
-/--
-Combined raw-combination comparison with `OGPrimitiveComul`.
--/
-theorem StableUEABialgebraData_on_mk_eq_OGPrimitive_of_OGPrimitiveOnIota
-    (D : StableUEABialgebraData)
-    (hD : StableUEABialgebraData.OGPrimitiveOnIota D)
-    (a : linearProofTreeCarrier) :
-    D.comul (preLieDifferenceStableQuotientToUEA a) =
-      OGPrimitiveComul.comul (mkPreLieDifferenceStableQuotient a) ∧
-    D.counit (preLieDifferenceStableQuotientToUEA a) =
-      OGPrimitiveComul.counit (mkPreLieDifferenceStableQuotient a) := by
-  exact
-    ⟨StableUEABialgebraData_comul_mk_eq_OGPrimitive_of_ι_formula D hD.1 a,
-      StableUEABialgebraData_counit_mk_eq_OGPrimitive_of_ι_formula D hD.2 a⟩
-
-/--
-Combined raw primitive formula for a bundled stable-UEA bialgebra candidate
-that is OG primitive on `ι`.
--/
-theorem StableUEABialgebraData_on_mk_of_OGPrimitiveOnIota
-    (D : StableUEABialgebraData)
-    (hD : StableUEABialgebraData.OGPrimitiveOnIota D)
-    (a : linearProofTreeCarrier) :
-    D.comul (preLieDifferenceStableQuotientToUEA a) =
-      TensorProduct.tmul ℤ (preLieDifferenceStableQuotientToUEA a) 1 +
-        TensorProduct.tmul ℤ 1 (preLieDifferenceStableQuotientToUEA a) ∧
-    D.counit (preLieDifferenceStableQuotientToUEA a) = 0 := by
-  exact
-    ⟨StableUEABialgebraData_comul_mk_eq_primitive_formula_of_ι_formula D hD.1 a,
-      StableUEABialgebraData_counit_mk_eq_zero_of_ι_formula D hD.2 a⟩
-
-/--
-Tree-generator specialization of the UEA-vs-OG primitive comparison.
--/
-theorem StableUEABialgebraData_on_treeGen_eq_OGPrimitive_of_OGPrimitiveOnIota
-    (D : StableUEABialgebraData)
-    (hD : StableUEABialgebraData.OGPrimitiveOnIota D)
-    (x : PTree) :
-    D.comul (stableUEA_treeGen x) =
-      OGPrimitiveComul.comul (mkPreLieDifferenceStableQuotient (treeGen x)) ∧
-    D.counit (stableUEA_treeGen x) =
-      OGPrimitiveComul.counit (mkPreLieDifferenceStableQuotient (treeGen x)) := by
-  simpa [stableUEA_treeGen_eq_ι, preLieDifferenceStableQuotientToUEA] using
-    StableUEABialgebraData_on_mk_eq_OGPrimitive_of_OGPrimitiveOnIota
-      D hD (treeGen x)
-
-/--
-Forest specialization of the UEA-vs-OG primitive comparison.
--/
-theorem StableUEABialgebraData_on_forestGen_eq_OGPrimitive_of_OGPrimitiveOnIota
-    (D : StableUEABialgebraData)
-    (hD : StableUEABialgebraData.OGPrimitiveOnIota D)
-    (f : Forest) :
-    D.comul (preLieDifferenceStableQuotientToUEA (forestGen f)) =
-      OGPrimitiveComul.comul (mkPreLieDifferenceStableQuotient (forestGen f)) ∧
-    D.counit (preLieDifferenceStableQuotientToUEA (forestGen f)) =
-      OGPrimitiveComul.counit (mkPreLieDifferenceStableQuotient (forestGen f)) := by
-  exact
-    StableUEABialgebraData_on_mk_eq_OGPrimitive_of_OGPrimitiveOnIota
-      D hD (forestGen f)
-
-/--
-Any two bundled stable-UEA bialgebra candidates that are OG primitive on `ι`
-agree on arbitrary raw linear combinations in the stable UEA.
--/
-theorem StableUEABialgebraData_eq_on_mk_of_OGPrimitiveOnIota
-    (D E : StableUEABialgebraData)
-    (hD : StableUEABialgebraData.OGPrimitiveOnIota D)
-    (hE : StableUEABialgebraData.OGPrimitiveOnIota E)
-    (a : linearProofTreeCarrier) :
-    D.comul (preLieDifferenceStableQuotientToUEA a) =
-      E.comul (preLieDifferenceStableQuotientToUEA a) ∧
-    D.counit (preLieDifferenceStableQuotientToUEA a) =
-      E.counit (preLieDifferenceStableQuotientToUEA a) := by
-  have hD' := StableUEABialgebraData_on_mk_eq_OGPrimitive_of_OGPrimitiveOnIota D hD a
-  have hE' := StableUEABialgebraData_on_mk_eq_OGPrimitive_of_OGPrimitiveOnIota E hE a
-  exact ⟨by rw [hD'.1, hE'.1], by rw [hD'.2, hE'.2]⟩
-
-/--
-Any two bundled stable-UEA bialgebra candidates with the OG primitive
-`ι`-formula agree on every forest input in the stable UEA.
--/
-theorem StableUEABialgebraData_eq_on_forestGen_of_ι_formula
-    (D E : StableUEABialgebraData)
-    (hDcomul : StableUEABialgebraData.OGPrimitiveComulOnIota D)
-    (hEcomul : StableUEABialgebraData.OGPrimitiveComulOnIota E)
-    (hDcounit : StableUEABialgebraData.OGPrimitiveCounitOnIota D)
-    (hEcounit : StableUEABialgebraData.OGPrimitiveCounitOnIota E)
-    (f : Forest) :
-    D.comul (preLieDifferenceStableQuotientToUEA (forestGen f)) =
-      E.comul (preLieDifferenceStableQuotientToUEA (forestGen f)) ∧
-    D.counit (preLieDifferenceStableQuotientToUEA (forestGen f)) =
-      E.counit (preLieDifferenceStableQuotientToUEA (forestGen f)) := by
-  have hMaps :=
-    StableUEABialgebraData_eq_on_structure_maps_of_ι_formula
-      D E hDcomul hEcomul hDcounit hEcounit
-  rcases hMaps with ⟨_, _, hComul, hCounit⟩
-  exact ⟨by rw [hComul], by rw [hCounit]⟩
-
-/--
-Combined-predicate form of forest-level agreement for bundled stable-UEA
-bialgebra candidates.
--/
-theorem StableUEABialgebraData_eq_on_forestGen_of_OGPrimitiveOnIota
-    (D E : StableUEABialgebraData)
-    (hD : StableUEABialgebraData.OGPrimitiveOnIota D)
-    (hE : StableUEABialgebraData.OGPrimitiveOnIota E)
-    (f : Forest) :
-    D.comul (preLieDifferenceStableQuotientToUEA (forestGen f)) =
-      E.comul (preLieDifferenceStableQuotientToUEA (forestGen f)) ∧
-    D.counit (preLieDifferenceStableQuotientToUEA (forestGen f)) =
-      E.counit (preLieDifferenceStableQuotientToUEA (forestGen f)) := by
-  exact
-    StableUEABialgebraData_eq_on_forestGen_of_ι_formula
-      D E hD.1 hE.1 hD.2 hE.2 f
-
-/--
-If two bundled stable-UEA bialgebra candidates are both OG primitive on `ι`,
-then they agree on the UEA images of all tree generators.
--/
-theorem StableUEABialgebraData_eq_on_treeGen_of_OGPrimitiveOnIota
-    (D E : StableUEABialgebraData)
-    (hD : StableUEABialgebraData.OGPrimitiveOnIota D)
-    (hE : StableUEABialgebraData.OGPrimitiveOnIota E) :
-    (∀ x : PTree, D.comul (stableUEA_treeGen x) = E.comul (stableUEA_treeGen x)) ∧
-    (∀ x : PTree, D.counit (stableUEA_treeGen x) = E.counit (stableUEA_treeGen x)) := by
-  exact
-    StableUEABialgebraData_eq_on_treeGen_of_ι_formula
-      D E hD.1 hE.1 hD.2 hE.2
-
-/--
-The OG primitive `ι`-formula determines the forest-level comultiplication of a
-bundled stable-UEA bialgebra candidate uniquely.
--/
-theorem StableUEABialgebraData_comul_forestGen_eq_of_OGPrimitiveOnIota
-    (D E : StableUEABialgebraData)
-    (hD : StableUEABialgebraData.OGPrimitiveOnIota D)
-    (hE : StableUEABialgebraData.OGPrimitiveOnIota E)
-    (f : Forest) :
-    D.comul (preLieDifferenceStableQuotientToUEA (forestGen f)) =
-      E.comul (preLieDifferenceStableQuotientToUEA (forestGen f)) := by
-  exact
-    (StableUEABialgebraData_eq_on_forestGen_of_OGPrimitiveOnIota
-      D E hD hE f).1
-
-/--
-Likewise for the forest-level counit.
--/
-theorem StableUEABialgebraData_counit_forestGen_eq_of_OGPrimitiveOnIota
-    (D E : StableUEABialgebraData)
-    (hD : StableUEABialgebraData.OGPrimitiveOnIota D)
-    (hE : StableUEABialgebraData.OGPrimitiveOnIota E)
-    (f : Forest) :
-    D.counit (preLieDifferenceStableQuotientToUEA (forestGen f)) =
-      E.counit (preLieDifferenceStableQuotientToUEA (forestGen f)) := by
-  exact
-    (StableUEABialgebraData_eq_on_forestGen_of_OGPrimitiveOnIota
-      D E hD hE f).2
-
-end OGPrimitiveUEABialgebraRigidity
-
-/--
-On a sum of two tree generators, the OG primitive comultiplication is the sum
-of the two primitive generator formulas.
--/
-theorem OGPrimitiveComul_comul_treeGen_sum_two
-    (x y : PTree) :
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) =
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) := by
-  simpa [OGPrimitiveComul] using
-    (stableUEA_comul_descend_treeGen_sum_two
-      stableUEA_OGPrimitiveGeneratorComulData
-      stableUEA_OGPrimitive_respectsStableQuotient_axiom x y)
-
-/--
-The OG primitive counit vanishes on a sum of two tree generators.
--/
-theorem OGPrimitiveComul_counit_treeGen_sum_two
-    (x y : PTree) :
-    OGPrimitiveComul.counit
-        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) = 0 := by
-  simpa [OGPrimitiveComul] using
-    (stableUEA_counit_descend_treeGen_sum_two
-      stableUEA_OGPrimitiveGeneratorComulData
-      stableUEA_OGPrimitive_respectsStableQuotient_axiom x y)
-
-/--
-On a sum of three tree generators, the OG primitive comultiplication expands as
-the sum of the three primitive generator formulas.
--/
-theorem OGPrimitiveComul_comul_treeGen_sum_three
-    (x y z : PTree) :
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y + treeGen z)) =
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  simpa [OGPrimitiveComul] using
-    (stableUEA_comul_descend_treeGen_sum_three_expanded
-      stableUEA_OGPrimitiveGeneratorComulData
-      stableUEA_OGPrimitive_respectsStableQuotient_axiom x y z)
-
-/--
-The OG primitive counit vanishes on a sum of three tree generators.
--/
-theorem OGPrimitiveComul_counit_treeGen_sum_three
-    (x y z : PTree) :
-    OGPrimitiveComul.counit
-        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y + treeGen z)) = 0 := by
-  simpa [OGPrimitiveComul] using
-    (stableUEA_counit_descend_treeGen_sum_three
-      stableUEA_OGPrimitiveGeneratorComulData
-      stableUEA_OGPrimitive_respectsStableQuotient_axiom x y z)
-
-/--
-On a sum of four tree generators, the OG primitive comultiplication expands as
-the sum of the four primitive generator formulas.
--/
-theorem OGPrimitiveComul_comul_treeGen_sum_four
-    (w x y z : PTree) :
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient
-          (treeGen w + treeGen x + treeGen y + treeGen z)) =
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  simpa [OGPrimitiveComul] using
-    (stableUEA_comul_descend_treeGen_sum_four_expanded
-      stableUEA_OGPrimitiveGeneratorComulData
-      stableUEA_OGPrimitive_respectsStableQuotient_axiom w x y z)
-
-/--
-The OG primitive counit vanishes on a sum of four tree generators.
--/
-theorem OGPrimitiveComul_counit_treeGen_sum_four
-    (w x y z : PTree) :
-    OGPrimitiveComul.counit
-        (mkPreLieDifferenceStableQuotient
-          (treeGen w + treeGen x + treeGen y + treeGen z)) = 0 := by
-  simpa [OGPrimitiveComul] using
-    (stableUEA_counit_descend_treeGen_sum_four
-      stableUEA_OGPrimitiveGeneratorComulData
-      stableUEA_OGPrimitive_respectsStableQuotient_axiom w x y z)
-
-/--
-On a sum of five tree generators, the OG primitive comultiplication expands as
-the sum of the five primitive generator formulas.
--/
-theorem OGPrimitiveComul_comul_treeGen_sum_five
-    (v w x y z : PTree) :
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient
-          (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) =
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  have hmk :
-      mkPreLieDifferenceStableQuotient
-          (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-        mkPreLieDifferenceStableQuotient
-          (treeGen v + treeGen w + treeGen x + treeGen y) +
-        mkPreLieDifferenceStableQuotient (treeGen z) := by
-    simpa using
-      (mkPreLieDifferenceStableQuotient.map_add
-        (treeGen v + treeGen w + treeGen x + treeGen y)
-        (treeGen z))
-  simpa [hmk, add_assoc, OGPrimitiveComul_comul_treeGen_sum_four,
-    OGPrimitiveComul_comul_treeGen] using
-    (OGPrimitiveComul.comul.map_add
-      (mkPreLieDifferenceStableQuotient
-        (treeGen v + treeGen w + treeGen x + treeGen y))
-      (mkPreLieDifferenceStableQuotient (treeGen z)))
-
-/--
-The OG primitive counit vanishes on a sum of five tree generators.
--/
-theorem OGPrimitiveComul_counit_treeGen_sum_five
-    (v w x y z : PTree) :
-    OGPrimitiveComul.counit
-        (mkPreLieDifferenceStableQuotient
-          (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) = 0 := by
-  have hmk :
-      mkPreLieDifferenceStableQuotient
-          (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-        mkPreLieDifferenceStableQuotient
-          (treeGen v + treeGen w + treeGen x + treeGen y) +
-        mkPreLieDifferenceStableQuotient (treeGen z) := by
-    simpa using
-      (mkPreLieDifferenceStableQuotient.map_add
-        (treeGen v + treeGen w + treeGen x + treeGen y)
-        (treeGen z))
-  simpa [hmk, OGPrimitiveComul_counit_treeGen_sum_four,
-    OGPrimitiveComul_counit_treeGen] using
-    (OGPrimitiveComul.counit.map_add
-      (mkPreLieDifferenceStableQuotient
-        (treeGen v + treeGen w + treeGen x + treeGen y))
-      (mkPreLieDifferenceStableQuotient (treeGen z)))
-
-/--
-On a sum of six tree generators, the OG primitive comultiplication expands as
-the sum of the six primitive generator formulas.
--/
-theorem OGPrimitiveComul_comul_treeGen_sum_six
-    (u v w x y z : PTree) :
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient
-          (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) =
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  have hmk :
-      mkPreLieDifferenceStableQuotient
-          (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-        mkPreLieDifferenceStableQuotient
-          (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y) +
-        mkPreLieDifferenceStableQuotient (treeGen z) := by
-    simpa using
-      (mkPreLieDifferenceStableQuotient.map_add
-        (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y)
-        (treeGen z))
-  simpa [hmk, add_assoc, OGPrimitiveComul_comul_treeGen_sum_five,
-    OGPrimitiveComul_comul_treeGen] using
-    (OGPrimitiveComul.comul.map_add
-      (mkPreLieDifferenceStableQuotient
-        (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y))
-      (mkPreLieDifferenceStableQuotient (treeGen z)))
-
-/--
-The OG primitive counit vanishes on a sum of six tree generators.
--/
-theorem OGPrimitiveComul_counit_treeGen_sum_six
-    (u v w x y z : PTree) :
-    OGPrimitiveComul.counit
-        (mkPreLieDifferenceStableQuotient
-          (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) = 0 := by
-  have hmk :
-      mkPreLieDifferenceStableQuotient
-          (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-        mkPreLieDifferenceStableQuotient
-          (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y) +
-        mkPreLieDifferenceStableQuotient (treeGen z) := by
-    simpa using
-      (mkPreLieDifferenceStableQuotient.map_add
-        (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y)
-        (treeGen z))
-  simpa [hmk, OGPrimitiveComul_counit_treeGen_sum_five,
-    OGPrimitiveComul_counit_treeGen] using
-    (OGPrimitiveComul.counit.map_add
-      (mkPreLieDifferenceStableQuotient
-        (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y))
-      (mkPreLieDifferenceStableQuotient (treeGen z)))
-
-/--
-On a sum of seven tree generators, the OG primitive comultiplication expands as
-the sum of the seven primitive generator formulas.
--/
-theorem OGPrimitiveComul_comul_treeGen_sum_seven
-    (t u v w x y z : PTree) :
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient
-          (treeGen t + treeGen u + treeGen v + treeGen w +
-            treeGen x + treeGen y + treeGen z)) =
-      (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  have hmk :
-      mkPreLieDifferenceStableQuotient
-          (treeGen t + treeGen u + treeGen v + treeGen w +
-            treeGen x + treeGen y + treeGen z) =
-        mkPreLieDifferenceStableQuotient
-          (treeGen t + treeGen u + treeGen v + treeGen w + treeGen x + treeGen y) +
-        mkPreLieDifferenceStableQuotient (treeGen z) := by
-    simpa using
-      (mkPreLieDifferenceStableQuotient.map_add
-        (treeGen t + treeGen u + treeGen v + treeGen w + treeGen x + treeGen y)
-        (treeGen z))
-  simpa [hmk, add_assoc, OGPrimitiveComul_comul_treeGen_sum_six,
-    OGPrimitiveComul_comul_treeGen] using
-    (OGPrimitiveComul.comul.map_add
-      (mkPreLieDifferenceStableQuotient
-        (treeGen t + treeGen u + treeGen v + treeGen w + treeGen x + treeGen y))
-      (mkPreLieDifferenceStableQuotient (treeGen z)))
-
-/--
-The OG primitive counit vanishes on a sum of seven tree generators.
--/
-theorem OGPrimitiveComul_counit_treeGen_sum_seven
-    (t u v w x y z : PTree) :
-    OGPrimitiveComul.counit
-        (mkPreLieDifferenceStableQuotient
-          (treeGen t + treeGen u + treeGen v + treeGen w +
-            treeGen x + treeGen y + treeGen z)) = 0 := by
-  have hmk :
-      mkPreLieDifferenceStableQuotient
-          (treeGen t + treeGen u + treeGen v + treeGen w +
-            treeGen x + treeGen y + treeGen z) =
-        mkPreLieDifferenceStableQuotient
-          (treeGen t + treeGen u + treeGen v + treeGen w + treeGen x + treeGen y) +
-        mkPreLieDifferenceStableQuotient (treeGen z) := by
-    simpa using
-      (mkPreLieDifferenceStableQuotient.map_add
-        (treeGen t + treeGen u + treeGen v + treeGen w + treeGen x + treeGen y)
-        (treeGen z))
-  simpa [hmk, OGPrimitiveComul_counit_treeGen_sum_six,
-    OGPrimitiveComul_counit_treeGen] using
-    (OGPrimitiveComul.counit.map_add
-      (mkPreLieDifferenceStableQuotient
-        (treeGen t + treeGen u + treeGen v + treeGen w + treeGen x + treeGen y))
-      (mkPreLieDifferenceStableQuotient (treeGen z)))
-
-/--
-On a sum of eight tree generators, the OG primitive comultiplication expands as
-the sum of the eight primitive generator formulas.
--/
-theorem OGPrimitiveComul_comul_treeGen_sum_eight
-    (s t u v w x y z : PTree) :
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient
-          (treeGen s + treeGen t + treeGen u + treeGen v +
-            treeGen w + treeGen x + treeGen y + treeGen z)) =
-      (TensorProduct.tmul Int (stableUEA_treeGen s) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen s)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  have hmk :
-      mkPreLieDifferenceStableQuotient
-          (treeGen s + treeGen t + treeGen u + treeGen v +
-            treeGen w + treeGen x + treeGen y + treeGen z) =
-        mkPreLieDifferenceStableQuotient
-          (treeGen s + treeGen t + treeGen u + treeGen v + treeGen w + treeGen x + treeGen y) +
-        mkPreLieDifferenceStableQuotient (treeGen z) := by
-    simpa using
-      (mkPreLieDifferenceStableQuotient.map_add
-        (treeGen s + treeGen t + treeGen u + treeGen v + treeGen w + treeGen x + treeGen y)
-        (treeGen z))
-  simpa [hmk, add_assoc, OGPrimitiveComul_comul_treeGen_sum_seven,
-    OGPrimitiveComul_comul_treeGen] using
-    (OGPrimitiveComul.comul.map_add
-      (mkPreLieDifferenceStableQuotient
-        (treeGen s + treeGen t + treeGen u + treeGen v + treeGen w + treeGen x + treeGen y))
-      (mkPreLieDifferenceStableQuotient (treeGen z)))
-
-/--
-The OG primitive counit vanishes on a sum of eight tree generators.
--/
-theorem OGPrimitiveComul_counit_treeGen_sum_eight
-    (s t u v w x y z : PTree) :
-    OGPrimitiveComul.counit
-        (mkPreLieDifferenceStableQuotient
-          (treeGen s + treeGen t + treeGen u + treeGen v +
-            treeGen w + treeGen x + treeGen y + treeGen z)) = 0 := by
-  have hmk :
-      mkPreLieDifferenceStableQuotient
-          (treeGen s + treeGen t + treeGen u + treeGen v +
-            treeGen w + treeGen x + treeGen y + treeGen z) =
-        mkPreLieDifferenceStableQuotient
-          (treeGen s + treeGen t + treeGen u + treeGen v + treeGen w + treeGen x + treeGen y) +
-        mkPreLieDifferenceStableQuotient (treeGen z) := by
-    simpa using
-      (mkPreLieDifferenceStableQuotient.map_add
-        (treeGen s + treeGen t + treeGen u + treeGen v + treeGen w + treeGen x + treeGen y)
-        (treeGen z))
-  simpa [hmk, OGPrimitiveComul_counit_treeGen_sum_seven,
-    OGPrimitiveComul_counit_treeGen] using
-    (OGPrimitiveComul.counit.map_add
-      (mkPreLieDifferenceStableQuotient
-        (treeGen s + treeGen t + treeGen u + treeGen v + treeGen w + treeGen x + treeGen y))
-      (mkPreLieDifferenceStableQuotient (treeGen z)))
-
-/--
-On a sum of nine tree generators, the OG primitive comultiplication expands as
-the sum of the nine primitive generator formulas.
--/
-theorem OGPrimitiveComul_comul_treeGen_sum_nine
-    (r s t u v w x y z : PTree) :
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient
-          (treeGen r + treeGen s + treeGen t + treeGen u + treeGen v +
-            treeGen w + treeGen x + treeGen y + treeGen z)) =
-      (TensorProduct.tmul Int (stableUEA_treeGen r) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen r)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen s) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen s)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  have hmk :
-      mkPreLieDifferenceStableQuotient
-          (treeGen r + treeGen s + treeGen t + treeGen u + treeGen v +
-            treeGen w + treeGen x + treeGen y + treeGen z) =
-        mkPreLieDifferenceStableQuotient
-          (treeGen r + treeGen s + treeGen t + treeGen u + treeGen v +
-            treeGen w + treeGen x + treeGen y) +
-        mkPreLieDifferenceStableQuotient (treeGen z) := by
-    simpa using
-      (mkPreLieDifferenceStableQuotient.map_add
-        (treeGen r + treeGen s + treeGen t + treeGen u + treeGen v +
-          treeGen w + treeGen x + treeGen y)
-        (treeGen z))
-  simpa [hmk, add_assoc, OGPrimitiveComul_comul_treeGen_sum_eight,
-    OGPrimitiveComul_comul_treeGen] using
-    (OGPrimitiveComul.comul.map_add
-      (mkPreLieDifferenceStableQuotient
-        (treeGen r + treeGen s + treeGen t + treeGen u + treeGen v +
-          treeGen w + treeGen x + treeGen y))
-      (mkPreLieDifferenceStableQuotient (treeGen z)))
-
-/--
-The OG primitive counit vanishes on a sum of nine tree generators.
--/
-theorem OGPrimitiveComul_counit_treeGen_sum_nine
-    (r s t u v w x y z : PTree) :
-    OGPrimitiveComul.counit
-        (mkPreLieDifferenceStableQuotient
-          (treeGen r + treeGen s + treeGen t + treeGen u + treeGen v +
-            treeGen w + treeGen x + treeGen y + treeGen z)) = 0 := by
-  have hmk :
-      mkPreLieDifferenceStableQuotient
-          (treeGen r + treeGen s + treeGen t + treeGen u + treeGen v +
-            treeGen w + treeGen x + treeGen y + treeGen z) =
-        mkPreLieDifferenceStableQuotient
-          (treeGen r + treeGen s + treeGen t + treeGen u + treeGen v +
-            treeGen w + treeGen x + treeGen y) +
-        mkPreLieDifferenceStableQuotient (treeGen z) := by
-    simpa using
-      (mkPreLieDifferenceStableQuotient.map_add
-        (treeGen r + treeGen s + treeGen t + treeGen u + treeGen v +
-          treeGen w + treeGen x + treeGen y)
-        (treeGen z))
-  simpa [hmk, OGPrimitiveComul_counit_treeGen_sum_eight,
-    OGPrimitiveComul_counit_treeGen] using
-    (OGPrimitiveComul.counit.map_add
-      (mkPreLieDifferenceStableQuotient
-        (treeGen r + treeGen s + treeGen t + treeGen u + treeGen v +
-          treeGen w + treeGen x + treeGen y))
-      (mkPreLieDifferenceStableQuotient (treeGen z)))
-
-/--
-The canonical-lift version of the primitive formula is just the tree-generator
-formula rewritten through `stableUEA_canonicalLiftData`.
--/
-theorem OGPrimitiveComul_comul_treeGen_via_canonicalLift
-    (x : PTree) :
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient (treeGen x)) =
-      TensorProduct.tmul Int
-        (stableUEA_canonicalLiftData.lift
-          (mkPreLieDifferenceStableQuotient (treeGen x))) 1 +
-        TensorProduct.tmul Int 1
-          (stableUEA_canonicalLiftData.lift
-            (mkPreLieDifferenceStableQuotient (treeGen x))) := by
-  simpa using
-    (OGPrimitiveComulPack_comul_on_treeGen_via_canonicalLift x)
-
-/--
-The concrete GL comultiplication on a forest sum is obtained by evaluating the
-descended quotient comultiplication on `mk(forestGen f)`.
--/
-theorem instance_comul_forestGen
-    (f : Forest) :
-    coproductSupportQuotientCoalgebraInst.comul
-        (mkPreLieDifferenceStableQuotient (forestGen f)) =
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (forestGen f)) := by
-  simpa using
-    (coproductSupportQuotientCoalgebraInst.comul_mk (forestGen f))
-
-/-!
-### Relationship between GL and OG comultiplications
-
-The GL comultiplication on `PreLieDifferenceStableQuotient` (via
-`coproductSupportSummary_comul_quot h_respects`) and the OG primitive
-comultiplication (via `OGPrimitiveComul.comul`) are related by the Oudom-Guin
-theorem: the UEA comultiplication on generators coincides with the primitive
-formula `x ⊗ 1 + 1 ⊗ x`.  A formal proof requires the isomorphism between the
-GL Hopf algebra on forests and the UEA of the free pre-Lie algebra.
-
-Until that transport is formalized, we record side-by-side comparison lemmas:
-the GL comultiplication on small sums of generators, and the corresponding OG
-primitive comultiplication on the same sums.
--/
-
-/--
-General side-by-side comparison on an arbitrary raw linear combination, before
-passing to special finite sums of generators.
--/
-theorem GL_OG_comul_compare_mk
-    (a : linearProofTreeCarrier) :
-    coproductSupportQuotientCoalgebraInst.comul
-        (mkPreLieDifferenceStableQuotient a) =
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear a) ∧
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient a) =
-      TensorProduct.tmul Int (preLieDifferenceStableQuotientToUEA a) 1 +
-        TensorProduct.tmul Int 1 (preLieDifferenceStableQuotientToUEA a) := by
-  exact ⟨coproductSupportQuotientCoalgebraInst.comul_mk a,
-    OGPrimitiveComul_comul_mk a⟩
-
-/--
-General side-by-side comparison of the GL and OG counits on an arbitrary raw
-linear combination.
--/
-theorem GL_OG_counit_compare_mk
-    (a : linearProofTreeCarrier) :
-    coproductSupportQuotientCoalgebraInst.counit
-        (mkPreLieDifferenceStableQuotient a) =
-      coproductSupportSummary_counit_linear a ∧
-    OGPrimitiveComul.counit
-        (mkPreLieDifferenceStableQuotient a) = 0 := by
-  exact ⟨coproductSupportQuotientCoalgebraInst.counit_mk a,
-    OGPrimitiveComul_counit_mk a⟩
-
-/--
-Side-by-side comparison on a single tree generator.
--/
-theorem GL_OG_comul_compare_treeGen
-    (x : PTree) :
-    coproductSupportQuotientCoalgebraInst.comul
-        (mkPreLieDifferenceStableQuotient (treeGen x)) =
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen x)) ∧
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient (treeGen x)) =
-      TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x) := by
-  exact ⟨instance_comul_treeGen x, OGPrimitiveComul_comul_treeGen x⟩
-
-/--
-Side-by-side comparison on a sum of two tree generators.
--/
-theorem GL_OG_comul_compare_treeGen_sum_two
-    (x y : PTree) :
-    coproductSupportQuotientCoalgebraInst.comul
-        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) =
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen x)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen y)) ∧
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) =
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) := by
-  exact
-    ⟨coproductSupportQuotientCoalgebraInst.comul_treeGen_sum_two_tensor x y,
-      OGPrimitiveComul_comul_treeGen_sum_two x y⟩
-
-/--
-Side-by-side comparison on a sum of three tree generators.
--/
-theorem GL_OG_comul_compare_treeGen_sum_three
-    (x y z : PTree) :
-    coproductSupportQuotientCoalgebraInst.comul
-        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y + treeGen z)) =
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen x)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen y)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen z)) ∧
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y + treeGen z)) =
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  exact
-    ⟨coproductSupportQuotientCoalgebraInst.comul_treeGen_sum_three_tensor x y z,
-      OGPrimitiveComul_comul_treeGen_sum_three x y z⟩
-
-/--
-Side-by-side comparison on a sum of four tree generators.
--/
-theorem GL_OG_comul_compare_treeGen_sum_four
-    (w x y z : PTree) :
-    coproductSupportQuotientCoalgebraInst.comul
-        (mkPreLieDifferenceStableQuotient
-          (treeGen w + treeGen x + treeGen y + treeGen z)) =
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen w)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen x)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen y)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen z)) ∧
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient
-          (treeGen w + treeGen x + treeGen y + treeGen z)) =
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  exact
-    ⟨coproductSupportQuotientCoalgebraInst.comul_treeGen_sum_four_tensor w x y z,
-      OGPrimitiveComul_comul_treeGen_sum_four w x y z⟩
-
-/--
-Side-by-side comparison on a sum of five tree generators.
--/
-theorem GL_OG_comul_compare_treeGen_sum_five
-    (v w x y z : PTree) :
-    coproductSupportQuotientCoalgebraInst.comul
-        (mkPreLieDifferenceStableQuotient
-          (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) =
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen v)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen w)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen x)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen y)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen z)) ∧
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient
-          (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) =
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  exact
-    ⟨coproductSupportQuotientCoalgebraInst.comul_treeGen_sum_five_tensor v w x y z,
-      OGPrimitiveComul_comul_treeGen_sum_five v w x y z⟩
-
-/--
-Side-by-side comparison on a sum of six tree generators.
--/
-theorem GL_OG_comul_compare_treeGen_sum_six
-    (u v w x y z : PTree) :
-    coproductSupportQuotientCoalgebraInst.comul
-        (mkPreLieDifferenceStableQuotient
-          (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) =
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen u)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen v)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen w)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen x)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen y)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen z)) ∧
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient
-          (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) =
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  exact
-    ⟨coproductSupportQuotientCoalgebraInst.comul_treeGen_sum_six_tensor u v w x y z,
-      OGPrimitiveComul_comul_treeGen_sum_six u v w x y z⟩
-
-/--
-Side-by-side comparison on a sum of seven tree generators.
--/
-theorem GL_OG_comul_compare_treeGen_sum_seven
-    (t u v w x y z : PTree) :
-    coproductSupportQuotientCoalgebraInst.comul
-        (mkPreLieDifferenceStableQuotient
-          (treeGen t + treeGen u + treeGen v + treeGen w +
-           treeGen x + treeGen y + treeGen z)) =
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen t)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen u)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen v)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen w)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen x)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen y)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen z)) ∧
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient
-          (treeGen t + treeGen u + treeGen v + treeGen w +
-            treeGen x + treeGen y + treeGen z)) =
-      (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  exact
-    ⟨coproductSupportQuotientCoalgebraInst.comul_treeGen_sum_seven_tensor t u v w x y z,
-      OGPrimitiveComul_comul_treeGen_sum_seven t u v w x y z⟩
-
-/--
-Side-by-side comparison on a sum of eight tree generators.
--/
-theorem GL_OG_comul_compare_treeGen_sum_eight
-    (s t u v w x y z : PTree) :
-    coproductSupportQuotientCoalgebraInst.comul
-        (mkPreLieDifferenceStableQuotient
-          (treeGen s + treeGen t + treeGen u + treeGen v +
-           treeGen w + treeGen x + treeGen y + treeGen z)) =
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen s)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen t)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen u)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen v)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen w)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen x)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen y)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen z)) ∧
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient
-          (treeGen s + treeGen t + treeGen u + treeGen v +
-            treeGen w + treeGen x + treeGen y + treeGen z)) =
-      (TensorProduct.tmul Int (stableUEA_treeGen s) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen s)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  exact
-    ⟨coproductSupportQuotientCoalgebraInst.comul_treeGen_sum_eight_tensor s t u v w x y z,
-      OGPrimitiveComul_comul_treeGen_sum_eight s t u v w x y z⟩
-
-/--
-Side-by-side comparison on a sum of nine tree generators.
--/
-theorem GL_OG_comul_compare_treeGen_sum_nine
-    (r s t u v w x y z : PTree) :
-    coproductSupportQuotientCoalgebraInst.comul
-        (mkPreLieDifferenceStableQuotient
-          (treeGen r + treeGen s + treeGen t + treeGen u + treeGen v +
-           treeGen w + treeGen x + treeGen y + treeGen z)) =
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen r)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen s)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen t)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen u)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen v)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen w)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen x)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen y)) +
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (treeGen z)) ∧
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient
-          (treeGen r + treeGen s + treeGen t + treeGen u + treeGen v +
-            treeGen w + treeGen x + treeGen y + treeGen z)) =
-      (TensorProduct.tmul Int (stableUEA_treeGen r) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen r)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen s) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen s)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  exact
-    ⟨coproductSupportQuotientCoalgebraInst.comul_treeGen_sum_nine_tensor r s t u v w x y z,
-      OGPrimitiveComul_comul_treeGen_sum_nine r s t u v w x y z⟩
-
-/--
-Side-by-side comparison of the GL and OG counits on a single tree generator.
--/
-theorem GL_OG_counit_compare_treeGen
-    (x : PTree) :
-    coproductSupportQuotientCoalgebraInst.counit
-        (mkPreLieDifferenceStableQuotient (treeGen x)) = 0 ∧
-    OGPrimitiveComul.counit
-        (mkPreLieDifferenceStableQuotient (treeGen x)) = 0 := by
-  exact ⟨instance_counit_treeGen_zero x, OGPrimitiveComul_counit_treeGen x⟩
-
-/--
-Side-by-side comparison of the GL and OG counits on a sum of two tree generators.
--/
-theorem GL_OG_counit_compare_treeGen_sum_two
-    (x y : PTree) :
-    coproductSupportQuotientCoalgebraInst.counit
-        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) = 0 ∧
-    OGPrimitiveComul.counit
-        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) = 0 := by
-  have hGL :
-      coproductSupportQuotientCoalgebraInst.counit
-          (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) = 0 := by
-    simpa using
-      (coproductSupportQuotientCoalgebraInst.counit_add_mk (treeGen x) (treeGen y))
-  exact ⟨hGL, OGPrimitiveComul_counit_treeGen_sum_two x y⟩
-
-/--
-Side-by-side comparison of the GL and OG counits on a sum of three tree generators.
--/
-theorem GL_OG_counit_compare_treeGen_sum_three
-    (x y z : PTree) :
-    coproductSupportQuotientCoalgebraInst.counit
-        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y + treeGen z)) = 0 ∧
-    OGPrimitiveComul.counit
-        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y + treeGen z)) = 0 := by
-  have hGL :
-      coproductSupportQuotientCoalgebraInst.counit
-          (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y + treeGen z)) = 0 := by
-    simpa using
-      (coproductSupportQuotientCoalgebraInst.counit_add_mk
-        (treeGen x + treeGen y) (treeGen z))
-  exact ⟨hGL, OGPrimitiveComul_counit_treeGen_sum_three x y z⟩
-
-/--
-Side-by-side comparison of the GL and OG counits on a sum of four tree generators.
--/
-theorem GL_OG_counit_compare_treeGen_sum_four
-    (w x y z : PTree) :
-    coproductSupportQuotientCoalgebraInst.counit
-        (mkPreLieDifferenceStableQuotient
-          (treeGen w + treeGen x + treeGen y + treeGen z)) = 0 ∧
-    OGPrimitiveComul.counit
-        (mkPreLieDifferenceStableQuotient
-          (treeGen w + treeGen x + treeGen y + treeGen z)) = 0 := by
-  have hGL :
-      coproductSupportQuotientCoalgebraInst.counit
-          (mkPreLieDifferenceStableQuotient
-            (treeGen w + treeGen x + treeGen y + treeGen z)) = 0 := by
-    simpa using
-      (coproductSupportQuotientCoalgebraInst.counit_add_mk
-        (treeGen w + treeGen x + treeGen y) (treeGen z))
-  exact ⟨hGL, OGPrimitiveComul_counit_treeGen_sum_four w x y z⟩
-
-/--
-Side-by-side comparison of the GL and OG counits on a sum of five tree generators.
--/
-theorem GL_OG_counit_compare_treeGen_sum_five
-    (v w x y z : PTree) :
-    coproductSupportQuotientCoalgebraInst.counit
-        (mkPreLieDifferenceStableQuotient
-          (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) = 0 ∧
-    OGPrimitiveComul.counit
-        (mkPreLieDifferenceStableQuotient
-          (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) = 0 := by
-  have hGL :
-      coproductSupportQuotientCoalgebraInst.counit
-          (mkPreLieDifferenceStableQuotient
-            (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) = 0 := by
-    simpa using
-      (coproductSupportQuotientCoalgebraInst.counit_add_mk
-        (treeGen v + treeGen w + treeGen x + treeGen y) (treeGen z))
-  exact ⟨hGL, OGPrimitiveComul_counit_treeGen_sum_five v w x y z⟩
-
-/--
-Side-by-side comparison of the GL and OG counits on a sum of six tree generators.
--/
-theorem GL_OG_counit_compare_treeGen_sum_six
-    (u v w x y z : PTree) :
-    coproductSupportQuotientCoalgebraInst.counit
-        (mkPreLieDifferenceStableQuotient
-          (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) = 0 ∧
-    OGPrimitiveComul.counit
-        (mkPreLieDifferenceStableQuotient
-          (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) = 0 := by
-  have hGL :
-      coproductSupportQuotientCoalgebraInst.counit
-          (mkPreLieDifferenceStableQuotient
-            (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) = 0 := by
-    simpa using
-      (coproductSupportQuotientCoalgebraInst.counit_add_mk
-        (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y) (treeGen z))
-  exact ⟨hGL, OGPrimitiveComul_counit_treeGen_sum_six u v w x y z⟩
-
-/--
-Side-by-side comparison of the GL and OG counits on a sum of seven tree generators.
--/
-theorem GL_OG_counit_compare_treeGen_sum_seven
-    (t u v w x y z : PTree) :
-    coproductSupportQuotientCoalgebraInst.counit
-        (mkPreLieDifferenceStableQuotient
-          (treeGen t + treeGen u + treeGen v + treeGen w +
-            treeGen x + treeGen y + treeGen z)) = 0 ∧
-    OGPrimitiveComul.counit
-        (mkPreLieDifferenceStableQuotient
-          (treeGen t + treeGen u + treeGen v + treeGen w +
-            treeGen x + treeGen y + treeGen z)) = 0 := by
-  have hGL :
-      coproductSupportQuotientCoalgebraInst.counit
-          (mkPreLieDifferenceStableQuotient
-            (treeGen t + treeGen u + treeGen v + treeGen w +
-              treeGen x + treeGen y + treeGen z)) = 0 := by
-    simpa using
-      (coproductSupportQuotientCoalgebraInst.counit_add_mk
-        (treeGen t + treeGen u + treeGen v + treeGen w + treeGen x + treeGen y)
-        (treeGen z))
-  exact ⟨hGL, OGPrimitiveComul_counit_treeGen_sum_seven t u v w x y z⟩
-
-/--
-Side-by-side comparison of the GL and OG counits on a sum of eight tree generators.
--/
-theorem GL_OG_counit_compare_treeGen_sum_eight
-    (s t u v w x y z : PTree) :
-    coproductSupportQuotientCoalgebraInst.counit
-        (mkPreLieDifferenceStableQuotient
-          (treeGen s + treeGen t + treeGen u + treeGen v +
-            treeGen w + treeGen x + treeGen y + treeGen z)) = 0 ∧
-    OGPrimitiveComul.counit
-        (mkPreLieDifferenceStableQuotient
-          (treeGen s + treeGen t + treeGen u + treeGen v +
-            treeGen w + treeGen x + treeGen y + treeGen z)) = 0 := by
-  have hGL :
-      coproductSupportQuotientCoalgebraInst.counit
-          (mkPreLieDifferenceStableQuotient
-            (treeGen s + treeGen t + treeGen u + treeGen v +
-              treeGen w + treeGen x + treeGen y + treeGen z)) = 0 := by
-    simpa using
-      (coproductSupportQuotientCoalgebraInst.counit_add_mk
-        (treeGen s + treeGen t + treeGen u + treeGen v + treeGen w + treeGen x + treeGen y)
-        (treeGen z))
-  exact ⟨hGL, OGPrimitiveComul_counit_treeGen_sum_eight s t u v w x y z⟩
-
-/--
-Side-by-side comparison of the GL and OG counits on a sum of nine tree generators.
--/
-theorem GL_OG_counit_compare_treeGen_sum_nine
-    (r s t u v w x y z : PTree) :
-    coproductSupportQuotientCoalgebraInst.counit
-        (mkPreLieDifferenceStableQuotient
-          (treeGen r + treeGen s + treeGen t + treeGen u + treeGen v +
-            treeGen w + treeGen x + treeGen y + treeGen z)) = 0 ∧
-    OGPrimitiveComul.counit
-        (mkPreLieDifferenceStableQuotient
-          (treeGen r + treeGen s + treeGen t + treeGen u + treeGen v +
-            treeGen w + treeGen x + treeGen y + treeGen z)) = 0 := by
-  have hGL :
-      coproductSupportQuotientCoalgebraInst.counit
-          (mkPreLieDifferenceStableQuotient
-            (treeGen r + treeGen s + treeGen t + treeGen u + treeGen v +
-              treeGen w + treeGen x + treeGen y + treeGen z)) = 0 := by
-    simpa using
-      (coproductSupportQuotientCoalgebraInst.counit_add_mk
-        (treeGen r + treeGen s + treeGen t + treeGen u + treeGen v +
-          treeGen w + treeGen x + treeGen y)
-        (treeGen z))
-  exact ⟨hGL, OGPrimitiveComul_counit_treeGen_sum_nine r s t u v w x y z⟩
-
-/-!
-### GL support formulas valued directly in the stable UEA tensor
-
-Because the canonical lift has only been packaged functionally so far, the
-full tensor-level transport from quotient tensor to UEA tensor still needs a
-separate linear packaging step.  What we can already do cleanly is evaluate
-the same cut-support data directly in the stable UEA tensor.
--/
-
-noncomputable def stableUEA_forestGen : Forest -> preLieDifferenceStableQuotientUEA
-  | [] => 0
-  | t :: ts => stableUEA_treeGen t + stableUEA_forestGen ts
-
-@[simp] theorem stableUEA_forestGen_nil :
-    stableUEA_forestGen ([] : Forest) = 0 := by
-  rfl
-
-@[simp] theorem stableUEA_forestGen_cons (t : PTree) (ts : Forest) :
-    stableUEA_forestGen (t :: ts) =
-      stableUEA_treeGen t + stableUEA_forestGen ts := by
-  rfl
-
-theorem stableUEA_forestGen_append (xs ys : Forest) :
-    stableUEA_forestGen (xs ++ ys) =
-      stableUEA_forestGen xs + stableUEA_forestGen ys := by
-  induction xs with
-  | nil =>
-      simp [stableUEA_forestGen]
-  | cons t ts ih =>
-      simp [stableUEA_forestGen, ih, add_assoc, add_left_comm, add_comm]
-
-noncomputable def stableUEA_coproductSupportSummary_tensorGen
-    (p : Prod Forest PTree) : stableUEATensor :=
-  TensorProduct.tmul Int (stableUEA_forestGen p.1) (stableUEA_treeGen p.2)
-
-noncomputable def stableUEA_coproductSupportSummary_comul_linear :
-    LinearMap (RingHom.id Int) linearProofTreeCarrier stableUEATensor :=
-  coproductSupportSummary_sum_linear
-    (alpha := stableUEATensor)
-    stableUEA_coproductSupportSummary_tensorGen
-
-noncomputable def stableUEA_expectedPrimitiveComulLinear :
-    LinearMap (RingHom.id Int) linearProofTreeCarrier stableUEATensor :=
-  Finsupp.lsum Int (fun x : PTree =>
-    (LinearMap.id : LinearMap (RingHom.id Int) Int Int).smulRight
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)))
-
-@[simp] theorem stableUEA_expectedPrimitiveComulLinear_treeGen
-    (x : PTree) :
-    stableUEA_expectedPrimitiveComulLinear (treeGen x) =
-      TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x) := by
-  classical
-  simp only [stableUEA_expectedPrimitiveComulLinear, treeGen, Finsupp.lsum_single,
-    LinearMap.smulRight_apply, LinearMap.id_apply]
-  exact one_smul Int _
-
-theorem stableUEA_expectedPrimitiveComulLinear_apply
-    (a : linearProofTreeCarrier) :
-    stableUEA_expectedPrimitiveComulLinear a =
-      a.sum (fun x c =>
-        c • (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-          TensorProduct.tmul Int 1 (stableUEA_treeGen x))) := by
-  simp [stableUEA_expectedPrimitiveComulLinear, Finsupp.lsum_apply]
-
-@[simp] theorem stableUEA_expectedPrimitiveComulLinear_add
-    (a b : linearProofTreeCarrier) :
-    stableUEA_expectedPrimitiveComulLinear (a + b) =
-      stableUEA_expectedPrimitiveComulLinear a +
-        stableUEA_expectedPrimitiveComulLinear b := by
-  simpa using (stableUEA_expectedPrimitiveComulLinear.map_add a b)
-
-@[simp] theorem stableUEA_expectedPrimitiveComulLinear_smul
-    (z : Int) (a : linearProofTreeCarrier) :
-    stableUEA_expectedPrimitiveComulLinear (z • a) =
-      z • stableUEA_expectedPrimitiveComulLinear a := by
-  simpa using (stableUEA_expectedPrimitiveComulLinear.map_smul z a)
-
-/--
-The primitive comultiplication formula, accumulated over a whole forest.
-
-This is the finite-list version of repeatedly adding the primitive terms
-`x ⊗ 1 + 1 ⊗ x`.
--/
-noncomputable def stableUEA_expectedPrimitiveComulForest : Forest -> stableUEATensor
-  | [] => 0
-  | t :: ts =>
-      (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t)) +
-      stableUEA_expectedPrimitiveComulForest ts
-
-@[simp] theorem stableUEA_expectedPrimitiveComulForest_nil :
-    stableUEA_expectedPrimitiveComulForest ([] : Forest) = 0 := by
-  rfl
-
-@[simp] theorem stableUEA_expectedPrimitiveComulForest_cons
-    (t : PTree) (ts : Forest) :
-    stableUEA_expectedPrimitiveComulForest (t :: ts) =
-      (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t)) +
-      stableUEA_expectedPrimitiveComulForest ts := by
-  rfl
-
-theorem stableUEA_expectedPrimitiveComulForest_append
-    (xs ys : Forest) :
-    stableUEA_expectedPrimitiveComulForest (xs ++ ys) =
-      stableUEA_expectedPrimitiveComulForest xs +
-        stableUEA_expectedPrimitiveComulForest ys := by
-  induction xs with
-  | nil =>
-      simp [stableUEA_expectedPrimitiveComulForest]
-  | cons t ts ih =>
-      simp [stableUEA_expectedPrimitiveComulForest, ih, add_assoc,
-        add_left_comm, add_comm]
-
-/--
-The raw-to-UEA linear map sends `forestGen` to the corresponding stable UEA
-sum of tree generators.
--/
-theorem stableUEA_rawToUEALinear_forestGen
-    (f : Forest) :
-    stableUEA_rawToUEALinear (forestGen f) = stableUEA_forestGen f := by
-  induction f with
-  | nil =>
-      simp
-  | cons t ts ih =>
-      simp [forestGen_cons, stableUEA_forestGen_cons, ih,
-        stableUEA_rawToUEALinear_add, stableUEA_rawToUEALinear_treeGen]
-
-/--
-Likewise, the older quotient-then-UEA map sends `forestGen` to the same stable
-UEA forest sum.
--/
-theorem preLieDifferenceStableQuotientToUEA_forestGen
-    (f : Forest) :
-    preLieDifferenceStableQuotientToUEA (forestGen f) = stableUEA_forestGen f := by
-  rw [← stableUEA_rawToUEALinear_eq_preLieDifferenceStableQuotientToUEA]
-  exact stableUEA_rawToUEALinear_forestGen f
-
-/--
-The recursive forest primitive formula is equivalent to the compact primitive
-formula on the forest sum itself.
--/
-theorem stableUEA_expectedPrimitiveComulForest_eq_formula
-    (f : Forest) :
-    stableUEA_expectedPrimitiveComulForest f =
-      TensorProduct.tmul Int (stableUEA_forestGen f) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_forestGen f) := by
-  induction f with
-  | nil =>
-      simp [stableUEA_expectedPrimitiveComulForest, stableUEA_forestGen]
-  | cons t ts ih =>
-      simp [stableUEA_expectedPrimitiveComulForest, stableUEA_forestGen, ih,
-        TensorProduct.tmul_add, TensorProduct.add_tmul, add_assoc,
-        add_left_comm, add_comm]
-
-/--
-Applying the expected primitive linear comultiplication to `forestGen f`
-produces the recursive forest primitive formula.
--/
-theorem stableUEA_expectedPrimitiveComulLinear_forestGen
-    (f : Forest) :
-    stableUEA_expectedPrimitiveComulLinear (forestGen f) =
-      stableUEA_expectedPrimitiveComulForest f := by
-  induction f with
-  | nil =>
-      simp [forestGen, stableUEA_expectedPrimitiveComulForest]
-  | cons t ts ih =>
-      simp [forestGen_cons, stableUEA_expectedPrimitiveComulForest, ih,
-        stableUEA_expectedPrimitiveComulLinear_add,
-        stableUEA_expectedPrimitiveComulLinear_treeGen]
-
-/--
-The OG primitive raw linear comultiplication on `forestGen f` is exactly the
-recursive forest primitive formula.
--/
-theorem stableUEA_OGPrimitive_comul_linear_forestGen
-    (f : Forest) :
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData (forestGen f) =
-      stableUEA_expectedPrimitiveComulForest f := by
-  calc
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData (forestGen f)
-        = TensorProduct.tmul Int (stableUEA_rawToUEALinear (forestGen f)) 1 +
-            TensorProduct.tmul Int 1 (stableUEA_rawToUEALinear (forestGen f)) := by
-              exact stableUEA_OGPrimitive_comul_linear_formula (forestGen f)
-    _ = TensorProduct.tmul Int (stableUEA_forestGen f) 1 +
-          TensorProduct.tmul Int 1 (stableUEA_forestGen f) := by
-            simp [stableUEA_rawToUEALinear_forestGen]
-    _ = stableUEA_expectedPrimitiveComulForest f := by
-          symm
-          exact stableUEA_expectedPrimitiveComulForest_eq_formula f
-
-/--
-The OG primitive raw linear counit vanishes on every forest sum.
--/
-theorem stableUEA_OGPrimitive_counit_linear_forestGen
-    (f : Forest) :
-    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData (forestGen f) = 0 := by
-  induction f with
-  | nil =>
-      simp [forestGen]
-  | cons t ts ih =>
-      simp [forestGen_cons, ih, stableUEA_counit_linear_add,
-        stableUEA_counit_linear_treeGen]
-
-/--
-The cut-support comultiplication, evaluated in the stable UEA tensor, also
-admits a recursive forest formula.
--/
-noncomputable def stableUEA_coproductSupportSummary_comulForest : Forest -> stableUEATensor
-  | [] => 0
-  | t :: ts =>
-      coproductSupportSummary_sum t stableUEA_coproductSupportSummary_tensorGen +
-        stableUEA_coproductSupportSummary_comulForest ts
-
-@[simp] theorem stableUEA_coproductSupportSummary_comulForest_nil :
-    stableUEA_coproductSupportSummary_comulForest ([] : Forest) = 0 := by
-  rfl
-
-@[simp] theorem stableUEA_coproductSupportSummary_comulForest_cons
-    (t : PTree) (ts : Forest) :
-    stableUEA_coproductSupportSummary_comulForest (t :: ts) =
-      coproductSupportSummary_sum t stableUEA_coproductSupportSummary_tensorGen +
-        stableUEA_coproductSupportSummary_comulForest ts := by
-  rfl
-
-theorem stableUEA_coproductSupportSummary_comulForest_append
-    (xs ys : Forest) :
-    stableUEA_coproductSupportSummary_comulForest (xs ++ ys) =
-      stableUEA_coproductSupportSummary_comulForest xs +
-        stableUEA_coproductSupportSummary_comulForest ys := by
-  induction xs with
-  | nil =>
-      simp [stableUEA_coproductSupportSummary_comulForest]
-  | cons t ts ih =>
-      simp [stableUEA_coproductSupportSummary_comulForest, ih, add_assoc,
-        add_left_comm, add_comm]
-
-/--
-Evaluating the cut-support linear map on `forestGen f` gives the recursive
-forest sum of the one-tree cut-support contributions.
--/
-theorem stableUEA_coproductSupportSummary_comul_linear_forestGen
-    (f : Forest) :
-    stableUEA_coproductSupportSummary_comul_linear (forestGen f) =
-      stableUEA_coproductSupportSummary_comulForest f := by
-  induction f with
-  | nil =>
-      simp [forestGen, stableUEA_coproductSupportSummary_comulForest]
-  | cons t ts ih =>
-      rw [forestGen_cons, stableUEA_coproductSupportSummary_comulForest_cons]
-      change
-        (coproductSupportSummary_sum_linear
-            stableUEA_coproductSupportSummary_tensorGen) (treeGen t + forestGen ts) =
-          coproductSupportSummary_sum t stableUEA_coproductSupportSummary_tensorGen +
-            stableUEA_coproductSupportSummary_comulForest ts
-      rw [coproductSupportSummary_sum_linear_add,
-        coproductSupportSummary_sum_linear_treeGen]
-      simpa [stableUEA_coproductSupportSummary_comul_linear] using ih
-
-/--
-The cut-support linear counit vanishes on every forest sum, since it already
-vanishes on each tree generator.
--/
-theorem coproductSupportSummary_counit_linear_forestGen
-    (f : Forest) :
-    coproductSupportSummary_counit_linear (forestGen f) = 0 := by
-  induction f with
-  | nil =>
-      simp [forestGen]
-  | cons t ts ih =>
-      simp [forestGen_cons, ih, coproductSupportSummary_counit_linear_add,
-        coproductSupportSummary_counit_linear_treeGen]
-
-/--
-The concrete GL counit vanishes on every forest sum.
--/
-theorem instance_counit_forestGen_zero
-    (f : Forest) :
-    coproductSupportQuotientCoalgebraInst.counit
-        (mkPreLieDifferenceStableQuotient (forestGen f)) = 0 := by
-  simpa [coproductSupportSummary_counit_linear_forestGen] using
-    (coproductSupportQuotientCoalgebraInst.counit_mk (forestGen f))
-
-/--
-The descended OG primitive comultiplication on a forest sum is the recursive
-forest primitive formula.
--/
-theorem OGPrimitiveComul_comul_forestGen
-    (f : Forest) :
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient (forestGen f)) =
-      stableUEA_expectedPrimitiveComulForest f := by
-  calc
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient (forestGen f))
-        =
-      TensorProduct.tmul Int
-        (preLieDifferenceStableQuotientToUEA (forestGen f)) 1 +
-      TensorProduct.tmul Int 1
-        (preLieDifferenceStableQuotientToUEA (forestGen f)) := by
-          exact OGPrimitiveComul_comul_mk (forestGen f)
-    _ =
-      TensorProduct.tmul Int (stableUEA_forestGen f) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_forestGen f) := by
-          simp [preLieDifferenceStableQuotientToUEA_forestGen]
-    _ = stableUEA_expectedPrimitiveComulForest f := by
-          symm
-          exact stableUEA_expectedPrimitiveComulForest_eq_formula f
-
-/--
-The descended OG primitive counit vanishes on every forest sum.
--/
-theorem OGPrimitiveComul_counit_forestGen
-    (f : Forest) :
-    OGPrimitiveComul.counit
-        (mkPreLieDifferenceStableQuotient (forestGen f)) = 0 := by
-  exact OGPrimitiveComul_counit_mk (forestGen f)
-
-/--
-Forest-level side-by-side comparison of the GL and OG comultiplications.
--/
-theorem GL_OG_comul_compare_forestGen
-    (f : Forest) :
-    coproductSupportQuotientCoalgebraInst.comul
-        (mkPreLieDifferenceStableQuotient (forestGen f)) =
-      mkPreLieDifferenceStableQuotient_tensor
-        (coproductSupportSummary_comul_linear (forestGen f)) ∧
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient (forestGen f)) =
-      stableUEA_expectedPrimitiveComulForest f := by
-  exact ⟨instance_comul_forestGen f, OGPrimitiveComul_comul_forestGen f⟩
-
-/--
-Forest-level side-by-side comparison of the GL and OG counits.
--/
-theorem GL_OG_counit_compare_forestGen
-    (f : Forest) :
-    coproductSupportQuotientCoalgebraInst.counit
-        (mkPreLieDifferenceStableQuotient (forestGen f)) = 0 ∧
-      OGPrimitiveComul.counit
-        (mkPreLieDifferenceStableQuotient (forestGen f)) = 0 := by
-  exact ⟨instance_counit_forestGen_zero f, OGPrimitiveComul_counit_forestGen f⟩
-
-/--
-Raw same-codomain comparison on a forest generator sum: the GL support-side
-linear map and the OG primitive linear map both admit explicit forest formulas.
--/
-theorem GLSupport_OGRaw_compare_forestGen
-    (f : Forest) :
-    stableUEA_coproductSupportSummary_comul_linear (forestGen f) =
-        stableUEA_coproductSupportSummary_comulForest f ∧
-      stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData (forestGen f) =
-        stableUEA_expectedPrimitiveComulForest f := by
-  exact ⟨stableUEA_coproductSupportSummary_comul_linear_forestGen f,
-    stableUEA_OGPrimitive_comul_linear_forestGen f⟩
-
-/--
-Forest-level comparison between the raw GL support-side comultiplication and
-the descended OG primitive comultiplication.
--/
-theorem GLSupport_OG_comul_compare_forestGen
-    (f : Forest) :
-    stableUEA_coproductSupportSummary_comul_linear (forestGen f) =
-        stableUEA_coproductSupportSummary_comulForest f ∧
-      OGPrimitiveComul.comul
-          (mkPreLieDifferenceStableQuotient (forestGen f)) =
-        stableUEA_expectedPrimitiveComulForest f := by
-  exact ⟨stableUEA_coproductSupportSummary_comul_linear_forestGen f,
-    OGPrimitiveComul_comul_forestGen f⟩
-
-/--
-Forest-level comparison between the raw GL support-side comultiplication and
-the expected primitive comultiplication formula.
--/
-theorem GLSupport_expectedPrimitive_compare_forestGen
-    (f : Forest) :
-    stableUEA_coproductSupportSummary_comul_linear (forestGen f) =
-        stableUEA_coproductSupportSummary_comulForest f ∧
-      stableUEA_expectedPrimitiveComulLinear (forestGen f) =
-        stableUEA_expectedPrimitiveComulForest f := by
-  exact ⟨stableUEA_coproductSupportSummary_comul_linear_forestGen f,
-    stableUEA_expectedPrimitiveComulLinear_forestGen f⟩
-
-/--
-Raw same-codomain counit comparison on a forest generator sum: both the GL
-support-side counit and the OG primitive counit vanish.
--/
-theorem GLSupport_OGRaw_counit_compare_forestGen
-    (f : Forest) :
-    coproductSupportSummary_counit_linear (forestGen f) = 0 ∧
-      stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData (forestGen f) = 0 := by
-  exact ⟨coproductSupportSummary_counit_linear_forestGen f,
-    stableUEA_OGPrimitive_counit_linear_forestGen f⟩
-
-/--
-The expected primitive comultiplication of an appended forest is the sum of the
-expected primitive comultiplications of the two parts.
--/
-theorem stableUEA_expectedPrimitiveComulLinear_forestGen_append
-    (xs ys : Forest) :
-    stableUEA_expectedPrimitiveComulLinear (forestGen (xs ++ ys)) =
-      stableUEA_expectedPrimitiveComulLinear (forestGen xs) +
-        stableUEA_expectedPrimitiveComulLinear (forestGen ys) := by
-  rw [stableUEA_expectedPrimitiveComulLinear_forestGen,
-    stableUEA_expectedPrimitiveComulLinear_forestGen,
-    stableUEA_expectedPrimitiveComulLinear_forestGen,
-    stableUEA_expectedPrimitiveComulForest_append]
-
-/--
-The raw OG primitive comultiplication of an appended forest is the sum of the
-raw OG primitive comultiplications of the two parts.
--/
-theorem stableUEA_OGPrimitive_comul_linear_forestGen_append
-    (xs ys : Forest) :
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData
-        (forestGen (xs ++ ys)) =
-      stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData (forestGen xs) +
-        stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData (forestGen ys) := by
-  rw [stableUEA_OGPrimitive_comul_linear_forestGen,
-    stableUEA_OGPrimitive_comul_linear_forestGen,
-    stableUEA_OGPrimitive_comul_linear_forestGen,
-    stableUEA_expectedPrimitiveComulForest_append]
-
-/--
-The raw GL support-side comultiplication of an appended forest is the sum of the
-raw GL support-side comultiplications of the two parts.
--/
-theorem stableUEA_coproductSupportSummary_comul_linear_forestGen_append
-    (xs ys : Forest) :
-    stableUEA_coproductSupportSummary_comul_linear (forestGen (xs ++ ys)) =
-      stableUEA_coproductSupportSummary_comul_linear (forestGen xs) +
-        stableUEA_coproductSupportSummary_comul_linear (forestGen ys) := by
-  rw [stableUEA_coproductSupportSummary_comul_linear_forestGen,
-    stableUEA_coproductSupportSummary_comul_linear_forestGen,
-    stableUEA_coproductSupportSummary_comul_linear_forestGen,
-    stableUEA_coproductSupportSummary_comulForest_append]
-
-/--
-The descended OG primitive comultiplication of an appended forest is the sum of
-the descended OG primitive comultiplications of the two parts.
--/
-theorem OGPrimitiveComul_comul_forestGen_append
-    (xs ys : Forest) :
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient (forestGen (xs ++ ys))) =
-      OGPrimitiveComul.comul
-          (mkPreLieDifferenceStableQuotient (forestGen xs)) +
-        OGPrimitiveComul.comul
-          (mkPreLieDifferenceStableQuotient (forestGen ys)) := by
-  rw [OGPrimitiveComul_comul_forestGen, OGPrimitiveComul_comul_forestGen,
-    OGPrimitiveComul_comul_forestGen, stableUEA_expectedPrimitiveComulForest_append]
-
-/--
-Any packaged quotient comultiplication data agrees with the OG primitive forest
-formula on arbitrary forest sums.
--/
-theorem StableQuotientComultiplicationData_comul_forestGen
-    (D : StableQuotientComultiplicationData)
-    (f : Forest) :
-    D.comul (mkPreLieDifferenceStableQuotient (forestGen f)) =
-      stableUEA_expectedPrimitiveComulForest f := by
-  have hD := StableQuotientComultiplicationData_eq_OGPrimitive D
-  rw [hD.1]
-  exact OGPrimitiveComul_comul_forestGen f
-
-/--
-Any packaged quotient comultiplication data has zero counit on arbitrary forest
-sums.
--/
-theorem StableQuotientComultiplicationData_counit_forestGen
-    (D : StableQuotientComultiplicationData)
-    (f : Forest) :
-    D.counit (mkPreLieDifferenceStableQuotient (forestGen f)) = 0 := by
-  have hD := StableQuotientComultiplicationData_eq_OGPrimitive D
-  rw [hD.2]
-  exact OGPrimitiveComul_counit_forestGen f
-
-/--
-Any quotient comultiplication pack agrees with the OG primitive forest formula
-on arbitrary forest sums.
--/
-theorem StableQuotientComultiplicationPack_comul_forestGen
-    (D : StableQuotientComultiplicationPack)
-    (f : Forest) :
-    D.comul (mkPreLieDifferenceStableQuotient (forestGen f)) =
-      stableUEA_expectedPrimitiveComulForest f := by
-  have hD := StableQuotientComultiplicationPack_eq_OGPrimitive D
-  rw [hD.1]
-  exact OGPrimitiveComul_comul_forestGen f
-
-/--
-Any quotient comultiplication pack has zero counit on arbitrary forest sums.
--/
-theorem StableQuotientComultiplicationPack_counit_forestGen
-    (D : StableQuotientComultiplicationPack)
-    (f : Forest) :
-    D.counit (mkPreLieDifferenceStableQuotient (forestGen f)) = 0 := by
-  have hD := StableQuotientComultiplicationPack_eq_OGPrimitive D
-  rw [hD.2]
-  exact OGPrimitiveComul_counit_forestGen f
-
-/--
-Any packaged quotient comultiplication data is additive with respect to forest
-concatenation.
--/
-theorem StableQuotientComultiplicationData_comul_forestGen_append
-    (D : StableQuotientComultiplicationData)
-    (xs ys : Forest) :
-    D.comul (mkPreLieDifferenceStableQuotient (forestGen (xs ++ ys))) =
-      D.comul (mkPreLieDifferenceStableQuotient (forestGen xs)) +
-        D.comul (mkPreLieDifferenceStableQuotient (forestGen ys)) := by
-  have hD := StableQuotientComultiplicationData_eq_OGPrimitive D
-  rw [hD.1]
-  exact OGPrimitiveComul_comul_forestGen_append xs ys
-
-/--
-Likewise, any quotient comultiplication pack is additive with respect to forest
-concatenation.
--/
-theorem StableQuotientComultiplicationPack_comul_forestGen_append
-    (D : StableQuotientComultiplicationPack)
-    (xs ys : Forest) :
-    D.comul (mkPreLieDifferenceStableQuotient (forestGen (xs ++ ys))) =
-      D.comul (mkPreLieDifferenceStableQuotient (forestGen xs)) +
-        D.comul (mkPreLieDifferenceStableQuotient (forestGen ys)) := by
-  have hD := StableQuotientComultiplicationPack_eq_OGPrimitive D
-  rw [hD.1]
-  exact OGPrimitiveComul_comul_forestGen_append xs ys
-
-/--
-The descended GL support-side comultiplication of an appended forest is the sum
-of the descended GL support-side comultiplications of the two parts.
--/
-theorem instance_comul_forestGen_append
-    (xs ys : Forest) :
-    coproductSupportQuotientCoalgebraInst.comul
-        (mkPreLieDifferenceStableQuotient (forestGen (xs ++ ys))) =
-      coproductSupportQuotientCoalgebraInst.comul
-          (mkPreLieDifferenceStableQuotient (forestGen xs)) +
-        coproductSupportQuotientCoalgebraInst.comul
-          (mkPreLieDifferenceStableQuotient (forestGen ys)) := by
-  rw [instance_comul_forestGen, instance_comul_forestGen, instance_comul_forestGen]
-  rw [forestGen_append, coproductSupportSummary_comul_linear_add,
-    mkPreLieDifferenceStableQuotient_tensor_add]
-
-/--
-The descended GL/OG comultiplication comparison is additive with respect to
-forest concatenation.
--/
-theorem GL_OG_comul_compare_forestGen_append
-    (xs ys : Forest) :
-    coproductSupportQuotientCoalgebraInst.comul
-        (mkPreLieDifferenceStableQuotient (forestGen (xs ++ ys))) =
-      coproductSupportQuotientCoalgebraInst.comul
-          (mkPreLieDifferenceStableQuotient (forestGen xs)) +
-        coproductSupportQuotientCoalgebraInst.comul
-          (mkPreLieDifferenceStableQuotient (forestGen ys)) ∧
-      OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient (forestGen (xs ++ ys))) =
-      OGPrimitiveComul.comul
-          (mkPreLieDifferenceStableQuotient (forestGen xs)) +
-        OGPrimitiveComul.comul
-          (mkPreLieDifferenceStableQuotient (forestGen ys)) := by
-  exact ⟨instance_comul_forestGen_append xs ys,
-    OGPrimitiveComul_comul_forestGen_append xs ys⟩
-
-/--
-The raw GL support-side and descended OG primitive forest comultiplications are
-both additive with respect to forest concatenation.
--/
-theorem GLSupport_OG_comul_compare_forestGen_append
-    (xs ys : Forest) :
-    stableUEA_coproductSupportSummary_comul_linear (forestGen (xs ++ ys)) =
-      stableUEA_coproductSupportSummary_comul_linear (forestGen xs) +
-        stableUEA_coproductSupportSummary_comul_linear (forestGen ys) ∧
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient (forestGen (xs ++ ys))) =
-      OGPrimitiveComul.comul
-          (mkPreLieDifferenceStableQuotient (forestGen xs)) +
-        OGPrimitiveComul.comul
-          (mkPreLieDifferenceStableQuotient (forestGen ys)) := by
-  exact ⟨stableUEA_coproductSupportSummary_comul_linear_forestGen_append xs ys,
-    OGPrimitiveComul_comul_forestGen_append xs ys⟩
-
-/--
-The raw GL support-side and expected primitive forest comultiplications are
-both additive with respect to forest concatenation.
--/
-theorem GLSupport_expectedPrimitive_compare_forestGen_append
-    (xs ys : Forest) :
-    stableUEA_coproductSupportSummary_comul_linear (forestGen (xs ++ ys)) =
-      stableUEA_coproductSupportSummary_comul_linear (forestGen xs) +
-        stableUEA_coproductSupportSummary_comul_linear (forestGen ys) ∧
-    stableUEA_expectedPrimitiveComulLinear (forestGen (xs ++ ys)) =
-      stableUEA_expectedPrimitiveComulLinear (forestGen xs) +
-        stableUEA_expectedPrimitiveComulLinear (forestGen ys) := by
-  exact ⟨stableUEA_coproductSupportSummary_comul_linear_forestGen_append xs ys,
-    stableUEA_expectedPrimitiveComulLinear_forestGen_append xs ys⟩
-
-/--
-Both descended counits vanish on appended forest sums.
--/
-theorem GL_OG_counit_compare_forestGen_append
-    (xs ys : Forest) :
-    coproductSupportQuotientCoalgebraInst.counit
-        (mkPreLieDifferenceStableQuotient (forestGen (xs ++ ys))) = 0 ∧
-      OGPrimitiveComul.counit
-        (mkPreLieDifferenceStableQuotient (forestGen (xs ++ ys))) = 0 := by
-  exact GL_OG_counit_compare_forestGen (xs ++ ys)
-
-@[simp] theorem stableUEA_expectedPrimitiveComulLinear_forestGen_nil :
-    stableUEA_expectedPrimitiveComulLinear (forestGen ([] : Forest)) = 0 := by
-  simpa using stableUEA_expectedPrimitiveComulLinear_forestGen ([] : Forest)
-
-@[simp] theorem stableUEA_OGPrimitive_comul_linear_forestGen_nil :
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData
-        (forestGen ([] : Forest)) = 0 := by
-  simpa using stableUEA_OGPrimitive_comul_linear_forestGen ([] : Forest)
-
-@[simp] theorem stableUEA_coproductSupportSummary_comul_linear_forestGen_nil :
-    stableUEA_coproductSupportSummary_comul_linear (forestGen ([] : Forest)) = 0 := by
-  simpa using stableUEA_coproductSupportSummary_comul_linear_forestGen ([] : Forest)
-
-@[simp] theorem OGPrimitiveComul_comul_forestGen_nil :
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient (forestGen ([] : Forest))) = 0 := by
-  simpa [stableUEA_expectedPrimitiveComulForest_nil] using
-    OGPrimitiveComul_comul_forestGen ([] : Forest)
-
-@[simp] theorem instance_comul_forestGen_nil :
-    coproductSupportQuotientCoalgebraInst.comul
-        (mkPreLieDifferenceStableQuotient (forestGen ([] : Forest))) = 0 := by
-  simpa [stableUEA_coproductSupportSummary_comulForest_nil] using
-    instance_comul_forestGen ([] : Forest)
-
-@[simp] theorem stableUEA_expectedPrimitiveComulLinear_forestGen_singleton
-    (t : PTree) :
-    stableUEA_expectedPrimitiveComulLinear (forestGen [t]) =
-      TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t) := by
-  simpa [stableUEA_expectedPrimitiveComulForest] using
-    stableUEA_expectedPrimitiveComulLinear_forestGen [t]
-
-@[simp] theorem stableUEA_OGPrimitive_comul_linear_forestGen_singleton
-    (t : PTree) :
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData (forestGen [t]) =
-      TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t) := by
-  simpa [stableUEA_expectedPrimitiveComulForest] using
-    stableUEA_OGPrimitive_comul_linear_forestGen [t]
-
-@[simp] theorem OGPrimitiveComul_comul_forestGen_singleton
-    (t : PTree) :
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient (forestGen [t])) =
-      TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t) := by
-  simpa [stableUEA_expectedPrimitiveComulForest] using
-    OGPrimitiveComul_comul_forestGen [t]
-
-@[simp] theorem stableUEA_expectedPrimitiveComulLinear_forestGen_pair
-    (s t : PTree) :
-    stableUEA_expectedPrimitiveComulLinear (forestGen [s, t]) =
-      (TensorProduct.tmul Int (stableUEA_treeGen s) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen s)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t)) := by
-  simpa [stableUEA_expectedPrimitiveComulForest] using
-    stableUEA_expectedPrimitiveComulLinear_forestGen [s, t]
-
-@[simp] theorem stableUEA_OGPrimitive_comul_linear_forestGen_pair
-    (s t : PTree) :
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData (forestGen [s, t]) =
-      (TensorProduct.tmul Int (stableUEA_treeGen s) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen s)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t)) := by
-  simpa [stableUEA_expectedPrimitiveComulForest] using
-    stableUEA_OGPrimitive_comul_linear_forestGen [s, t]
-
-@[simp] theorem OGPrimitiveComul_comul_forestGen_pair
-    (s t : PTree) :
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient (forestGen [s, t])) =
-      (TensorProduct.tmul Int (stableUEA_treeGen s) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen s)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t)) := by
-  simpa [stableUEA_expectedPrimitiveComulForest] using
-    OGPrimitiveComul_comul_forestGen [s, t]
-
-@[simp] theorem stableUEA_expectedPrimitiveComulLinear_forestGen_triple
-    (r s t : PTree) :
-    stableUEA_expectedPrimitiveComulLinear (forestGen [r, s, t]) =
-      (TensorProduct.tmul Int (stableUEA_treeGen r) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen r)) +
-      ((TensorProduct.tmul Int (stableUEA_treeGen s) 1 +
-          TensorProduct.tmul Int 1 (stableUEA_treeGen s)) +
-        (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-          TensorProduct.tmul Int 1 (stableUEA_treeGen t))) := by
-  simpa [stableUEA_expectedPrimitiveComulForest, add_assoc] using
-    stableUEA_expectedPrimitiveComulLinear_forestGen [r, s, t]
-
-@[simp] theorem stableUEA_OGPrimitive_comul_linear_forestGen_triple
-    (r s t : PTree) :
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData (forestGen [r, s, t]) =
-      (TensorProduct.tmul Int (stableUEA_treeGen r) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen r)) +
-      ((TensorProduct.tmul Int (stableUEA_treeGen s) 1 +
-          TensorProduct.tmul Int 1 (stableUEA_treeGen s)) +
-        (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-          TensorProduct.tmul Int 1 (stableUEA_treeGen t))) := by
-  simpa [stableUEA_expectedPrimitiveComulForest, add_assoc] using
-    stableUEA_OGPrimitive_comul_linear_forestGen [r, s, t]
-
-@[simp] theorem OGPrimitiveComul_comul_forestGen_triple
-    (r s t : PTree) :
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient (forestGen [r, s, t])) =
-      (TensorProduct.tmul Int (stableUEA_treeGen r) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen r)) +
-      ((TensorProduct.tmul Int (stableUEA_treeGen s) 1 +
-          TensorProduct.tmul Int 1 (stableUEA_treeGen s)) +
-        (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-          TensorProduct.tmul Int 1 (stableUEA_treeGen t))) := by
-  simpa [stableUEA_expectedPrimitiveComulForest, add_assoc] using
-    OGPrimitiveComul_comul_forestGen [r, s, t]
-
-theorem stableUEA_expectedPrimitiveComulLinear_treeGen_sum_two
-    (x y : PTree) :
-    stableUEA_expectedPrimitiveComulLinear (treeGen x + treeGen y) =
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) := by
-  simp [stableUEA_expectedPrimitiveComulLinear_add]
-
-theorem stableUEA_expectedPrimitiveComulLinear_treeGen_sum_three
-    (x y z : PTree) :
-    stableUEA_expectedPrimitiveComulLinear (treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  simp [stableUEA_expectedPrimitiveComulLinear_add, add_assoc]
-
-theorem stableUEA_expectedPrimitiveComulLinear_treeGen_sum_four
-    (w x y z : PTree) :
-    stableUEA_expectedPrimitiveComulLinear
-        (treeGen w + treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  simp [stableUEA_expectedPrimitiveComulLinear_add, add_assoc]
-
-theorem stableUEA_expectedPrimitiveComulLinear_treeGen_sum_five
-    (v w x y z : PTree) :
-    stableUEA_expectedPrimitiveComulLinear
-        (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  simp [stableUEA_expectedPrimitiveComulLinear_add, add_assoc]
-
-theorem stableUEA_expectedPrimitiveComulLinear_treeGen_sum_six
-    (u v w x y z : PTree) :
-    stableUEA_expectedPrimitiveComulLinear
-        (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  simp [stableUEA_expectedPrimitiveComulLinear_add, add_assoc]
-
-theorem stableUEA_expectedPrimitiveComulLinear_treeGen_sum_seven
-    (t u v w x y z : PTree) :
-    stableUEA_expectedPrimitiveComulLinear
-        (treeGen t + treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  simp [stableUEA_expectedPrimitiveComulLinear_add, add_assoc]
-
-theorem stableUEA_expectedPrimitiveComulLinear_treeGen_sum_eight
-    (s t u v w x y z : PTree) :
-    stableUEA_expectedPrimitiveComulLinear
-        (treeGen s + treeGen t + treeGen u + treeGen v +
-          treeGen w + treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen s) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen s)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  simp [stableUEA_expectedPrimitiveComulLinear_add, add_assoc]
-
-theorem stableUEA_expectedPrimitiveComulLinear_treeGen_sum_nine
-    (r s t u v w x y z : PTree) :
-    stableUEA_expectedPrimitiveComulLinear
-        (treeGen r + treeGen s + treeGen t + treeGen u + treeGen v +
-          treeGen w + treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen r) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen r)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen s) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen s)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  simp [stableUEA_expectedPrimitiveComulLinear_add, add_assoc]
-
-@[simp] theorem stableUEA_OGPrimitive_comul_linear_eq_expected :
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData =
-      stableUEA_expectedPrimitiveComulLinear := by
-  apply LinearMap.ext
-  intro a
-  induction a using Finsupp.induction_linear with
-  | zero =>
-      simp [stableUEA_comul_linear, stableUEA_expectedPrimitiveComulLinear]
-  | add f g hf hg =>
-      simp [hf, hg]
-  | single x n =>
-      simp [stableUEA_comul_linear, stableUEA_expectedPrimitiveComulLinear,
-        stableUEA_OGPrimitiveGeneratorComulData, Finsupp.lsum_single,
-        LinearMap.smulRight_apply, LinearMap.id_apply]
-
-
-
-theorem stableUEA_OGPrimitive_comul_linear_treeGen_sum_two
-    (x y : PTree) :
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen x + treeGen y) =
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) := by
-  simpa [stableUEA_OGPrimitive_comul_linear_eq_expected] using
-    (stableUEA_expectedPrimitiveComulLinear_treeGen_sum_two x y)
-
-theorem stableUEA_OGPrimitive_comul_linear_treeGen_sum_three
-    (x y z : PTree) :
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  simpa [stableUEA_OGPrimitive_comul_linear_eq_expected] using
-    (stableUEA_expectedPrimitiveComulLinear_treeGen_sum_three x y z)
-
-theorem stableUEA_OGPrimitive_comul_linear_treeGen_sum_four
-    (w x y z : PTree) :
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen w + treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  simpa [stableUEA_OGPrimitive_comul_linear_eq_expected] using
-    (stableUEA_expectedPrimitiveComulLinear_treeGen_sum_four w x y z)
-
-theorem stableUEA_OGPrimitive_comul_linear_treeGen_sum_five
-    (v w x y z : PTree) :
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  simpa [stableUEA_OGPrimitive_comul_linear_eq_expected] using
-    (stableUEA_expectedPrimitiveComulLinear_treeGen_sum_five v w x y z)
-
-theorem stableUEA_OGPrimitive_comul_linear_treeGen_sum_six
-    (u v w x y z : PTree) :
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  simpa [stableUEA_OGPrimitive_comul_linear_eq_expected] using
-    (stableUEA_expectedPrimitiveComulLinear_treeGen_sum_six u v w x y z)
-
-theorem stableUEA_OGPrimitive_comul_linear_treeGen_sum_seven
-    (t u v w x y z : PTree) :
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen t + treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  simpa [stableUEA_OGPrimitive_comul_linear_eq_expected] using
-    (stableUEA_expectedPrimitiveComulLinear_treeGen_sum_seven t u v w x y z)
-
-theorem stableUEA_OGPrimitive_comul_linear_treeGen_sum_eight
-    (s t u v w x y z : PTree) :
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen s + treeGen t + treeGen u + treeGen v +
-          treeGen w + treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen s) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen s)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  simpa [stableUEA_OGPrimitive_comul_linear_eq_expected] using
-    (stableUEA_expectedPrimitiveComulLinear_treeGen_sum_eight s t u v w x y z)
-
-theorem stableUEA_OGPrimitive_comul_linear_treeGen_sum_nine
-    (r s t u v w x y z : PTree) :
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen r + treeGen s + treeGen t + treeGen u +
-          treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen r) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen r)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen s) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen s)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  simpa [stableUEA_OGPrimitive_comul_linear_eq_expected] using
-    (stableUEA_expectedPrimitiveComulLinear_treeGen_sum_nine r s t u v w x y z)
-@[simp] theorem stableUEA_coproductSupportSummary_comul_linear_treeGen
-    (x : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear (treeGen x) =
-      coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen := by
-  simp [stableUEA_coproductSupportSummary_comul_linear,
-    coproductSupportSummary_sum_linear_treeGen]
-
-theorem stableUEA_coproductSupportSummary_comul_linear_apply
-    (a : linearProofTreeCarrier) :
-    stableUEA_coproductSupportSummary_comul_linear a =
-      a.sum (fun x c =>
-        c • coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen) := by
-  simp [stableUEA_coproductSupportSummary_comul_linear,
-    coproductSupportSummary_sum_linear_apply]
-
-@[simp] theorem stableUEA_coproductSupportSummary_comul_linear_add
-    (a b : linearProofTreeCarrier) :
-    stableUEA_coproductSupportSummary_comul_linear (a + b) =
-      stableUEA_coproductSupportSummary_comul_linear a +
-        stableUEA_coproductSupportSummary_comul_linear b := by
-  simpa using (stableUEA_coproductSupportSummary_comul_linear.map_add a b)
-
-@[simp] theorem stableUEA_coproductSupportSummary_comul_linear_smul
-    (z : Int) (a : linearProofTreeCarrier) :
-    stableUEA_coproductSupportSummary_comul_linear (z • a) =
-      z • stableUEA_coproductSupportSummary_comul_linear a := by
-  simpa using (stableUEA_coproductSupportSummary_comul_linear.map_smul z a)
-
-theorem stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_two
-    (x y : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear (treeGen x + treeGen y) =
-      coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen := by
-  simp [stableUEA_coproductSupportSummary_comul_linear_add]
-
-theorem stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_three
-    (x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen := by
-  simp [stableUEA_coproductSupportSummary_comul_linear_add, add_assoc]
-
-theorem stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_four
-    (w x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen w + treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum w stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen := by
-  simp [stableUEA_coproductSupportSummary_comul_linear_add, add_assoc]
-
-theorem stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_five
-    (v w x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum v stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum w stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen := by
-  simp [stableUEA_coproductSupportSummary_comul_linear_add, add_assoc]
-
-theorem stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_six
-    (u v w x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum u stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum v stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum w stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen := by
-  simp [stableUEA_coproductSupportSummary_comul_linear_add, add_assoc]
-
-theorem stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_seven
-    (t u v w x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen t + treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum t stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum u stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum v stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum w stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen := by
-  simp [stableUEA_coproductSupportSummary_comul_linear_add, add_assoc]
-
-theorem stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_eight
-    (s t u v w x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen s + treeGen t + treeGen u + treeGen v +
-          treeGen w + treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum s stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum t stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum u stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum v stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum w stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen := by
-  simp [stableUEA_coproductSupportSummary_comul_linear_add, add_assoc]
-
-theorem stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_nine
-    (r s t u v w x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen r + treeGen s + treeGen t + treeGen u + treeGen v +
-          treeGen w + treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum r stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum s stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum t stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum u stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum v stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum w stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen := by
-  simp [stableUEA_coproductSupportSummary_comul_linear_add, add_assoc]
-
-theorem GLSupport_OG_comul_compare_treeGen
-    (x : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear (treeGen x) =
-      coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen ∧
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient (treeGen x)) =
-      TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x) := by
-  exact ⟨stableUEA_coproductSupportSummary_comul_linear_treeGen x,
-    OGPrimitiveComul_comul_treeGen x⟩
-
-theorem GLSupport_OG_comul_compare_treeGen_sum_two
-    (x y : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear (treeGen x + treeGen y) =
-      coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen ∧
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y)) =
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) := by
-  exact ⟨stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_two x y,
-    OGPrimitiveComul_comul_treeGen_sum_two x y⟩
-
-theorem GLSupport_OG_comul_compare_treeGen_sum_three
-    (x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen ∧
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient (treeGen x + treeGen y + treeGen z)) =
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  exact ⟨stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_three x y z,
-    OGPrimitiveComul_comul_treeGen_sum_three x y z⟩
-
-theorem GLSupport_OG_comul_compare_treeGen_sum_four
-    (w x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen w + treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum w stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen ∧
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient
-          (treeGen w + treeGen x + treeGen y + treeGen z)) =
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  exact ⟨stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_four w x y z,
-    OGPrimitiveComul_comul_treeGen_sum_four w x y z⟩
-
-theorem GLSupport_OG_comul_compare_treeGen_sum_five
-    (v w x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum v stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum w stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen ∧
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient
-          (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) =
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  exact ⟨stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_five v w x y z,
-    OGPrimitiveComul_comul_treeGen_sum_five v w x y z⟩
-
-theorem GLSupport_OG_comul_compare_treeGen_sum_six
-    (u v w x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum u stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum v stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum w stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen ∧
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient
-          (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) =
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  exact ⟨stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_six u v w x y z,
-    OGPrimitiveComul_comul_treeGen_sum_six u v w x y z⟩
-
-theorem GLSupport_OG_comul_compare_treeGen_sum_seven
-    (t u v w x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen t + treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum t stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum u stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum v stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum w stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen ∧
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient
-          (treeGen t + treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z)) =
-      (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  exact ⟨stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_seven t u v w x y z,
-    OGPrimitiveComul_comul_treeGen_sum_seven t u v w x y z⟩
-
-theorem GLSupport_OG_comul_compare_treeGen_sum_eight
-    (s t u v w x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen s + treeGen t + treeGen u + treeGen v +
-          treeGen w + treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum s stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum t stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum u stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum v stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum w stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen ∧
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient
-          (treeGen s + treeGen t + treeGen u + treeGen v +
-            treeGen w + treeGen x + treeGen y + treeGen z)) =
-      (TensorProduct.tmul Int (stableUEA_treeGen s) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen s)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  exact ⟨stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_eight s t u v w x y z,
-    OGPrimitiveComul_comul_treeGen_sum_eight s t u v w x y z⟩
-
-theorem GLSupport_OG_comul_compare_treeGen_sum_nine
-    (r s t u v w x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen r + treeGen s + treeGen t + treeGen u + treeGen v +
-          treeGen w + treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum r stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum s stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum t stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum u stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum v stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum w stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen ∧
-    OGPrimitiveComul.comul
-        (mkPreLieDifferenceStableQuotient
-          (treeGen r + treeGen s + treeGen t + treeGen u + treeGen v +
-            treeGen w + treeGen x + treeGen y + treeGen z)) =
-      (TensorProduct.tmul Int (stableUEA_treeGen r) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen r)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen s) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen s)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  exact ⟨stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_nine r s t u v w x y z,
-    OGPrimitiveComul_comul_treeGen_sum_nine r s t u v w x y z⟩
-
-theorem GLSupport_expectedPrimitive_compare_treeGen
-    (x : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear (treeGen x) =
-      coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen /\
-    stableUEA_expectedPrimitiveComulLinear (treeGen x) =
-      TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x) := by
-  exact And.intro
-    (stableUEA_coproductSupportSummary_comul_linear_treeGen x)
-    (stableUEA_expectedPrimitiveComulLinear_treeGen x)
-
-theorem GLSupport_expectedPrimitive_compare_treeGen_sum_two
-    (x y : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear (treeGen x + treeGen y) =
-      coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen /\
-    stableUEA_expectedPrimitiveComulLinear (treeGen x + treeGen y) =
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) := by
-  exact And.intro
-    (stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_two x y)
-    (stableUEA_expectedPrimitiveComulLinear_treeGen_sum_two x y)
-
-theorem GLSupport_expectedPrimitive_compare_treeGen_sum_three
-    (x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen /\
-    stableUEA_expectedPrimitiveComulLinear (treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  exact And.intro
-    (stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_three x y z)
-    (stableUEA_expectedPrimitiveComulLinear_treeGen_sum_three x y z)
-
-theorem GLSupport_expectedPrimitive_compare_treeGen_sum_four
-    (w x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen w + treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum w stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen /\
-    stableUEA_expectedPrimitiveComulLinear
-        (treeGen w + treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  exact And.intro
-    (stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_four w x y z)
-    (stableUEA_expectedPrimitiveComulLinear_treeGen_sum_four w x y z)
-
-theorem GLSupport_expectedPrimitive_compare_treeGen_sum_five
-    (v w x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum v stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum w stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen /\
-    stableUEA_expectedPrimitiveComulLinear
-        (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  exact And.intro
-    (stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_five v w x y z)
-    (stableUEA_expectedPrimitiveComulLinear_treeGen_sum_five v w x y z)
-
-theorem GLSupport_expectedPrimitive_compare_treeGen_sum_six
-    (u v w x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum u stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum v stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum w stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen /\
-    stableUEA_expectedPrimitiveComulLinear
-        (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  exact And.intro
-    (stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_six u v w x y z)
-    (stableUEA_expectedPrimitiveComulLinear_treeGen_sum_six u v w x y z)
-
-theorem GLSupport_expectedPrimitive_compare_treeGen_sum_seven
-    (t u v w x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen t + treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum t stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum u stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum v stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum w stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen /\
-    stableUEA_expectedPrimitiveComulLinear
-        (treeGen t + treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  exact And.intro
-    (stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_seven t u v w x y z)
-    (stableUEA_expectedPrimitiveComulLinear_treeGen_sum_seven t u v w x y z)
-
-theorem GLSupport_expectedPrimitive_compare_treeGen_sum_eight
-    (s t u v w x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen s + treeGen t + treeGen u + treeGen v +
-          treeGen w + treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum s stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum t stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum u stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum v stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum w stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen /\
-    stableUEA_expectedPrimitiveComulLinear
-        (treeGen s + treeGen t + treeGen u + treeGen v +
-          treeGen w + treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen s) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen s)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  exact And.intro
-    (stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_eight s t u v w x y z)
-    (stableUEA_expectedPrimitiveComulLinear_treeGen_sum_eight s t u v w x y z)
-
-theorem GLSupport_expectedPrimitive_compare_treeGen_sum_nine
-    (r s t u v w x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen r + treeGen s + treeGen t + treeGen u + treeGen v +
-          treeGen w + treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum r stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum s stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum t stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum u stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum v stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum w stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen /\
-    stableUEA_expectedPrimitiveComulLinear
-        (treeGen r + treeGen s + treeGen t + treeGen u + treeGen v +
-          treeGen w + treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen r) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen r)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen s) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen s)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) := by
-  exact And.intro
-    (stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_nine r s t u v w x y z)
-    (stableUEA_expectedPrimitiveComulLinear_treeGen_sum_nine r s t u v w x y z)
-
-@[simp] theorem stableUEA_OGPrimitive_counit_linear_apply_zero
-    (a : linearProofTreeCarrier) :
-    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData a = 0 := by
-  simpa using
-    congrFun
-      (congrArg DFunLike.coe stableUEA_OGPrimitive_counit_linear_eq_zero) a
-
-theorem stableUEA_OGPrimitive_counit_linear_treeGen_sum_two
-    (x y : PTree) :
-    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen x + treeGen y) = 0 := by
-  simpa using
-    (stableUEA_OGPrimitive_counit_linear_apply_zero (treeGen x + treeGen y))
-
-theorem stableUEA_OGPrimitive_counit_linear_treeGen_sum_three
-    (x y z : PTree) :
-    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen x + treeGen y + treeGen z) = 0 := by
-  simpa using
-    (stableUEA_OGPrimitive_counit_linear_apply_zero
-      (treeGen x + treeGen y + treeGen z))
-
-theorem stableUEA_OGPrimitive_counit_linear_treeGen_sum_four
-    (w x y z : PTree) :
-    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen w + treeGen x + treeGen y + treeGen z) = 0 := by
-  simpa using
-    (stableUEA_OGPrimitive_counit_linear_apply_zero
-      (treeGen w + treeGen x + treeGen y + treeGen z))
-
-theorem stableUEA_OGPrimitive_counit_linear_treeGen_sum_five
-    (v w x y z : PTree) :
-    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) = 0 := by
-  simpa using
-    (stableUEA_OGPrimitive_counit_linear_apply_zero
-      (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z))
-
-theorem stableUEA_OGPrimitive_counit_linear_treeGen_sum_six
-    (u v w x y z : PTree) :
-    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) = 0 := by
-  simpa using
-    (stableUEA_OGPrimitive_counit_linear_apply_zero
-      (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z))
-
-theorem stableUEA_OGPrimitive_counit_linear_treeGen_sum_seven
-    (t u v w x y z : PTree) :
-    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen t + treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) = 0 := by
-  simpa using
-    (stableUEA_OGPrimitive_counit_linear_apply_zero
-      (treeGen t + treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z))
-
-theorem stableUEA_OGPrimitive_counit_linear_treeGen_sum_eight
-    (s t u v w x y z : PTree) :
-    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen s + treeGen t + treeGen u + treeGen v +
-          treeGen w + treeGen x + treeGen y + treeGen z) = 0 := by
-  simpa using
-    (stableUEA_OGPrimitive_counit_linear_apply_zero
-      (treeGen s + treeGen t + treeGen u + treeGen v +
-        treeGen w + treeGen x + treeGen y + treeGen z))
-
-theorem stableUEA_OGPrimitive_counit_linear_treeGen_sum_nine
-    (r s t u v w x y z : PTree) :
-    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen r + treeGen s + treeGen t + treeGen u +
-          treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) = 0 := by
-  simpa using
-    (stableUEA_OGPrimitive_counit_linear_apply_zero
-      (treeGen r + treeGen s + treeGen t + treeGen u +
-        treeGen v + treeGen w + treeGen x + treeGen y + treeGen z))
-
-theorem GLSupport_OGRaw_compare_treeGen
-    (x : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear (treeGen x) =
-      coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen /\
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData (treeGen x) =
-      TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x) /\
-    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData (treeGen x) = 0 := by
-  exact ⟨stableUEA_coproductSupportSummary_comul_linear_treeGen x,
-    ⟨stableUEA_OGPrimitive_comul_linear_treeGen x,
-      stableUEA_OGPrimitive_counit_linear_treeGen x⟩⟩
-
-theorem GLSupport_OGRaw_compare_apply
-    (a : linearProofTreeCarrier) :
-    stableUEA_coproductSupportSummary_comul_linear a =
-      a.sum (fun x c =>
-        c • coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen) /\
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData a =
-      TensorProduct.tmul Int (stableUEA_rawToUEALinear a) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_rawToUEALinear a) /\
-    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData a = 0 := by
-  exact ⟨stableUEA_coproductSupportSummary_comul_linear_apply a,
-    ⟨stableUEA_OGPrimitive_comul_linear_formula a,
-      stableUEA_OGPrimitive_counit_linear_apply_zero a⟩⟩
-
-theorem GLSupport_OGRaw_compare_treeGen_sum_two
-    (x y : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear (treeGen x + treeGen y) =
-      coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen /\
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen x + treeGen y) =
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) /\
-    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen x + treeGen y) = 0 := by
-  exact ⟨stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_two x y,
-    ⟨stableUEA_OGPrimitive_comul_linear_treeGen_sum_two x y,
-      stableUEA_OGPrimitive_counit_linear_treeGen_sum_two x y⟩⟩
-
-theorem GLSupport_OGRaw_compare_treeGen_sum_three
-    (x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen /\
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) /\
-    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen x + treeGen y + treeGen z) = 0 := by
-  exact ⟨stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_three x y z,
-    ⟨stableUEA_OGPrimitive_comul_linear_treeGen_sum_three x y z,
-      stableUEA_OGPrimitive_counit_linear_treeGen_sum_three x y z⟩⟩
-
-theorem GLSupport_OGRaw_compare_treeGen_sum_four
-    (w x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen w + treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum w stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen /\
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen w + treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) /\
-    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen w + treeGen x + treeGen y + treeGen z) = 0 := by
-  exact ⟨stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_four w x y z,
-    ⟨stableUEA_OGPrimitive_comul_linear_treeGen_sum_four w x y z,
-      stableUEA_OGPrimitive_counit_linear_treeGen_sum_four w x y z⟩⟩
-
-theorem GLSupport_OGRaw_compare_treeGen_sum_five
-    (v w x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum v stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum w stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen /\
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) /\
-    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) = 0 := by
-  exact ⟨stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_five v w x y z,
-    ⟨stableUEA_OGPrimitive_comul_linear_treeGen_sum_five v w x y z,
-      stableUEA_OGPrimitive_counit_linear_treeGen_sum_five v w x y z⟩⟩
-
-theorem GLSupport_OGRaw_compare_treeGen_sum_six
-    (u v w x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum u stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum v stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum w stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen /\
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) /\
-    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) = 0 := by
-  exact ⟨stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_six u v w x y z,
-    ⟨stableUEA_OGPrimitive_comul_linear_treeGen_sum_six u v w x y z,
-      stableUEA_OGPrimitive_counit_linear_treeGen_sum_six u v w x y z⟩⟩
-
-theorem GLSupport_OGRaw_compare_treeGen_sum_seven
-    (t u v w x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen t + treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum t stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum u stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum v stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum w stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen /\
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen t + treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) /\
-    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen t + treeGen u + treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) = 0 := by
-  exact ⟨stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_seven t u v w x y z,
-    ⟨stableUEA_OGPrimitive_comul_linear_treeGen_sum_seven t u v w x y z,
-      stableUEA_OGPrimitive_counit_linear_treeGen_sum_seven t u v w x y z⟩⟩
-
-theorem GLSupport_OGRaw_compare_treeGen_sum_eight
-    (s t u v w x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen s + treeGen t + treeGen u + treeGen v +
-          treeGen w + treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum s stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum t stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum u stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum v stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum w stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen /\
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen s + treeGen t + treeGen u + treeGen v +
-          treeGen w + treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen s) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen s)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) /\
-    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen s + treeGen t + treeGen u + treeGen v +
-          treeGen w + treeGen x + treeGen y + treeGen z) = 0 := by
-  exact ⟨stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_eight s t u v w x y z,
-    ⟨stableUEA_OGPrimitive_comul_linear_treeGen_sum_eight s t u v w x y z,
-      stableUEA_OGPrimitive_counit_linear_treeGen_sum_eight s t u v w x y z⟩⟩
-
-theorem GLSupport_OGRaw_compare_treeGen_sum_nine
-    (r s t u v w x y z : PTree) :
-    stableUEA_coproductSupportSummary_comul_linear
-        (treeGen r + treeGen s + treeGen t + treeGen u + treeGen v +
-          treeGen w + treeGen x + treeGen y + treeGen z) =
-      coproductSupportSummary_sum r stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum s stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum t stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum u stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum v stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum w stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum y stableUEA_coproductSupportSummary_tensorGen +
-        coproductSupportSummary_sum z stableUEA_coproductSupportSummary_tensorGen /\
-    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen r + treeGen s + treeGen t + treeGen u +
-          treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) =
-      (TensorProduct.tmul Int (stableUEA_treeGen r) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen r)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen s) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen s)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen t) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen t)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen u) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen u)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen v) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen v)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen w) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen w)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen x)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen y) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen y)) +
-      (TensorProduct.tmul Int (stableUEA_treeGen z) 1 +
-        TensorProduct.tmul Int 1 (stableUEA_treeGen z)) /\
-    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData
-        (treeGen r + treeGen s + treeGen t + treeGen u +
-          treeGen v + treeGen w + treeGen x + treeGen y + treeGen z) = 0 := by
-  exact ⟨stableUEA_coproductSupportSummary_comul_linear_treeGen_sum_nine r s t u v w x y z,
-    ⟨stableUEA_OGPrimitive_comul_linear_treeGen_sum_nine r s t u v w x y z,
-      stableUEA_OGPrimitive_counit_linear_treeGen_sum_nine r s t u v w x y z⟩⟩
-
-/--
-The counit on the stable quotient induced by the OG primitive data is
-the zero map on generators, consistent with the augmentation ideal structure.
--/
-theorem OGPrimitiveComul_counit_eq_zero_on_generators :
-    ∀ (x : PTree),
-      OGPrimitiveComul.counit
-          (mkPreLieDifferenceStableQuotient (treeGen x)) = 0 :=
-  OGPrimitiveComul_counit_treeGen
-
-end OudomGuinScaffolding
-
-/-! ## 18. Coalgebra summary and live sorry ledger
-
-All non-trivial theorems that remain `sorry`'d, with their mathematical status:
-
-### Sorry'd combinatorial theorems (core bottlenecks)
-
-1. `coproductSupportSummary_comul_linear_preLieDifferenceGenerators` (Section 2a):
-   The GL coproduct kills every pre-Lie difference generator.
-   *Status*: Requires a bijection on admissible-cut addresses.
-
-2. `comul_linear_ker_stable_left/right` (Section 2b):
-   The kernel is stable under graftPreLie by tree generators.
-   *Status*: Requires the coaction formula Δ(u ▷ a) in terms of Δ(a).
-
-3. `comul_quot_coassoc_tensor` (Section 5):
-   Pointwise cut-tensor coassociativity for the descended comultiplication.
-   *Status*: Requires a two-level cut bijection.  The higher tree-level and
-   global coassociativity theorems are now reduced to this pointwise theorem.
-
-### Sorry'd counit theorems (structural issue in main file)
-
-4. `coproductSupportSummary_rTensor_counit_comp_comul` (Section 8):
-   Right counit law with the zero counit.  *False as stated.*
-   *Status*: The counit definition in the main file needs `then 1` not `then 0`.
-
-5. `coproductSupportSummary_lTensor_counit_comp_comul` (Section 8):
-   Left counit law.  *False as stated.*  Same fix needed.
-
-### Sorry'd corrected-counit theorems (Section 14–15)
-
-6. `correctedCounit_linear_preLieDifferenceGenerators`:
-   The corrected counit kills generators.
-   *Status*: Follows from the leaf-count symmetry `[(b+c-1)+a-(a+c-1)-b] = 0`.
-   *Needs*: Formal leaf-count lemmas for `PTree.graftPreLieTree`.
-
-7. `correctedCounit_linear_graft_preLieDifferenceGenerators`:
-   Corrected counit kills graftings of generators.
-   *Status*: Same leaf-count identity propagates to all grafting depths.
-
-8. `correctedCounit_linear_kills_stableSubmodule`:
-   Descent of corrected counit.
-   *Status*: Follows from (6) and (7) by induction on stable closure.
-
-9. `correctedCounit_rTensor_comp_comul` / `correctedCounit_lTensor_comp_comul`:
-   The naive corrected-counit laws are false as stated.
-   *Status*: Obstructed already on `nodeLeaf`; see
-   `correctedCounit_rTensor_comp_comul_obstructed` and
-   `correctedCounit_lTensor_comp_comul_obstructed`.
-
-### Completed since the original ledger
-
-The theorem
-
-`stableUEA_OGPrimitive_respectsStableQuotient_axiom`
-
-is now proved in Section 17, so it is no longer part of the live blocker list.
-
-At the theorem level, the file still contains 9 explicit `sorry`s; the list
-below groups those into the main mathematical bottlenecks rather than counting
-every wrapper lemma separately.
--/
-
-section SorryLedger
-
-/-- Summary: the live blocker list above has 9 grouped items, while the file
-still contains 9 explicit theorem-level `sorry`s.  The mathematical content is
-fully specified; the remaining `sorry`s mark combinatorial or UEA-theoretic
-gaps rather than missing architectural structure. -/
-theorem sorry_ledger_count : True := trivial
-
-end SorryLedger
-
-end QuotientConnected.CoproductSupport
+/-! Section 17 onward now lives in Nonmonlogics.GrossmanLarssonOudomGuinHopfRigidity. -/
