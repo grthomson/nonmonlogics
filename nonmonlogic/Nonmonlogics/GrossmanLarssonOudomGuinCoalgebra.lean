@@ -1,4 +1,4 @@
-﻿import Mathlib.Algebra.NonAssoc.PreLie.Basic
+import Mathlib.Algebra.NonAssoc.PreLie.Basic
 import Mathlib.Algebra.NonAssoc.LieAdmissible.Defs
 import Mathlib.Algebra.Lie.UniversalEnveloping
 import Mathlib.LinearAlgebra.TensorProduct.Basic
@@ -416,6 +416,74 @@ theorem stableUEA_OGPrimitiveComultiplicationCanonical_comul_apply
     stableUEA_OGPrimitiveComultiplication_counit_apply
       stableUEA_OGPrimitiveRespectsStableQuotient_proof q
 
+/--
+The primitive Oudom-Guin comultiplication kills every generator-level pre-Lie
+defect.  This is the quotient-respecting theorem we want at the UEA primitive
+level: the pre-Lie quotient is invisible to the primitive coproduct.
+-/
+theorem stableUEA_OGPrimitive_comul_linear_preLieDifferenceGenerators
+    (x y z : PTree) :
+    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData
+        (preLieDifferenceGenerators x y z) = 0 := by
+  rw [stableUEA_OGPrimitive_comul_linear_factor]
+  rw [mkPreLieDifferenceStableQuotient_preLieDifferenceGenerators_eq_zero]
+  exact LinearMap.map_zero stableUEA_OGPrimitiveComulFromStableQuotient
+
+/-- The primitive Oudom-Guin counit kills every pre-Lie defect generator. -/
+theorem stableUEA_OGPrimitive_counit_linear_preLieDifferenceGenerators
+    (x y z : PTree) :
+    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData
+        (preLieDifferenceGenerators x y z) = 0 := by
+  rw [stableUEA_OGPrimitive_counit_linear_eq_zero]
+  simp
+
+/-- The primitive Oudom-Guin comultiplication kills the whole stable submodule. -/
+theorem stableUEA_OGPrimitive_comul_linear_kills_stableSubmodule
+    {a : linearProofTreeCarrier}
+    (ha : a ∈ preLieDifferenceStableSubmodule) :
+    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData a = 0 := by
+  exact (stableUEA_OGPrimitiveRespectsStableQuotient_proof a ha).1
+
+/-- The primitive Oudom-Guin counit kills the whole stable submodule. -/
+theorem stableUEA_OGPrimitive_counit_linear_kills_stableSubmodule
+    {a : linearProofTreeCarrier}
+    (ha : a ∈ preLieDifferenceStableSubmodule) :
+    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData a = 0 := by
+  exact (stableUEA_OGPrimitiveRespectsStableQuotient_proof a ha).2
+
+/-- The reduced primitive Oudom-Guin comultiplication on the stable quotient. -/
+noncomputable def stableUEA_OGPrimitiveReducedComul :
+    PreLieDifferenceStableQuotient →ₗ[ℤ] stableUEATensor :=
+  stableUEA_OGPrimitiveComultiplicationCanonical.comul -
+    stableUEA_OGPrimitiveComulFromStableQuotient
+
+/-- Every quotient class is primitive for the descended primitive OG coproduct. -/
+theorem stableUEA_OGPrimitiveComultiplicationCanonical_every_class_primitive
+    (q : PreLieDifferenceStableQuotient) :
+    stableUEA_OGPrimitiveComultiplicationCanonical.comul q =
+      TensorProduct.tmul ℤ
+          (preLieDifferenceStableQuotientUEA_ι_linear q) 1 +
+        TensorProduct.tmul ℤ 1
+          (preLieDifferenceStableQuotientUEA_ι_linear q) :=
+  stableUEA_OGPrimitiveComultiplicationCanonical_comul_apply q
+
+/-- The reduced primitive Oudom-Guin comultiplication vanishes identically. -/
+theorem stableUEA_OGPrimitiveReducedComul_eq_zero :
+    stableUEA_OGPrimitiveReducedComul = 0 := by
+  apply LinearMap.ext
+  intro q
+  change
+    stableUEA_OGPrimitiveComultiplicationCanonical.comul q -
+        stableUEA_OGPrimitiveComulFromStableQuotient q = 0
+  rw [stableUEA_OGPrimitiveComultiplicationCanonical_comul_eq_fromStableQuotient]
+  simp
+
+@[simp] theorem stableUEA_OGPrimitiveReducedComul_apply
+    (q : PreLieDifferenceStableQuotient) :
+    stableUEA_OGPrimitiveReducedComul q = 0 := by
+  rw [stableUEA_OGPrimitiveReducedComul_eq_zero]
+  rfl
+
 end OudomGuinPrimitiveGenerators
 
 /-! ## 1. The counit is the zero map -/
@@ -538,6 +606,752 @@ def CoproductSupportNodeCutPropDecompositionClaim.proof :
   exact PTree.isAdmissibleCut_restrictCut cut i hi
 
 /--
+Boolean-enumerated node cuts immediately yield the Prop-level induction
+invariant on each premise subtree.
+
+This is the bridge we want for the real induction: `allAdmissibleCuts` is the
+finite computational support of the coproduct, while `IsAdmissibleCut` is the
+mathematical object on which the node-height argument should proceed.
+-/
+def CoproductSupportNodeCutPropDecompositionClaim.of_bool_cut
+    {r : RuleTag} {s : MultiSequent} {cs : List PTree}
+    {cut : List Address}
+    (hcut : cut ∈ PTree.allAdmissibleCuts (PTree.node r s cs))
+    (i : Nat) (hi : i < cs.length) :
+    PTree.IsAdmissibleCut cs[i] := by
+  exact
+    PTree.isAdmissibleCut_restrictCut
+      (PTree.isAdmissibleCut_of_mem_allAdmissibleCuts hcut) i hi
+
+/-- The full finite-enumerator node-cut decomposition theorem. -/
+theorem CoproductSupportNodeCutDecompositionClaim.proof :
+    CoproductSupportNodeCutDecompositionClaim := by
+  intro r s cs cut hcut
+  by_cases hroot : [] ∈ cut
+  · exact Or.inl hroot
+  · refine Or.inr ⟨hroot, ?_⟩
+    intro i hi
+    exact PTree.restrictCut_mem_allAdmissibleCuts_of_mem_node hcut i hi
+
+/--
+Strong finite-enumerator node-cut decomposition.
+
+For a rule node, every enumerated admissible cut is either the singleton root
+cut, or else it avoids the root and restricts to enumerated admissible cuts of
+each immediate premise subtree.  This is the rooted-tree cut dichotomy needed
+for the coassociativity/compatibility induction.
+-/
+def CoproductSupportNodeCutStrongDecompositionClaim : Prop :=
+  ∀ (r : RuleTag) (s : MultiSequent) (cs : List PTree)
+      (cut : List Address),
+    cut ∈ PTree.allAdmissibleCuts (PTree.node r s cs) →
+      (cut = [[]]) ∨
+        ([] ∉ cut ∧
+          ∀ i (hi : i < cs.length),
+            PTree.restrictCut cut i ∈ PTree.allAdmissibleCuts cs[i])
+
+/-- The strong node-cut dichotomy follows from the root-singleton cut lemma. -/
+theorem CoproductSupportNodeCutStrongDecompositionClaim.proof :
+    CoproductSupportNodeCutStrongDecompositionClaim := by
+  intro r s cs cut hcut
+  by_cases hroot : [] ∈ cut
+  · exact Or.inl
+      (PTree.eq_singleton_root_of_mem_allAdmissibleCuts_of_root_mem hcut hroot)
+  · refine Or.inr ⟨hroot, ?_⟩
+    intro i hi
+    exact PTree.restrictCut_mem_allAdmissibleCuts_of_mem_node hcut i hi
+
+/--
+Coalgebra-facing node decomposition for a single coproduct term.
+
+For an enumerated cut of a rule node, either the term is the root-cut term
+`([node], leaf conclusion)`, or the cut is root-free and the term decomposes
+childwise: the remainder is rebuilt from restricted child remainders, and every
+pruned tree comes from one of the restricted child prunings.
+-/
+def CoproductSupportNodeCoproductTermDecompositionClaim : Prop :=
+  ∀ (r : RuleTag) (s : MultiSequent) (cs : List PTree)
+      (cut : List Address),
+    cut ∈ PTree.allAdmissibleCuts (PTree.node r s cs) →
+      PTree.coproductTerm (PTree.node r s cs) cut =
+          ([PTree.node r s cs], PTree.leaf s) ∨
+        ([] ∉ cut ∧
+          (PTree.coproductTerm (PTree.node r s cs) cut).2 =
+            PTree.node r s
+              (cs.attach.mapIdx (fun i child =>
+                PTree.remainderGo (PTree.restrictCut cut i) [] child.1)) ∧
+          ∀ u : PTree,
+            u ∈ (PTree.coproductTerm (PTree.node r s cs) cut).1 ↔
+              ∃ i, ∃ hi : i < cs.length,
+                u ∈ (PTree.restrictCut cut i).filterMap
+                  (PTree.subtreeAt cs[i]))
+
+/-- The coproduct-term node decomposition follows from the address lemmas. -/
+theorem CoproductSupportNodeCoproductTermDecompositionClaim.proof :
+    CoproductSupportNodeCoproductTermDecompositionClaim := by
+  intro r s cs cut hcut
+  rcases CoproductSupportNodeCutStrongDecompositionClaim.proof r s cs cut hcut with hroot | hnonroot
+  · left
+    simpa [hroot] using
+      PTree.coproductTerm_singleton_root_node r s cs
+  · right
+    rcases hnonroot with ⟨hroot, _hchildren⟩
+    refine ⟨hroot, ?_, ?_⟩
+    · simpa [PTree.coproductTerm] using
+        PTree.remainderGo_node_root_not_mem
+          (r := r) (s := s) (cs := cs) (cut := cut) hroot
+    · intro u
+      simpa [PTree.coproductTerm] using
+        PTree.mem_filterMap_subtreeAt_node_iff_exists_restrictCut
+          (r := r) (s := s) (cs := cs) (cut := cut) (u := u) hroot
+
+/--
+Permutation form of the node-cut decomposition.  If an admissible cut avoids
+the root of a rule node, then its address list is, up to permutation, the
+flattened list obtained by restricting the cut to each immediate premise
+subtree and then re-prefixing by that premise index.
+
+This is the finite-list combinatorial theorem that feeds coproduct
+coassociativity: sums over parent cuts may be reorganised as sums over child
+cuts without changing multiplicities.
+-/
+def CoproductSupportNodeCutAddressPermutationClaim : Prop :=
+  ∀ (r : RuleTag) (s : MultiSequent) (cs : List PTree)
+      (cut : List Address),
+    cut ∈ PTree.allAdmissibleCuts (PTree.node r s cs) →
+      [] ∉ cut →
+        List.Perm cut
+          ((cs.attach.mapIdx (fun i _child =>
+            (PTree.restrictCut cut i).map (fun a => i :: a))).flatten)
+
+/-- The address-permutation node-cut decomposition is now proved in the tree layer. -/
+theorem CoproductSupportNodeCutAddressPermutationClaim.proof :
+    CoproductSupportNodeCutAddressPermutationClaim := by
+  intro r s cs cut hcut hroot
+  exact
+    PTree.rootFree_sublist_node_cut_perm_flatten_restrictCut_map_cons
+      (r := r) (s := s) (cs := cs) (cut := cut)
+      (PTree.cut_sublist_allAddresses_of_mem_allAdmissibleCuts hcut)
+      hroot
+
+/--
+Forest-permutation form of the node-cut decomposition.  If an admissible cut
+avoids the root of a rule node, then the forest component of the coproduct
+term is, up to permutation, the concatenation of the forest components of the
+restricted cuts on the immediate premise subtrees.
+
+This is stronger than the earlier support-membership statement: it preserves
+multiplicities, which is exactly what is needed for linear coproduct sums.
+-/
+def CoproductSupportNodeCutForestPermutationClaim : Prop :=
+  ∀ (r : RuleTag) (s : MultiSequent) (cs : List PTree)
+      (cut : List Address),
+    cut ∈ PTree.allAdmissibleCuts (PTree.node r s cs) →
+      Not (List.Mem ([] : Address) cut) →
+        List.Perm
+          (PTree.coproductTerm (PTree.node r s cs) cut).1
+          ((cs.attach.mapIdx (fun i child =>
+            (PTree.restrictCut cut i).filterMap
+              (PTree.subtreeAt child.1))).flatten)
+
+/-- The forest-permutation node-cut theorem follows from the tree-layer proof. -/
+theorem CoproductSupportNodeCutForestPermutationClaim.proof :
+    CoproductSupportNodeCutForestPermutationClaim := by
+  intro r s cs cut hcut hroot
+  simpa [PTree.coproductTerm] using
+    PTree.rootFree_sublist_node_cut_perm_filterMap_subtreeAt_flatten_restrictCut
+      (r := r) (s := s) (cs := cs) (cut := cut)
+      (PTree.cut_sublist_allAddresses_of_mem_allAdmissibleCuts hcut)
+      hroot
+
+/--
+Coproduct-term node decomposition with the forest component stated
+permutationally rather than merely by support.
+
+This is the form needed by the quotient-respecting coproduct proof: the root cut
+is explicit, and every non-root term decomposes into a childwise forest
+permutation plus the childwise remainder equality.
+-/
+def CoproductSupportNodeCoproductTermPermutationDecompositionClaim : Prop :=
+  ∀ (r : RuleTag) (s : MultiSequent) (cs : List PTree)
+      (cut : List Address),
+    cut ∈ PTree.allAdmissibleCuts (PTree.node r s cs) →
+      PTree.coproductTerm (PTree.node r s cs) cut =
+          ([PTree.node r s cs], PTree.leaf s) ∨
+        (Not (List.Mem ([] : Address) cut) ∧
+          List.Perm
+            (PTree.coproductTerm (PTree.node r s cs) cut).1
+            ((cs.attach.mapIdx (fun i child =>
+              (PTree.restrictCut cut i).filterMap
+                (PTree.subtreeAt child.1))).flatten) ∧
+          (PTree.coproductTerm (PTree.node r s cs) cut).2 =
+            PTree.node r s
+              (cs.attach.mapIdx (fun i child =>
+                PTree.remainderGo (PTree.restrictCut cut i) [] child.1)))
+
+/--
+The permutation-strengthened coproduct-term decomposition is now a theorem,
+not a placeholder: root-free cuts split into child cuts both on the forest side
+and on the remainder side.
+-/
+theorem CoproductSupportNodeCoproductTermPermutationDecompositionClaim.proof :
+    CoproductSupportNodeCoproductTermPermutationDecompositionClaim := by
+  intro r s cs cut hcut
+  rcases CoproductSupportNodeCutStrongDecompositionClaim.proof r s cs cut hcut with hroot | hnonroot
+  · left
+    simpa [hroot] using
+      PTree.coproductTerm_singleton_root_node r s cs
+  · right
+    rcases hnonroot with ⟨hroot, _hchildren⟩
+    refine ⟨hroot, ?_, ?_⟩
+    · exact
+        CoproductSupportNodeCutForestPermutationClaim.proof
+          r s cs cut hcut hroot
+    · simpa [PTree.coproductTerm] using
+        PTree.remainderGo_node_root_not_mem
+          (r := r) (s := s) (cs := cs) (cut := cut) hroot
+
+/--
+Linear-carrier form of the forest decomposition.  The new forest permutation
+theorem becomes an actual equality after applying `forestGen`.
+
+This is the exact bridge from finite cut combinatorics to the linear coalgebra
+formula: coproduct terms are insensitive to the childwise regrouping of the
+cut forest once interpreted in the free abelian carrier.
+-/
+def CoproductSupportNodeCutForestGenDecompositionClaim : Prop :=
+  ∀ (r : RuleTag) (s : MultiSequent) (cs : List PTree)
+      (cut : List Address),
+    cut ∈ PTree.allAdmissibleCuts (PTree.node r s cs) →
+      Not (List.Mem ([] : Address) cut) →
+        forestGen (PTree.coproductTerm (PTree.node r s cs) cut).1 =
+          forestGen
+            ((cs.attach.mapIdx (fun i child =>
+              (PTree.restrictCut cut i).filterMap
+                (PTree.subtreeAt child.1))).flatten)
+
+/-- The childwise forest decomposition is respected by `forestGen`. -/
+theorem CoproductSupportNodeCutForestGenDecompositionClaim.proof :
+    CoproductSupportNodeCutForestGenDecompositionClaim := by
+  intro r s cs cut hcut hroot
+  exact
+    forestGen_of_perm
+      (CoproductSupportNodeCutForestPermutationClaim.proof
+        r s cs cut hcut hroot)
+
+/--
+The left tensor factor contributed by a root-free cut of a rule node: collect
+all childwise cut-off subtrees, preserving the list-level multiplicity/order
+chosen by the cut enumerator.
+-/
+noncomputable def nodeRootFreeCutForestGen
+    (cs : List PTree) (cut : List Address) : linearProofTreeCarrier :=
+  forestGen
+    ((cs.attach.mapIdx (fun i child =>
+      (PTree.restrictCut cut i).filterMap
+        (PTree.subtreeAt child.1))).flatten)
+
+/--
+The right tensor factor contributed by a root-free cut of a rule node: keep the
+same rule at the root and replace each premise subtree by its childwise
+remainder.
+-/
+noncomputable def nodeRootFreeCutRemainderGen
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree)
+    (cut : List Address) : linearProofTreeCarrier :=
+  treeGen
+    (PTree.node r s
+      (cs.attach.mapIdx (fun i child =>
+        PTree.remainderGo (PTree.restrictCut cut i) [] child.1)))
+
+/--
+The tensor summand associated to a root-free cut of a rule node.
+-/
+noncomputable def nodeRootFreeCutTensorGen
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree)
+    (cut : List Address) :
+    TensorProduct Int linearProofTreeCarrier linearProofTreeCarrier :=
+  TensorProduct.tmul ℤ
+    (nodeRootFreeCutForestGen cs cut)
+    (nodeRootFreeCutRemainderGen r s cs cut)
+
+/--
+Pointwise tensor-generator decomposition for a root-free cut of a rule node.
+
+This is the first statement in this chain that is literally about the
+coalgebra summand used in `coproductSupportSummary_comul_linear`: the cut term
+evaluates to the tensor of the childwise pruned forest and the childwise
+remainder.
+-/
+def CoproductSupportNodeCutTensorGenDecompositionClaim : Prop :=
+  ∀ (r : RuleTag) (s : MultiSequent) (cs : List PTree)
+      (cut : List Address),
+    cut ∈ PTree.allAdmissibleCuts (PTree.node r s cs) →
+      Not (List.Mem ([] : Address) cut) →
+        coproductSupportSummary_tensorGen
+            (PTree.coproductTerm (PTree.node r s cs) cut) =
+          nodeRootFreeCutTensorGen r s cs cut
+
+/-- The tensor-generator decomposition follows from forest and remainder decomposition. -/
+theorem CoproductSupportNodeCutTensorGenDecompositionClaim.proof :
+    CoproductSupportNodeCutTensorGenDecompositionClaim := by
+  intro r s cs cut hcut hroot
+  have hforest :
+      forestGen (PTree.coproductTerm (PTree.node r s cs) cut).1 =
+        forestGen
+          ((cs.attach.mapIdx (fun i child =>
+            (PTree.restrictCut cut i).filterMap
+              (PTree.subtreeAt child.1))).flatten) :=
+    CoproductSupportNodeCutForestGenDecompositionClaim.proof
+      r s cs cut hcut hroot
+  have hrem :
+      (PTree.coproductTerm (PTree.node r s cs) cut).2 =
+        PTree.node r s
+          (cs.attach.mapIdx (fun i child =>
+            PTree.remainderGo (PTree.restrictCut cut i) [] child.1)) := by
+    simpa [PTree.coproductTerm] using
+      PTree.remainderGo_node_root_not_mem
+        (r := r) (s := s) (cs := cs) (cut := cut) hroot
+  unfold coproductSupportSummary_tensorGen
+  unfold nodeRootFreeCutTensorGen nodeRootFreeCutForestGen nodeRootFreeCutRemainderGen
+  rw [hforest, hrem]
+
+/-- The tensor-generator value of the root cut of a rule node. -/
+theorem coproductSupportSummary_tensorGen_singleton_root_node
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree) :
+    coproductSupportSummary_tensorGen
+        (PTree.coproductTerm (PTree.node r s cs) [[]]) =
+      TensorProduct.tmul ℤ (treeGen (PTree.node r s cs)) (treeGen (PTree.leaf s)) := by
+  simp [PTree.coproductTerm_singleton_root_node,
+    coproductSupportSummary_tensorGen, forestGen_cons]
+
+/--
+Every admissible cut of a rule node has a tensor-generator contribution of one
+of two forms: the root-cut tensor, or the childwise root-free tensor.
+
+This is the local coassociativity spine for the GL support coproduct: it is the
+precise theorem that lets the sum over node cuts split into the root summand
+and the sums over premise-subtree cuts.
+-/
+def CoproductSupportNodeCutTensorGenDichotomyClaim : Prop :=
+  ∀ (r : RuleTag) (s : MultiSequent) (cs : List PTree)
+      (cut : List Address),
+    cut ∈ PTree.allAdmissibleCuts (PTree.node r s cs) →
+      coproductSupportSummary_tensorGen
+          (PTree.coproductTerm (PTree.node r s cs) cut) =
+        TensorProduct.tmul ℤ
+          (treeGen (PTree.node r s cs)) (treeGen (PTree.leaf s)) ∨
+      (Not (List.Mem ([] : Address) cut) ∧
+        coproductSupportSummary_tensorGen
+            (PTree.coproductTerm (PTree.node r s cs) cut) =
+          nodeRootFreeCutTensorGen r s cs cut)
+
+/-- The tensor-generator dichotomy follows from the strong node-cut split. -/
+theorem CoproductSupportNodeCutTensorGenDichotomyClaim.proof :
+    CoproductSupportNodeCutTensorGenDichotomyClaim := by
+  intro r s cs cut hcut
+  rcases CoproductSupportNodeCutStrongDecompositionClaim.proof r s cs cut hcut with hroot | hnonroot
+  · left
+    simpa [hroot] using
+      coproductSupportSummary_tensorGen_singleton_root_node r s cs
+  · right
+    rcases hnonroot with ⟨hroot, _hchildren⟩
+    exact
+      ⟨hroot,
+        CoproductSupportNodeCutTensorGenDecompositionClaim.proof
+          r s cs cut hcut hroot⟩
+
+/--
+The tensor summand associated to the unique root cut of a rule node.
+
+Separating this from the root-free summands is the coalgebraic analogue of
+separating the external cut from the internal recursive cuts in the proof-tree
+induction.
+-/
+noncomputable def nodeRootCutTensorGen
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree) :
+    TensorProduct Int linearProofTreeCarrier linearProofTreeCarrier :=
+  TensorProduct.tmul ℤ
+    (treeGen (PTree.node r s cs)) (treeGen (PTree.leaf s))
+
+/-- The singleton root cut is always enumerated as an admissible cut. -/
+theorem singleton_root_cut_mem_allAdmissibleCuts
+    (t : PTree) :
+    ([[]] : List Address) ∈ PTree.allAdmissibleCuts t := by
+  apply PTree.mem_allAdmissibleCuts_of_sublist_valid_antichain
+  · exact List.singleton_sublist.2 (PTree.root_mem_allAddresses t)
+  · simp
+  · intro a ha
+    have ha' : a = [] := by
+      simpa using ha
+    subst a
+    simpa [PTree.ValidAddress] using PTree.validAddress_root t
+  · intro a ha b hb hne _hcomp
+    have ha' : a = [] := by
+      simpa using ha
+    have hb' : b = [] := by
+      simpa using hb
+    subst a
+    subst b
+    exact hne rfl
+
+/--
+Normal form for the tensor contribution of a single admissible cut of a rule
+node.  The root cut contributes the whole node on the left and the conclusion
+leaf on the right; every root-free cut contributes the childwise pruned forest
+and the childwise remainder.
+-/
+noncomputable def nodeCutTensorGenNormalForm
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree)
+    (cut : List Address) :
+    TensorProduct Int linearProofTreeCarrier linearProofTreeCarrier :=
+  if [] ∈ cut then
+    nodeRootCutTensorGen r s cs
+  else
+    nodeRootFreeCutTensorGen r s cs cut
+
+/-- The normal form specializes to the root-cut tensor when the root is cut. -/
+theorem nodeCutTensorGenNormalForm_root
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree)
+    (cut : List Address)
+    (hroot : [] ∈ cut) :
+    nodeCutTensorGenNormalForm r s cs cut =
+      nodeRootCutTensorGen r s cs := by
+  simp [nodeCutTensorGenNormalForm, hroot]
+
+/-- The normal form specializes to the childwise tensor when the root is not cut. -/
+theorem nodeCutTensorGenNormalForm_rootFree
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree)
+    (cut : List Address)
+    (hroot : [] ∉ cut) :
+    nodeCutTensorGenNormalForm r s cs cut =
+      nodeRootFreeCutTensorGen r s cs cut := by
+  simp [nodeCutTensorGenNormalForm, hroot]
+
+/--
+For an enumerated admissible cut of a rule node, the root case is exactly the
+singleton root cut.  Thus the normal form can be indexed by the concrete
+enumerator decision `cut = [[]]`, with every other summand treated as an
+internal/root-free cut.
+-/
+theorem nodeCutTensorGenNormalForm_eq_singletonRoot_or_rootFree
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree)
+    (cut : List Address)
+    (hcut : cut ∈ PTree.allAdmissibleCuts (PTree.node r s cs)) :
+    nodeCutTensorGenNormalForm r s cs cut =
+      if cut = ([[]] : List Address) then
+        nodeRootCutTensorGen r s cs
+      else
+        nodeRootFreeCutTensorGen r s cs cut := by
+  by_cases hroot : [] ∈ cut
+  · have hsingleton :
+        cut = ([[]] : List Address) :=
+      PTree.eq_singleton_root_of_mem_allAdmissibleCuts_of_root_mem hcut hroot
+    rw [hsingleton]
+    simp [nodeCutTensorGenNormalForm, nodeRootCutTensorGen]
+  · have hne : cut ≠ ([[]] : List Address) := by
+      intro hsingleton
+      apply hroot
+      rw [hsingleton]
+      simp
+    simp [nodeCutTensorGenNormalForm, hroot, hne]
+
+/--
+Partition a list-sum into the terms equal to a chosen element and the terms
+different from it.  This deliberately works at the list level, not the finset
+level, so it preserves multiplicities of cut witnesses.
+-/
+theorem list_sum_map_eq_filter_eq_add_filter_ne
+    {α M : Type} [DecidableEq α] [AddCommMonoid M]
+    (xs : List α) (a : α) (f : α → M) :
+    (xs.map f).sum =
+      ((xs.filter (fun x => decide (x = a))).map f).sum +
+        ((xs.filter (fun x => decide (x ≠ a))).map f).sum := by
+  induction xs with
+  | nil =>
+      simp
+  | cons x xs ih =>
+      by_cases hx : x = a
+      · subst x
+        simp [ih, add_assoc]
+      · simp [hx, ih, add_left_comm]
+
+/--
+The root part of the admissible-cut enumerator for a rule node.
+
+Like the root-free enumerator below, this is intentionally a list filter rather
+than a quotient or finset: the coalgebra sum must remember the exact
+enumeration of admissible cuts.
+-/
+noncomputable def nodeRootAdmissibleCuts
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree) :
+    List (List Address) :=
+  (PTree.allAdmissibleCuts (PTree.node r s cs)).filter
+    (fun cut => decide (cut = ([[]] : List Address)))
+
+/-- Membership in the root-cut node enumerator. -/
+theorem mem_nodeRootAdmissibleCuts_iff
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree)
+    (cut : List Address) :
+    cut ∈ nodeRootAdmissibleCuts r s cs ↔
+      cut ∈ PTree.allAdmissibleCuts (PTree.node r s cs) ∧
+        cut = ([[]] : List Address) := by
+  simp [nodeRootAdmissibleCuts]
+
+/-- The singleton root cut appears in the root-cut enumerator of every node. -/
+theorem singleton_root_mem_nodeRootAdmissibleCuts
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree) :
+    ([[]] : List Address) ∈ nodeRootAdmissibleCuts r s cs := by
+  exact (mem_nodeRootAdmissibleCuts_iff r s cs ([[]] : List Address)).mpr
+    ⟨singleton_root_cut_mem_allAdmissibleCuts (PTree.node r s cs), rfl⟩
+
+/--
+The root part of the admissible-cut sum has constant tensor normal form: every
+enumerated cut in this filtered list is the singleton root cut.
+-/
+theorem nodeRootAdmissibleCuts_sum_normalForm_eq
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree) :
+    ((nodeRootAdmissibleCuts r s cs).map
+        (nodeCutTensorGenNormalForm r s cs)).sum =
+      ((nodeRootAdmissibleCuts r s cs).map
+        (fun _ => nodeRootCutTensorGen r s cs)).sum := by
+  exact congrArg List.sum
+    (List.map_congr_left
+      (fun cut hcut =>
+        by
+          have hroot :
+              cut = ([[]] : List Address) :=
+            ((mem_nodeRootAdmissibleCuts_iff r s cs cut).mp hcut).2
+          rw [hroot]
+          simp [nodeCutTensorGenNormalForm, nodeRootCutTensorGen]))
+
+/--
+The root-free part of the admissible-cut enumerator for a rule node.
+
+This keeps the original list order and multiplicity from
+`PTree.allAdmissibleCuts`; it merely removes the unique root cut.  This is the
+list-level object that should feed the recursive/height-induction step.
+-/
+noncomputable def nodeRootFreeAdmissibleCuts
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree) :
+    List (List Address) :=
+  (PTree.allAdmissibleCuts (PTree.node r s cs)).filter
+    (fun cut => decide (cut ≠ ([[]] : List Address)))
+
+/-- Membership in the root-free node cut enumerator. -/
+theorem mem_nodeRootFreeAdmissibleCuts_iff
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree)
+    (cut : List Address) :
+    cut ∈ nodeRootFreeAdmissibleCuts r s cs ↔
+      cut ∈ PTree.allAdmissibleCuts (PTree.node r s cs) ∧
+        cut ≠ ([[]] : List Address) := by
+  simp [nodeRootFreeAdmissibleCuts]
+
+/--
+A cut in the root-free enumerator really is root-free.  This is where the
+antichain condition enters: an admissible cut containing the root must be the
+singleton root cut.
+-/
+theorem root_not_mem_of_mem_nodeRootFreeAdmissibleCuts
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree)
+    {cut : List Address}
+    (hcut : cut ∈ nodeRootFreeAdmissibleCuts r s cs) :
+    [] ∉ cut := by
+  have hcut' :
+      cut ∈ PTree.allAdmissibleCuts (PTree.node r s cs) ∧
+        cut ≠ ([[]] : List Address) :=
+    (mem_nodeRootFreeAdmissibleCuts_iff r s cs cut).mp hcut
+  intro hroot
+  exact hcut'.2
+    (PTree.eq_singleton_root_of_mem_allAdmissibleCuts_of_root_mem
+      hcut'.1 hroot)
+
+/--
+Every root-free node cut restricts to an admissible cut of each immediate
+premise subtree.  This is the exact recursive input needed for the
+height-induction proof of the coproduct/pre-Lie compatibility.
+-/
+theorem restrictCut_mem_allAdmissibleCuts_of_mem_nodeRootFreeAdmissibleCuts
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree)
+    {cut : List Address}
+    (hcut : cut ∈ nodeRootFreeAdmissibleCuts r s cs)
+    (i : Nat) (hi : i < cs.length) :
+    PTree.restrictCut cut i ∈ PTree.allAdmissibleCuts cs[i] := by
+  have hcut' :
+      cut ∈ PTree.allAdmissibleCuts (PTree.node r s cs) :=
+    ((mem_nodeRootFreeAdmissibleCuts_iff r s cs cut).mp hcut).1
+  exact PTree.restrictCut_mem_allAdmissibleCuts_of_mem_node hcut' i hi
+
+/--
+Root-free membership is enough to rewrite the actual cut summand as the
+childwise tensor generator.  This packages the pointwise decomposition in the
+form the list-sum induction will use.
+-/
+theorem nodeRootFreeCutTensorGen_of_mem_nodeRootFreeAdmissibleCuts
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree)
+    {cut : List Address}
+    (hcut : cut ∈ nodeRootFreeAdmissibleCuts r s cs) :
+    coproductSupportSummary_tensorGen
+        (PTree.coproductTerm (PTree.node r s cs) cut) =
+      nodeRootFreeCutTensorGen r s cs cut := by
+  have hcut' :
+      cut ∈ PTree.allAdmissibleCuts (PTree.node r s cs) :=
+    ((mem_nodeRootFreeAdmissibleCuts_iff r s cs cut).mp hcut).1
+  have hroot : [] ∉ cut :=
+    root_not_mem_of_mem_nodeRootFreeAdmissibleCuts r s cs hcut
+  exact
+    CoproductSupportNodeCutTensorGenDecompositionClaim.proof
+      r s cs cut hcut' hroot
+
+/--
+The root-free part of the cut enumerator already has the desired tensor
+normal form after summing.  This is the list/enumerator-level version of the
+node decomposition, preserving multiplicities.
+-/
+theorem nodeRootFreeAdmissibleCuts_sum_tensorGen_eq
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree) :
+    ((nodeRootFreeAdmissibleCuts r s cs).map
+        (fun cut =>
+          coproductSupportSummary_tensorGen
+            (PTree.coproductTerm (PTree.node r s cs) cut))).sum =
+      ((nodeRootFreeAdmissibleCuts r s cs).map
+        (nodeRootFreeCutTensorGen r s cs)).sum := by
+  exact congrArg List.sum
+    (List.map_congr_left
+      (fun cut hcut =>
+        nodeRootFreeCutTensorGen_of_mem_nodeRootFreeAdmissibleCuts
+          r s cs hcut))
+
+/--
+Equivalently, the normal-form summands over the root-free enumerator are
+exactly the childwise tensor summands.  This is the form used after rewriting
+`coproductData_comul_linear` by `nodeCutTensorGenNormalForm`.
+-/
+theorem nodeRootFreeAdmissibleCuts_sum_normalForm_eq
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree) :
+    ((nodeRootFreeAdmissibleCuts r s cs).map
+        (nodeCutTensorGenNormalForm r s cs)).sum =
+      ((nodeRootFreeAdmissibleCuts r s cs).map
+        (nodeRootFreeCutTensorGen r s cs)).sum := by
+  exact congrArg List.sum
+    (List.map_congr_left
+      (fun cut hcut =>
+        nodeCutTensorGenNormalForm_rootFree r s cs cut
+          (root_not_mem_of_mem_nodeRootFreeAdmissibleCuts
+            r s cs hcut)))
+
+/--
+The whole admissible-cut enumerator for a rule node splits into its root part
+and its root-free part.  This is the clean list-level node-cut decomposition
+needed for the coalgebra induction.
+-/
+theorem nodeAllAdmissibleCuts_sum_normalForm_eq_root_add_rootFree
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree) :
+    ((PTree.allAdmissibleCuts (PTree.node r s cs)).map
+        (nodeCutTensorGenNormalForm r s cs)).sum =
+      ((nodeRootAdmissibleCuts r s cs).map
+        (nodeCutTensorGenNormalForm r s cs)).sum +
+        ((nodeRootFreeAdmissibleCuts r s cs).map
+          (nodeCutTensorGenNormalForm r s cs)).sum := by
+  simpa [nodeRootAdmissibleCuts, nodeRootFreeAdmissibleCuts] using
+    list_sum_map_eq_filter_eq_add_filter_ne
+      (PTree.allAdmissibleCuts (PTree.node r s cs))
+      ([[]] : List Address)
+      (nodeCutTensorGenNormalForm r s cs)
+
+/--
+After applying the pointwise normal-form theorems, the node coproduct split is
+literally root tensor plus childwise/root-free tensor.
+-/
+theorem nodeAllAdmissibleCuts_sum_normalForm_eq_rootTensor_add_rootFreeTensor
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree) :
+    ((PTree.allAdmissibleCuts (PTree.node r s cs)).map
+        (nodeCutTensorGenNormalForm r s cs)).sum =
+      ((nodeRootAdmissibleCuts r s cs).map
+        (fun _ => nodeRootCutTensorGen r s cs)).sum +
+        ((nodeRootFreeAdmissibleCuts r s cs).map
+          (nodeRootFreeCutTensorGen r s cs)).sum := by
+  rw [nodeAllAdmissibleCuts_sum_normalForm_eq_root_add_rootFree]
+  rw [nodeRootAdmissibleCuts_sum_normalForm_eq,
+    nodeRootFreeAdmissibleCuts_sum_normalForm_eq]
+
+/--
+Every enumerated cut summand of a rule node agrees with the node-cut normal
+form.  This is pointwise, but it is already strong enough to rewrite a whole
+list-sum over cuts by `List.map_congr_left`.
+-/
+theorem coproductSupportSummary_tensorGen_nodeCutNormalForm
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree)
+    (cut : List Address)
+    (hcut : cut ∈ PTree.allAdmissibleCuts (PTree.node r s cs)) :
+    coproductSupportSummary_tensorGen
+        (PTree.coproductTerm (PTree.node r s cs) cut) =
+      nodeCutTensorGenNormalForm r s cs cut := by
+  unfold nodeCutTensorGenNormalForm
+  by_cases hroot : [] ∈ cut
+  · have hcutRoot :
+        cut = ([[]] : List Address) :=
+      PTree.eq_singleton_root_of_mem_allAdmissibleCuts_of_root_mem hcut hroot
+    rw [hcutRoot]
+    simp [PTree.coproductTerm_singleton_root_node,
+      coproductSupportSummary_tensorGen, forestGen_cons, nodeRootCutTensorGen]
+  · have hroot' : Not (List.Mem ([] : Address) cut) := hroot
+    simp [hroot,
+      CoproductSupportNodeCutTensorGenDecompositionClaim.proof
+        r s cs cut hcut hroot']
+
+/--
+The multiplicity-aware raw coproduct of a rule node is the list-sum of the
+normal forms of its admissible cuts.  Unlike the support-level `Finset` sum,
+this statement preserves repeated contributions from distinct cuts.
+-/
+theorem coproductData_comul_linear_treeGen_node_eq_normalForm_sum
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree) :
+    coproductData_comul_linear (treeGen (PTree.node r s cs)) =
+      ((PTree.allAdmissibleCuts (PTree.node r s cs)).map
+        (nodeCutTensorGenNormalForm r s cs)).sum := by
+  rw [coproductData_comul_linear_treeGen_eq_allAdmissibleCuts]
+  exact congrArg List.sum
+    (List.map_congr_left
+      (fun cut hcut =>
+        coproductSupportSummary_tensorGen_nodeCutNormalForm
+          r s cs cut hcut))
+
+/--
+The actual linear coproduct of a rule-node generator splits into the root cut
+and the root-free childwise cuts.  This is the first node-level coalgebra
+formula that exposes the recursive structure of the proof tree.
+-/
+theorem coproductData_comul_linear_treeGen_node_eq_rootTensor_add_rootFreeTensor
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree) :
+    coproductData_comul_linear (treeGen (PTree.node r s cs)) =
+      ((nodeRootAdmissibleCuts r s cs).map
+        (fun _ => nodeRootCutTensorGen r s cs)).sum +
+        ((nodeRootFreeAdmissibleCuts r s cs).map
+          (nodeRootFreeCutTensorGen r s cs)).sum := by
+  rw [coproductData_comul_linear_treeGen_node_eq_normalForm_sum]
+  exact nodeAllAdmissibleCuts_sum_normalForm_eq_rootTensor_add_rootFreeTensor r s cs
+
+/--
+The same multiplicity-aware node-cut split after applying the stable quotient
+tensor map.  This is the descent-facing version of the node formula: the
+root/root-free decomposition is visible before and after quotienting by the
+pre-Lie defect.
+-/
+theorem mkPreLieDifferenceStableQuotient_tensor_coproductData_treeGen_node_eq_rootTensor_add_rootFreeTensor
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree) :
+    mkPreLieDifferenceStableQuotient_tensor
+        (coproductData_comul_linear (treeGen (PTree.node r s cs))) =
+      mkPreLieDifferenceStableQuotient_tensor
+          (((nodeRootAdmissibleCuts r s cs).map
+            (fun _ => nodeRootCutTensorGen r s cs)).sum) +
+        mkPreLieDifferenceStableQuotient_tensor
+          (((nodeRootFreeAdmissibleCuts r s cs).map
+            (nodeRootFreeCutTensorGen r s cs)).sum) := by
+  rw [coproductData_comul_linear_treeGen_node_eq_rootTensor_add_rootFreeTensor]
+  simp
+
+/--
 Derivation-level cut decomposition target.
 
 This is the proof-theoretic version of the node decomposition claim: for an
@@ -576,6 +1390,13 @@ theorem NMMSDerivationCutDecompositionClaim.of_node_claim
   | node r s0 cs =>
       simpa [htree, PTree.children] using
         hnode r s0 cs cut (by simpa [htree] using hcut)
+
+/-- The derivation-level node-cut decomposition, powered by the enumerator theorem. -/
+theorem NMMSDerivationCutDecompositionClaim.proof
+    (base : BaseRel) :
+    NMMSDerivationCutDecompositionClaim base :=
+  NMMSDerivationCutDecompositionClaim.of_node_claim
+    CoproductSupportNodeCutDecompositionClaim.proof
 
 /--
 For derivation trees whose admissible cuts are base-compatible, every term in
@@ -671,6 +1492,1031 @@ theorem pTree_total_height_ge_three (x y z : PTree) :
   have hy : 1 ≤ PTree.height y := pTree_one_le_height y
   have hz : 1 ≤ PTree.height z := pTree_one_le_height z
   omega
+
+/--
+Height-one proof trees are exactly leaves or nullary rule nodes.
+
+This is the first small structural lemma needed by the height induction:
+the first non-vacuous total-height case is not only three leaves, but three
+height-one objects, i.e. leaves and zero-premiss rule nodes.
+-/
+theorem pTree_eq_leaf_or_nullary_node_of_height_eq_one
+    {t : PTree} (ht : PTree.height t = 1) :
+    (∃ s : MultiSequent, t = PTree.leaf s) ∨
+      ∃ (r : RuleTag) (s : MultiSequent), t = PTree.node r s [] := by
+  cases t with
+  | leaf s =>
+      exact Or.inl ⟨s, rfl⟩
+  | node r s cs =>
+      cases cs with
+      | nil =>
+          exact Or.inr ⟨r, s, rfl⟩
+      | cons c cs =>
+          simp [PTree.height] at ht
+          have hcpos : 0 < PTree.height c := pTree_height_pos c
+          omega
+
+attribute [simp] matchingLeafGraftings_leaf
+
+/-- Nullary rule nodes have no leaves available for matching-leaf substitution. -/
+@[simp] theorem matchingLeafGraftings_nullary_node
+    (u : PTree) (r : RuleTag) (s : MultiSequent) :
+    PTree.matchingLeafGraftings u (PTree.node r s []) = [] := by
+  simp [PTree.matchingLeafGraftings, PTree.allAddresses,
+    PTree.allAddressesGo, PTree.graftMatchingLeafAt,
+    PTree.subtreeAt]
+
+/--
+The raw singleton-child form of `matchingLeafGraftings_nodeLeaf`.
+
+This is deliberately separate from making `matchingLeafGraftings_nodeLeaf`
+itself a global simp lemma: the latter can make the simplifier chase the
+reducible abbreviation `nodeLeaf`, while this theorem orients exactly the
+height-four node-with-one-leaf-child shape.
+-/
+@[simp] theorem matchingLeafGraftings_node_singleton_leaf
+    (u : PTree) (r : RuleTag) (s sz : MultiSequent) :
+    PTree.matchingLeafGraftings u (PTree.node r s [PTree.leaf sz]) =
+      if u.conclusion = sz then [PTree.node r s [u]] else [] := by
+  simpa [nodeLeaf] using matchingLeafGraftings_nodeLeaf u r s sz
+
+/--
+The singleton-child form when the child is a nullary rule node.
+
+This is the other height-four singleton shape.  There is still a real child
+at the root, but no leaf below it, so matching-leaf substitution has no
+eligible address.
+-/
+@[simp] theorem matchingLeafGraftings_node_singleton_nullary_node
+    (u : PTree) (r : RuleTag) (s : MultiSequent)
+    (r' : RuleTag) (s' : MultiSequent) :
+    PTree.matchingLeafGraftings u
+        (PTree.node r s [PTree.node r' s' []]) = [] := by
+  simpa [nodeStump, stump] using matchingLeafGraftings_nodeStump u r s r' s'
+
+/--
+In the first non-vacuous height case, the raw pre-Lie comparison already
+vanishes before applying the coproduct.
+
+This is a genuine base slice of the main induction: after the height-one
+classification above, the claim reduces to the concrete one-term/zero-term
+matching-leaf grafting lists for leaves and nullary nodes.
+-/
+theorem preLieDifferenceGenerators_eq_zero_of_height_eq_one
+    {x y z : PTree}
+    (hx : PTree.height x = 1)
+    (hy : PTree.height y = 1)
+    (hz : PTree.height z = 1) :
+    preLieDifferenceGenerators x y z = 0 := by
+  rcases pTree_eq_leaf_or_nullary_node_of_height_eq_one hx with
+    ⟨sx, rfl⟩ | ⟨rx, sx, rfl⟩
+  all_goals
+    rcases pTree_eq_leaf_or_nullary_node_of_height_eq_one hy with
+      ⟨sy, rfl⟩ | ⟨ry, sy, rfl⟩
+  all_goals
+    rcases pTree_eq_leaf_or_nullary_node_of_height_eq_one hz with
+      ⟨sz, rfl⟩ | ⟨rz, sz, rfl⟩
+  all_goals
+    ext w
+    simp [preLieDifferenceGenerators, comparisonSideGenerators_apply_eq_sum_counts,
+      swappedComparisonSideGenerators_apply_eq_sum_counts]
+    try (split_ifs <;> simp_all [PTree.conclusion])
+
+/-- The first non-vacuous height bound is completely closed. -/
+theorem CoproductKillsPreLieDifferenceHeightClaim.three :
+    CoproductKillsPreLieDifferenceHeightClaim 3 := by
+  intro x y z hheight
+  have hsum : PTree.height x + PTree.height y + PTree.height z = 3 := by
+    exact le_antisymm hheight (pTree_total_height_ge_three x y z)
+  have hx : PTree.height x = 1 := by
+    have hx1 : 1 ≤ PTree.height x := pTree_one_le_height x
+    have hy1 : 1 ≤ PTree.height y := pTree_one_le_height y
+    have hz1 : 1 ≤ PTree.height z := pTree_one_le_height z
+    omega
+  have hy : PTree.height y = 1 := by
+    have hx1 : 1 ≤ PTree.height x := pTree_one_le_height x
+    have hy1 : 1 ≤ PTree.height y := pTree_one_le_height y
+    have hz1 : 1 ≤ PTree.height z := pTree_one_le_height z
+    omega
+  have hz : PTree.height z = 1 := by
+    have hx1 : 1 ≤ PTree.height x := pTree_one_le_height x
+    have hy1 : 1 ≤ PTree.height y := pTree_one_le_height y
+    have hz1 : 1 ≤ PTree.height z := pTree_one_le_height z
+    omega
+  rw [preLieDifferenceGenerators_eq_zero_of_height_eq_one hx hy hz]
+  simp
+
+/-!
+### The first genuine height-four calculations
+
+At total height four, exactly one of the three trees can have a real child.
+The smallest such shape is `nodeLeaf r s s'`.  The following lemmas compute
+the raw two-step grafting lists in the three possible positions.  These are
+the first non-vacuous instances where the address bookkeeping matters: each
+proof is a finite version of the address-bijection argument used in the
+general pre-Lie identity.
+-/
+
+/-- A height-two branching node with two leaf children. -/
+@[reducible] def nodeTwoLeaf
+    (r : RuleTag) (s s₁ s₂ : MultiSequent) : PTree :=
+  PTree.node r s [PTree.leaf s₁, PTree.leaf s₂]
+
+@[simp] theorem leaf_conclusion
+    (s : MultiSequent) :
+    (PTree.leaf s).conclusion = s := rfl
+
+@[simp] theorem node_conclusion
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree) :
+    (PTree.node r s cs).conclusion = s := rfl
+
+@[simp] theorem nodeTwoLeaf_conclusion
+    (r : RuleTag) (s s₁ s₂ : MultiSequent) :
+    (nodeTwoLeaf r s s₁ s₂).conclusion = s := rfl
+
+/-- The address list of a branching two-leaf node. -/
+theorem allAddresses_nodeTwoLeaf
+    (r : RuleTag) (s s₁ s₂ : MultiSequent) :
+    PTree.allAddresses (nodeTwoLeaf r s s₁ s₂) = [[], [0], [1]] := by
+  simp [PTree.allAddresses, PTree.allAddressesGo, nodeTwoLeaf, PTree.size,
+    List.mapIdx_cons, List.mapIdx_nil]
+
+/--
+Grafting into a two-leaf branching node is the sum of the possible replacements
+at its left and right leaf children.
+-/
+theorem matchingLeafGraftings_nodeTwoLeaf
+    (u : PTree) (r : RuleTag) (s s₁ s₂ : MultiSequent) :
+    PTree.matchingLeafGraftings u (nodeTwoLeaf r s s₁ s₂) =
+      (if u.conclusion = s₁ then [PTree.node r s [u, PTree.leaf s₂]] else [])
+        ++
+      (if u.conclusion = s₂ then [PTree.node r s [PTree.leaf s₁, u]] else []) := by
+  simp only [PTree.matchingLeafGraftings, allAddresses_nodeTwoLeaf,
+    List.filterMap_cons, List.filterMap_nil]
+  have h0 :
+      PTree.graftMatchingLeafAt u (nodeTwoLeaf r s s₁ s₂) [] = none :=
+    PTree.graftMatchingLeafAt_eq_none_of_subtreeAt_node
+      u (nodeTwoLeaf r s s₁ s₂) [] r s [PTree.leaf s₁, PTree.leaf s₂]
+      (by simp [nodeTwoLeaf, PTree.subtreeAt])
+  rw [h0]
+  by_cases h₁ : u.conclusion = s₁
+  · by_cases h₂ : u.conclusion = s₂
+    · have hs : s₁ = s₂ := h₁.symm.trans h₂
+      simp [PTree.graftMatchingLeafAt, PTree.subtreeAt, PTree.modifyAt,
+        PTree.replaceNth, h₁, h₂, hs]
+    · have hs : s₁ ≠ s₂ := by
+        intro hs
+        exact h₂ (h₁.trans hs)
+      simp [PTree.graftMatchingLeafAt, PTree.subtreeAt, PTree.modifyAt,
+        PTree.replaceNth, h₁, h₂, hs]
+  · by_cases h₂ : u.conclusion = s₂
+    · have hs : s₂ ≠ s₁ := by
+        intro hs
+        exact h₁ (h₂.trans hs)
+      simp [PTree.graftMatchingLeafAt, PTree.subtreeAt, PTree.modifyAt,
+        PTree.replaceNth, h₁, h₂, hs]
+    · simp [PTree.graftMatchingLeafAt, PTree.subtreeAt, PTree.modifyAt,
+        PTree.replaceNth, h₁, h₂]
+
+attribute [simp] matchingLeafGraftings_nodeTwoLeaf
+
+@[simp] theorem matchingLeafGraftings_raw_nodeTwoLeaf
+    (u : PTree) (r : RuleTag) (s s₁ s₂ : MultiSequent) :
+    PTree.matchingLeafGraftings u (PTree.node r s [PTree.leaf s₁, PTree.leaf s₂]) =
+      (if u.conclusion = s₁ then [PTree.node r s [u, PTree.leaf s₂]] else [])
+        ++
+      (if u.conclusion = s₂ then [PTree.node r s [PTree.leaf s₁, u]] else []) := by
+  simpa [nodeTwoLeaf] using matchingLeafGraftings_nodeTwoLeaf u r s s₁ s₂
+
+@[simp] theorem matchingLeafGraftings_raw_nodeLeaf
+    (u : PTree) (r : RuleTag) (s sx : MultiSequent) :
+    PTree.matchingLeafGraftings u (PTree.node r s [PTree.leaf sx]) =
+      if u.conclusion = sx then [PTree.node r s [u]] else [] := by
+  simpa [nodeLeaf] using matchingLeafGraftings_nodeLeaf u r s sx
+
+@[simp] theorem matchingLeafGraftings_raw_nodeNodeLeaf
+    (u : PTree) (r : RuleTag) (s : MultiSequent)
+    (r1 : RuleTag) (s1 s2 : MultiSequent) :
+    PTree.matchingLeafGraftings u (PTree.node r s [PTree.node r1 s1 [PTree.leaf s2]]) =
+      if u.conclusion = s2 then [PTree.node r s [PTree.node r1 s1 [u]]] else [] := by
+  simpa [nodeNodeLeaf, nodeLeaf] using matchingLeafGraftings_nodeNodeLeaf u r s r1 s1 s2
+
+/--
+The tree-level pre-Lie grafting product on a two-leaf branching node is the sum
+of the left-leaf and right-leaf replacement contributions.
+-/
+theorem graftPreLieTree_nodeTwoLeaf
+    (u : PTree) (r : RuleTag) (s s₁ s₂ : MultiSequent) :
+    PTree.graftPreLieTree u (nodeTwoLeaf r s s₁ s₂) =
+      (if u.conclusion = s₁ then treeGen (PTree.node r s [u, PTree.leaf s₂]) else 0)
+        +
+      (if u.conclusion = s₂ then treeGen (PTree.node r s [PTree.leaf s₁, u]) else 0) := by
+  unfold PTree.graftPreLieTree
+  rw [matchingLeafGraftings_nodeTwoLeaf]
+  by_cases h₁ : u.conclusion = s₁
+  · by_cases h₂ : u.conclusion = s₂
+    · have hs : s₁ = s₂ := h₁.symm.trans h₂
+      simp [h₁, h₂, hs, add_assoc, add_left_comm, add_comm]
+    · have hs : s₁ ≠ s₂ := by
+        intro hs
+        exact h₂ (h₁.trans hs)
+      simp [h₁, h₂, hs, add_assoc, add_left_comm, add_comm]
+  · by_cases h₂ : u.conclusion = s₂
+    · have hs : s₂ ≠ s₁ := by
+        intro hs
+        exact h₁ (h₂.trans hs)
+      simp [h₁, h₂, hs, add_assoc, add_left_comm, add_comm]
+    · simp [h₁, h₂, add_assoc, add_left_comm, add_comm]
+
+/-- Linearized pre-Lie product on a branching two-leaf target. -/
+theorem graftPreLie_treeGen_nodeTwoLeaf
+    (x : PTree) (r : RuleTag) (s s₁ s₂ : MultiSequent) :
+    graftPreLie (treeGen x) (treeGen (nodeTwoLeaf r s s₁ s₂)) =
+      (if x.conclusion = s₁ then treeGen (PTree.node r s [x, PTree.leaf s₂]) else 0)
+        +
+      (if x.conclusion = s₂ then treeGen (PTree.node r s [PTree.leaf s₁, x]) else 0) := by
+  rw [graftPreLie_on_generators, graftPreLieTree_nodeTwoLeaf]
+
+/-- A branching node with a `nodeLeaf` on the left and a leaf on the right. -/
+@[reducible] def nodeLeafLeft
+    (r : RuleTag) (s : MultiSequent)
+    (r1 : RuleTag) (s1 s2 s3 : MultiSequent) : PTree :=
+  PTree.node r s [nodeLeaf r1 s1 s2, PTree.leaf s3]
+
+/-- A branching node with a leaf on the left and a `nodeLeaf` on the right. -/
+@[reducible] def nodeLeafRight
+    (r : RuleTag) (s s1 : MultiSequent)
+    (r1 : RuleTag) (s2 s3 : MultiSequent) : PTree :=
+  PTree.node r s [PTree.leaf s1, nodeLeaf r1 s2 s3]
+
+@[simp] theorem nodeLeafLeft_conclusion
+    (r : RuleTag) (s : MultiSequent)
+    (r1 : RuleTag) (s1 s2 s3 : MultiSequent) :
+    (nodeLeafLeft r s r1 s1 s2 s3).conclusion = s := rfl
+
+@[simp] theorem nodeLeafRight_conclusion
+    (r : RuleTag) (s s1 : MultiSequent)
+    (r1 : RuleTag) (s2 s3 : MultiSequent) :
+    (nodeLeafRight r s s1 r1 s2 s3).conclusion = s := rfl
+
+theorem allAddresses_nodeLeafLeft
+    (r : RuleTag) (s : MultiSequent)
+    (r1 : RuleTag) (s1 s2 s3 : MultiSequent) :
+    PTree.allAddresses (nodeLeafLeft r s r1 s1 s2 s3) = [[], [0], [0, 0], [1]] := by
+  simp [PTree.allAddresses, PTree.allAddressesGo, nodeLeafLeft, nodeLeaf, PTree.size,
+    List.mapIdx_cons, List.mapIdx_nil]
+
+theorem allAddresses_nodeLeafRight
+    (r : RuleTag) (s s1 : MultiSequent)
+    (r1 : RuleTag) (s2 s3 : MultiSequent) :
+    PTree.allAddresses (nodeLeafRight r s s1 r1 s2 s3) = [[], [0], [1], [1, 0]] := by
+  simp [PTree.allAddresses, PTree.allAddressesGo, nodeLeafRight, nodeLeaf, PTree.size,
+    List.mapIdx_cons, List.mapIdx_nil]
+
+theorem matchingLeafGraftings_nodeLeafLeft
+    (u : PTree) (r : RuleTag) (s : MultiSequent)
+    (r1 : RuleTag) (s1 s2 s3 : MultiSequent) :
+    PTree.matchingLeafGraftings u (nodeLeafLeft r s r1 s1 s2 s3) =
+      (if u.conclusion = s2 then [PTree.node r s [PTree.node r1 s1 [u], PTree.leaf s3]] else [])
+        ++
+      (if u.conclusion = s3 then [PTree.node r s [nodeLeaf r1 s1 s2, u]] else []) := by
+  simp only [PTree.matchingLeafGraftings, allAddresses_nodeLeafLeft,
+    List.filterMap_cons, List.filterMap_nil]
+  have h0 :
+      PTree.graftMatchingLeafAt u (nodeLeafLeft r s r1 s1 s2 s3) [] = none :=
+    PTree.graftMatchingLeafAt_eq_none_of_subtreeAt_node
+      u (nodeLeafLeft r s r1 s1 s2 s3) [] r s [nodeLeaf r1 s1 s2, PTree.leaf s3]
+      (by simp [nodeLeafLeft, PTree.subtreeAt])
+  have h1 :
+      PTree.graftMatchingLeafAt u (nodeLeafLeft r s r1 s1 s2 s3) [0] = none :=
+    PTree.graftMatchingLeafAt_eq_none_of_subtreeAt_node
+      u (nodeLeafLeft r s r1 s1 s2 s3) [0] r1 s1 [PTree.leaf s2]
+      (by simp [nodeLeafLeft, nodeLeaf, PTree.subtreeAt])
+  rw [h0, h1]
+  by_cases h2 : u.conclusion = s2
+  · by_cases h3 : u.conclusion = s3
+    · have hs : s2 = s3 := h2.symm.trans h3
+      simp [PTree.graftMatchingLeafAt, nodeLeaf, PTree.subtreeAt, PTree.modifyAt,
+        PTree.replaceNth, h2, h3, hs]
+    · have hs : s2 ≠ s3 := by
+        intro hs
+        exact h3 (h2.trans hs)
+      simp [PTree.graftMatchingLeafAt, nodeLeaf, PTree.subtreeAt, PTree.modifyAt,
+        PTree.replaceNth, h2, h3, hs]
+  · by_cases h3 : u.conclusion = s3
+    · have hs : s3 ≠ s2 := by
+        intro hs
+        exact h2 (h3.trans hs)
+      simp [PTree.graftMatchingLeafAt, nodeLeaf, PTree.subtreeAt, PTree.modifyAt,
+        PTree.replaceNth, h2, h3, hs]
+    · simp [PTree.graftMatchingLeafAt, nodeLeaf, PTree.subtreeAt, PTree.modifyAt,
+        PTree.replaceNth, h2, h3]
+
+attribute [simp] matchingLeafGraftings_nodeLeafLeft
+
+@[simp] theorem matchingLeafGraftings_raw_nodeLeafLeft
+    (u : PTree) (r : RuleTag) (s : MultiSequent)
+    (r1 : RuleTag) (s1 s2 s3 : MultiSequent) :
+    PTree.matchingLeafGraftings u (PTree.node r s [PTree.node r1 s1 [PTree.leaf s2], PTree.leaf s3]) =
+      (if u.conclusion = s2 then [PTree.node r s [PTree.node r1 s1 [u], PTree.leaf s3]] else [])
+        ++
+      (if u.conclusion = s3 then [PTree.node r s [nodeLeaf r1 s1 s2, u]] else []) := by
+  simpa [nodeLeafLeft, nodeLeaf] using matchingLeafGraftings_nodeLeafLeft u r s r1 s1 s2 s3
+
+theorem matchingLeafGraftings_nodeLeafRight
+    (u : PTree) (r : RuleTag) (s s1 : MultiSequent)
+    (r1 : RuleTag) (s2 s3 : MultiSequent) :
+    PTree.matchingLeafGraftings u (nodeLeafRight r s s1 r1 s2 s3) =
+      (if u.conclusion = s1 then [PTree.node r s [u, nodeLeaf r1 s2 s3]] else [])
+        ++
+      (if u.conclusion = s3 then [PTree.node r s [PTree.leaf s1, PTree.node r1 s2 [u]]] else []) := by
+  simp only [PTree.matchingLeafGraftings, allAddresses_nodeLeafRight,
+    List.filterMap_cons, List.filterMap_nil]
+  have h0 :
+      PTree.graftMatchingLeafAt u (nodeLeafRight r s s1 r1 s2 s3) [] = none :=
+    PTree.graftMatchingLeafAt_eq_none_of_subtreeAt_node
+      u (nodeLeafRight r s s1 r1 s2 s3) [] r s [PTree.leaf s1, nodeLeaf r1 s2 s3]
+      (by simp [nodeLeafRight, PTree.subtreeAt])
+  have h1 :
+      PTree.graftMatchingLeafAt u (nodeLeafRight r s s1 r1 s2 s3) [1] = none :=
+    PTree.graftMatchingLeafAt_eq_none_of_subtreeAt_node
+      u (nodeLeafRight r s s1 r1 s2 s3) [1] r1 s2 [PTree.leaf s3]
+      (by simp [nodeLeafRight, nodeLeaf, PTree.subtreeAt])
+  rw [h0, h1]
+  by_cases h2 : u.conclusion = s1
+  · by_cases h3 : u.conclusion = s3
+    · have hs : s1 = s3 := h2.symm.trans h3
+      simp [PTree.graftMatchingLeafAt, nodeLeaf, PTree.subtreeAt, PTree.modifyAt,
+        PTree.replaceNth, h2, h3, hs]
+    · have hs : s1 ≠ s3 := by
+        intro hs
+        exact h3 (h2.trans hs)
+      simp [PTree.graftMatchingLeafAt, nodeLeaf, PTree.subtreeAt, PTree.modifyAt,
+        PTree.replaceNth, h2, h3, hs]
+  · by_cases h3 : u.conclusion = s3
+    · have hs : s3 ≠ s1 := by
+        intro hs
+        exact h2 (h3.trans hs)
+      simp [PTree.graftMatchingLeafAt, nodeLeaf, PTree.subtreeAt, PTree.modifyAt,
+        PTree.replaceNth, h2, h3, hs]
+    · simp [PTree.graftMatchingLeafAt, nodeLeaf, PTree.subtreeAt, PTree.modifyAt,
+        PTree.replaceNth, h2, h3]
+
+attribute [simp] matchingLeafGraftings_nodeLeafRight
+
+@[simp] theorem matchingLeafGraftings_raw_nodeLeafRight
+    (u : PTree) (r : RuleTag) (s s1 : MultiSequent)
+    (r1 : RuleTag) (s2 s3 : MultiSequent) :
+    PTree.matchingLeafGraftings u (PTree.node r s [PTree.leaf s1, PTree.node r1 s2 [PTree.leaf s3]]) =
+      (if u.conclusion = s1 then [PTree.node r s [u, nodeLeaf r1 s2 s3]] else [])
+        ++
+      (if u.conclusion = s3 then [PTree.node r s [PTree.leaf s1, PTree.node r1 s2 [u]]] else []) := by
+  simpa [nodeLeafRight, nodeLeaf] using matchingLeafGraftings_nodeLeafRight u r s s1 r1 s2 s3
+
+/-- A node whose sole child is a branching two-leaf node. -/
+@[reducible] def nodeNodeTwoLeaf
+    (r : RuleTag) (s : MultiSequent)
+    (r1 : RuleTag) (s1 s2 s3 : MultiSequent) : PTree :=
+  PTree.node r s [nodeTwoLeaf r1 s1 s2 s3]
+
+theorem allAddresses_nodeNodeTwoLeaf
+    (r : RuleTag) (s : MultiSequent)
+    (r1 : RuleTag) (s1 s2 s3 : MultiSequent) :
+    PTree.allAddresses (nodeNodeTwoLeaf r s r1 s1 s2 s3) = [[], [0], [0, 0], [0, 1]] := by
+  simp [PTree.allAddresses, PTree.allAddressesGo, nodeNodeTwoLeaf, nodeTwoLeaf, PTree.size,
+    List.mapIdx_cons, List.mapIdx_nil]
+
+theorem matchingLeafGraftings_nodeNodeTwoLeaf
+    (u : PTree) (r : RuleTag) (s : MultiSequent)
+    (r1 : RuleTag) (s1 s2 s3 : MultiSequent) :
+    PTree.matchingLeafGraftings u (nodeNodeTwoLeaf r s r1 s1 s2 s3) =
+      (if u.conclusion = s2 then [PTree.node r s [PTree.node r1 s1 [u, PTree.leaf s3]]] else [])
+        ++
+      (if u.conclusion = s3 then [PTree.node r s [PTree.node r1 s1 [PTree.leaf s2, u]]] else []) := by
+  simp only [PTree.matchingLeafGraftings, allAddresses_nodeNodeTwoLeaf,
+    List.filterMap_cons, List.filterMap_nil]
+  have h0 :
+      PTree.graftMatchingLeafAt u (nodeNodeTwoLeaf r s r1 s1 s2 s3) [] = none :=
+    PTree.graftMatchingLeafAt_eq_none_of_subtreeAt_node
+      u (nodeNodeTwoLeaf r s r1 s1 s2 s3) [] r s [nodeTwoLeaf r1 s1 s2 s3]
+      (by simp [nodeNodeTwoLeaf, PTree.subtreeAt])
+  have h1 :
+      PTree.graftMatchingLeafAt u (nodeNodeTwoLeaf r s r1 s1 s2 s3) [0] = none :=
+    PTree.graftMatchingLeafAt_eq_none_of_subtreeAt_node
+      u (nodeNodeTwoLeaf r s r1 s1 s2 s3) [0] r1 s1 [PTree.leaf s2, PTree.leaf s3]
+      (by simp [nodeNodeTwoLeaf, nodeTwoLeaf, PTree.subtreeAt])
+  rw [h0, h1]
+  by_cases h2 : u.conclusion = s2
+  · by_cases h3 : u.conclusion = s3
+    · have hs : s2 = s3 := h2.symm.trans h3
+      simp [PTree.graftMatchingLeafAt, nodeTwoLeaf, PTree.subtreeAt, PTree.modifyAt,
+        PTree.replaceNth, h2, h3, hs]
+    · have hs : s2 ≠ s3 := by
+        intro hs
+        exact h3 (h2.trans hs)
+      simp [PTree.graftMatchingLeafAt, nodeTwoLeaf, PTree.subtreeAt, PTree.modifyAt,
+        PTree.replaceNth, h2, h3, hs]
+  · by_cases h3 : u.conclusion = s3
+    · have hs : s3 ≠ s2 := by
+        intro hs
+        exact h2 (h3.trans hs)
+      simp [PTree.graftMatchingLeafAt, nodeTwoLeaf, PTree.subtreeAt, PTree.modifyAt,
+        PTree.replaceNth, h2, h3, hs]
+    · simp [PTree.graftMatchingLeafAt, nodeTwoLeaf, PTree.subtreeAt, PTree.modifyAt,
+        PTree.replaceNth, h2, h3]
+
+@[simp] theorem matchingLeafGraftings_raw_nodeNodeTwoLeaf
+    (u : PTree) (r : RuleTag) (s : MultiSequent)
+    (r1 : RuleTag) (s1 s2 s3 : MultiSequent) :
+    PTree.matchingLeafGraftings u (PTree.node r s [PTree.node r1 s1 [PTree.leaf s2, PTree.leaf s3]]) =
+      (if u.conclusion = s2 then [PTree.node r s [PTree.node r1 s1 [u, PTree.leaf s3]]] else [])
+        ++
+      (if u.conclusion = s3 then [PTree.node r s [PTree.node r1 s1 [PTree.leaf s2, u]]] else []) := by
+  simpa [nodeNodeTwoLeaf, nodeTwoLeaf] using matchingLeafGraftings_nodeNodeTwoLeaf u r s r1 s1 s2 s3
+
+/--
+The raw pre-Lie defect is skew in the first two arguments.
+-/
+theorem preLieDifferenceGenerators_swap_neg
+    (x y z : PTree) :
+    preLieDifferenceGenerators x y z = -preLieDifferenceGenerators y x z := by
+  unfold preLieDifferenceGenerators comparisonSideGenerators swappedComparisonSideGenerators
+  abel
+
+/-- Height-four node-child case: the nontrivial tree is the target `z`. -/
+theorem preLieDifferenceGenerators_leaf_leaf_nodeLeaf_eq_zero
+    (sx sy : MultiSequent) (r : RuleTag) (s sz : MultiSequent) :
+    preLieDifferenceGenerators
+      (PTree.leaf sx) (PTree.leaf sy) (nodeLeaf r s sz) = 0 := by
+  ext w
+  simp [preLieDifferenceGenerators, comparisonSideGenerators_apply_eq_sum_counts,
+    swappedComparisonSideGenerators_apply_eq_sum_counts,
+    matchingLeafGraftings_nodeLeaf, PTree.conclusion]
+  repeat' split_ifs <;> subst_vars <;> simp [nodeLeaf, PTree.conclusion, eq_comm] at *
+
+/-- Height-four node-child case: the nontrivial tree is the middle argument. -/
+theorem preLieDifferenceGenerators_leaf_nodeLeaf_leaf_eq_zero
+    (sx : MultiSequent) (r : RuleTag) (s sy : MultiSequent)
+    (sz : MultiSequent) :
+    preLieDifferenceGenerators
+      (PTree.leaf sx) (nodeLeaf r s sy) (PTree.leaf sz) = 0 := by
+  ext w
+  simp [preLieDifferenceGenerators, comparisonSideGenerators_apply_eq_sum_counts,
+    swappedComparisonSideGenerators_apply_eq_sum_counts,
+    matchingLeafGraftings_nodeLeaf, PTree.conclusion]
+  repeat' split_ifs <;> subst_vars <;> simp [nodeLeaf, PTree.conclusion, eq_comm] at *
+
+/-- Height-four node-child case: the nontrivial tree is the first argument. -/
+theorem preLieDifferenceGenerators_nodeLeaf_leaf_leaf_eq_zero
+    (r : RuleTag) (s sx : MultiSequent) (sy sz : MultiSequent) :
+    preLieDifferenceGenerators
+      (nodeLeaf r s sx) (PTree.leaf sy) (PTree.leaf sz) = 0 := by
+  ext w
+  simp [preLieDifferenceGenerators, comparisonSideGenerators_apply_eq_sum_counts,
+    swappedComparisonSideGenerators_apply_eq_sum_counts,
+    matchingLeafGraftings_nodeLeaf, PTree.conclusion]
+  repeat' split_ifs <;> subst_vars <;> simp [nodeLeaf, PTree.conclusion, eq_comm] at *
+
+/--
+Coalgebra version of the first genuine height-four calculation: the GL
+coproduct kills the pre-Lie difference when the target is a one-leaf-child
+tree.
+-/
+theorem coproductSupportSummary_comul_linear_preLieDifferenceGenerators_leaf_leaf_nodeLeaf
+    (sx sy : MultiSequent) (r : RuleTag) (s sz : MultiSequent) :
+    coproductSupportSummary_comul_linear
+        (preLieDifferenceGenerators
+          (PTree.leaf sx) (PTree.leaf sy) (nodeLeaf r s sz)) = 0 := by
+  rw [preLieDifferenceGenerators_leaf_leaf_nodeLeaf_eq_zero]
+  simp
+
+/-- Coalgebra version of the height-four calculation with the node in the middle. -/
+theorem coproductSupportSummary_comul_linear_preLieDifferenceGenerators_leaf_nodeLeaf_leaf
+    (sx : MultiSequent) (r : RuleTag) (s sy : MultiSequent)
+    (sz : MultiSequent) :
+    coproductSupportSummary_comul_linear
+        (preLieDifferenceGenerators
+          (PTree.leaf sx) (nodeLeaf r s sy) (PTree.leaf sz)) = 0 := by
+  rw [preLieDifferenceGenerators_leaf_nodeLeaf_leaf_eq_zero]
+  simp
+
+/-- Coalgebra version of the height-four calculation with the node first. -/
+theorem coproductSupportSummary_comul_linear_preLieDifferenceGenerators_nodeLeaf_leaf_leaf
+    (r : RuleTag) (s sx : MultiSequent) (sy sz : MultiSequent) :
+    coproductSupportSummary_comul_linear
+        (preLieDifferenceGenerators
+          (nodeLeaf r s sx) (PTree.leaf sy) (PTree.leaf sz)) = 0 := by
+  rw [preLieDifferenceGenerators_nodeLeaf_leaf_leaf_eq_zero]
+  simp
+
+/--
+Height-four branching case: when the target is a two-leaf node, the two leaf
+insertions commute and the raw pre-Lie defect still vanishes.
+-/
+theorem preLieDifferenceGenerators_leaf_leaf_nodeTwoLeaf_eq_zero
+    (sx sy : MultiSequent) (r : RuleTag) (s s₁ s₂ : MultiSequent) :
+    preLieDifferenceGenerators
+      (PTree.leaf sx) (PTree.leaf sy) (nodeTwoLeaf r s s₁ s₂) = 0 := by
+  ext w
+  by_cases hxs1 : sx = s₁ <;>
+    by_cases hxs2 : sx = s₂ <;>
+    by_cases hys1 : sy = s₁ <;>
+    by_cases hys2 : sy = s₂ <;>
+    (try subst_vars) <;>
+    simp_all [preLieDifferenceGenerators,
+      comparisonSideGenerators_apply_eq_sum_counts,
+      swappedComparisonSideGenerators_apply_eq_sum_counts,
+      matchingLeafGraftings_nodeTwoLeaf,
+      matchingLeafGraftings_raw_nodeTwoLeaf,
+      leaf_conclusion, nodeTwoLeaf, eq_comm] <;>
+    (try (repeat' (split_ifs at * <;> simp_all [eq_comm]))) <;>
+    try abel_nf
+
+/--
+Coalgebra version of the branching height-four calculation with a two-leaf
+target.
+-/
+theorem coproductSupportSummary_comul_linear_preLieDifferenceGenerators_leaf_leaf_nodeTwoLeaf
+    (sx sy : MultiSequent) (r : RuleTag) (s s₁ s₂ : MultiSequent) :
+    coproductSupportSummary_comul_linear
+        (preLieDifferenceGenerators
+          (PTree.leaf sx) (PTree.leaf sy) (nodeTwoLeaf r s s₁ s₂)) = 0 := by
+  rw [preLieDifferenceGenerators_leaf_leaf_nodeTwoLeaf_eq_zero]
+  simp
+
+/-- Height-four singleton-child case: the target child is a nullary rule node. -/
+theorem preLieDifferenceGenerators_leaf_leaf_nodeStump_eq_zero
+    (sx sy : MultiSequent)
+    (r : RuleTag) (s : MultiSequent) (r' : RuleTag) (s' : MultiSequent) :
+    preLieDifferenceGenerators
+      (PTree.leaf sx) (PTree.leaf sy) (nodeStump r s r' s') = 0 := by
+  ext w
+  simp [preLieDifferenceGenerators, comparisonSideGenerators_apply_eq_sum_counts,
+    swappedComparisonSideGenerators_apply_eq_sum_counts,
+    matchingLeafGraftings_nodeStump, PTree.conclusion]
+  repeat' split_ifs <;> subst_vars <;> simp [nodeStump, stump, PTree.conclusion, eq_comm] at *
+
+/-- Height-four singleton-child case: the middle tree is a node over a nullary child. -/
+theorem preLieDifferenceGenerators_leaf_nodeStump_leaf_eq_zero
+    (sx : MultiSequent)
+    (r : RuleTag) (s : MultiSequent) (r' : RuleTag) (sy : MultiSequent)
+    (sz : MultiSequent) :
+    preLieDifferenceGenerators
+      (PTree.leaf sx) (nodeStump r s r' sy) (PTree.leaf sz) = 0 := by
+  ext w
+  simp [preLieDifferenceGenerators, comparisonSideGenerators_apply_eq_sum_counts,
+    swappedComparisonSideGenerators_apply_eq_sum_counts,
+    matchingLeafGraftings_nodeStump, PTree.conclusion]
+  repeat' split_ifs <;> subst_vars <;> simp [nodeStump, stump, PTree.conclusion, eq_comm] at *
+
+/-- Height-four singleton-child case: the first tree is a node over a nullary child. -/
+theorem preLieDifferenceGenerators_nodeStump_leaf_leaf_eq_zero
+    (r : RuleTag) (s : MultiSequent) (r' : RuleTag) (sx : MultiSequent)
+    (sy sz : MultiSequent) :
+    preLieDifferenceGenerators
+      (nodeStump r s r' sx) (PTree.leaf sy) (PTree.leaf sz) = 0 := by
+  ext w
+  simp [preLieDifferenceGenerators, comparisonSideGenerators_apply_eq_sum_counts,
+    swappedComparisonSideGenerators_apply_eq_sum_counts,
+    matchingLeafGraftings_nodeStump, PTree.conclusion]
+  repeat' split_ifs <;> subst_vars <;> simp [nodeStump, stump, PTree.conclusion, eq_comm] at *
+
+/-- Coalgebra version of the height-four calculation with a nullary child target. -/
+theorem coproductSupportSummary_comul_linear_preLieDifferenceGenerators_leaf_leaf_nodeStump
+    (sx sy : MultiSequent)
+    (r : RuleTag) (s : MultiSequent) (r' : RuleTag) (s' : MultiSequent) :
+    coproductSupportSummary_comul_linear
+        (preLieDifferenceGenerators
+          (PTree.leaf sx) (PTree.leaf sy) (nodeStump r s r' s')) = 0 := by
+  rw [preLieDifferenceGenerators_leaf_leaf_nodeStump_eq_zero]
+  simp
+
+/-- Coalgebra version of the height-four calculation with the nullary child node in the middle. -/
+theorem coproductSupportSummary_comul_linear_preLieDifferenceGenerators_leaf_nodeStump_leaf
+    (sx : MultiSequent)
+    (r : RuleTag) (s : MultiSequent) (r' : RuleTag) (sy : MultiSequent)
+    (sz : MultiSequent) :
+    coproductSupportSummary_comul_linear
+        (preLieDifferenceGenerators
+          (PTree.leaf sx) (nodeStump r s r' sy) (PTree.leaf sz)) = 0 := by
+  rw [preLieDifferenceGenerators_leaf_nodeStump_leaf_eq_zero]
+  simp
+
+/-- Coalgebra version of the height-four calculation with the nullary child node first. -/
+theorem coproductSupportSummary_comul_linear_preLieDifferenceGenerators_nodeStump_leaf_leaf
+    (r : RuleTag) (s : MultiSequent) (r' : RuleTag) (sx : MultiSequent)
+    (sy sz : MultiSequent) :
+    coproductSupportSummary_comul_linear
+        (preLieDifferenceGenerators
+          (nodeStump r s r' sx) (PTree.leaf sy) (PTree.leaf sz)) = 0 := by
+  rw [preLieDifferenceGenerators_nodeStump_leaf_leaf_eq_zero]
+  simp
+
+/--
+If the target tree is a leaf, the two rearranged pre-Lie comparison sides agree
+for every pair `x, y`: grafting into the terminal leaf only tests the root
+conclusion, and successful first-stage grafting preserves that root conclusion.
+-/
+theorem matchingLeafGraftings_flatMap_leaf_count
+    (u t w : PTree) (s : MultiSequent) :
+    (((PTree.matchingLeafGraftings u t).flatMap
+        (fun t' => PTree.matchingLeafGraftings t' (PTree.leaf s))).count w) =
+      if t.conclusion = s then (PTree.matchingLeafGraftings u t).count w else 0 := by
+  classical
+  by_cases h : t.conclusion = s
+  · have hcount :
+        ∀ L : List PTree,
+          (∀ t' ∈ L, t'.conclusion = s) →
+          (L.flatMap (fun t' => if t'.conclusion = s then [t'] else [])).count w =
+            L.count w := by
+      intro L hL
+      induction L with
+      | nil =>
+          simp
+      | cons a L ih =>
+          have ha : a.conclusion = s := hL a (by simp)
+          have htail : ∀ t' ∈ L, t'.conclusion = s := by
+            intro t' ht'
+            exact hL t' (by simp [ht'])
+          simpa [List.count_cons, ha] using ih htail
+    have hall :
+        ∀ t' ∈ PTree.matchingLeafGraftings u t, t'.conclusion = s := by
+      intro t' ht'
+      simpa [h] using matchingLeafGraftings_conclusion u t t' ht'
+    simp_rw [matchingLeafGraftings_leaf]
+    simpa [h] using hcount (PTree.matchingLeafGraftings u t) hall
+  · have hcount :
+        ∀ L : List PTree,
+          (∀ t' ∈ L, t'.conclusion ≠ s) →
+          (L.flatMap (fun t' => if t'.conclusion = s then [t'] else [])).count w = 0 := by
+      intro L hL
+      induction L with
+      | nil =>
+          simp
+      | cons a L ih =>
+          have ha : a.conclusion ≠ s := hL a (by simp)
+          have htail : ∀ t' ∈ L, t'.conclusion ≠ s := by
+            intro t' ht'
+            exact hL t' (by simp [ht'])
+          simpa [List.count_cons, ha] using ih htail
+    have hall :
+        ∀ t' ∈ PTree.matchingLeafGraftings u t, t'.conclusion ≠ s := by
+      intro t' ht'
+      have ht' : t'.conclusion = t.conclusion :=
+        matchingLeafGraftings_conclusion u t t' ht'
+      simpa [ht'] using h
+    simp_rw [matchingLeafGraftings_leaf]
+    simpa [h] using hcount (PTree.matchingLeafGraftings u t) hall
+
+/--
+If the third tree is a leaf, the raw pre-Lie defect already vanishes before
+applying the coproduct: the `A` and `B` terms coincide, and so do `D` and `C`.
+-/
+theorem preLieDifferenceGenerators_any_any_leaf_eq_zero
+    (x y : PTree) (sz : MultiSequent) :
+    preLieDifferenceGenerators x y (PTree.leaf sz) = 0 := by
+  ext w
+  rw [preLieDifferenceGenerators, Finsupp.sub_apply,
+    comparisonSideGenerators_apply_eq_sum_counts,
+    swappedComparisonSideGenerators_apply_eq_sum_counts,
+    matchingLeafGraftings_flatMap_leaf_count y x w sz,
+    matchingLeafGraftings_flatMap_leaf_count x y w sz]
+  by_cases hy : y.conclusion = sz
+  · by_cases hx : x.conclusion = sz
+    · simp [matchingLeafGraftings_leaf, hy, hx]
+      abel
+    · simp [matchingLeafGraftings_leaf, hy, hx]
+  · by_cases hx : x.conclusion = sz
+    · simp [matchingLeafGraftings_leaf, hy, hx]
+    · simp [matchingLeafGraftings_leaf, hy, hx]
+
+/--
+Coalgebra corollary of the leaf-target vanishing theorem.  This closes the
+entire `(?, ?, leaf)` slice, including the total-height-five `(2, 2, 1)` cases.
+-/
+theorem coproductSupportSummary_comul_linear_preLieDifferenceGenerators_any_any_leaf
+    (x y : PTree) (sz : MultiSequent) :
+    coproductSupportSummary_comul_linear
+        (preLieDifferenceGenerators x y (PTree.leaf sz)) = 0 := by
+  rw [preLieDifferenceGenerators_any_any_leaf_eq_zero]
+  simp
+
+/--
+Concrete height-five leaf-target case: even when both leading trees are
+singleton-child nodes, the raw pre-Lie defect still vanishes because the right
+slot is a leaf.
+-/
+theorem preLieDifferenceGenerators_nodeLeaf_nodeLeaf_leaf_eq_zero
+    (r₁ : RuleTag) (s₁ sx : MultiSequent)
+    (r₂ : RuleTag) (s₂ sy : MultiSequent)
+    (sz : MultiSequent) :
+    preLieDifferenceGenerators
+      (nodeLeaf r₁ s₁ sx) (nodeLeaf r₂ s₂ sy) (PTree.leaf sz) = 0 := by
+  exact preLieDifferenceGenerators_any_any_leaf_eq_zero
+    (nodeLeaf r₁ s₁ sx) (nodeLeaf r₂ s₂ sy) sz
+
+/--
+Coalgebra corollary of the concrete height-five `nodeLeaf/nodeLeaf/leaf`
+vanishing case.
+-/
+theorem coproductSupportSummary_comul_linear_preLieDifferenceGenerators_nodeLeaf_nodeLeaf_leaf
+    (r₁ : RuleTag) (s₁ sx : MultiSequent)
+    (r₂ : RuleTag) (s₂ sy : MultiSequent)
+    (sz : MultiSequent) :
+    coproductSupportSummary_comul_linear
+        (preLieDifferenceGenerators
+          (nodeLeaf r₁ s₁ sx) (nodeLeaf r₂ s₂ sy) (PTree.leaf sz)) = 0 := by
+  rw [preLieDifferenceGenerators_nodeLeaf_nodeLeaf_leaf_eq_zero]
+  simp
+
+/--
+Concrete height-five case with a leaf in the first slot and one-leaf-child nodes
+in the other two slots.
+-/
+theorem preLieDifferenceGenerators_leaf_nodeLeaf_nodeLeaf_eq_zero
+    (sx : MultiSequent)
+    (r₁ : RuleTag) (s₁ sy : MultiSequent)
+    (r₂ : RuleTag) (s₂ sz : MultiSequent) :
+    preLieDifferenceGenerators
+      (PTree.leaf sx) (nodeLeaf r₁ s₁ sy) (nodeLeaf r₂ s₂ sz) = 0 := by
+  ext w
+  by_cases hs1z : s₁ = sz <;>
+    by_cases hxy : sx = sy <;>
+    by_cases hxz : sx = sz <;>
+    by_cases hs1x : s₁ = sx <;>
+    (try subst_vars) <;>
+    simp_all [preLieDifferenceGenerators,
+      comparisonSideGenerators_apply_eq_sum_counts,
+      swappedComparisonSideGenerators_apply_eq_sum_counts,
+      matchingLeafGraftings_leaf, matchingLeafGraftings_leaf_match,
+      matchingLeafGraftings_leaf_mismatch, matchingLeafGraftings_leaf_self,
+      matchingLeafGraftings_leaf_leaf_ne, matchingLeafGraftings_nodeLeaf,
+      matchingLeafGraftings_nodeNodeLeaf, matchingLeafGraftings_raw_nodeLeaf,
+      matchingLeafGraftings_raw_nodeNodeLeaf, leaf_conclusion,
+      nodeLeaf, nodeNodeLeaf, eq_comm] <;>
+    (try (repeat' (split_ifs at * <;> simp_all [eq_comm]))) <;>
+    try abel_nf
+
+/--
+Concrete height-five case with a leaf in the middle slot and one-leaf-child
+nodes in the outer two slots.
+-/
+theorem preLieDifferenceGenerators_nodeLeaf_leaf_nodeLeaf_eq_zero
+    (r₁ : RuleTag) (s₁ sx : MultiSequent)
+    (sy : MultiSequent)
+    (r₂ : RuleTag) (s₂ sz : MultiSequent) :
+    preLieDifferenceGenerators
+      (nodeLeaf r₁ s₁ sx) (PTree.leaf sy) (nodeLeaf r₂ s₂ sz) = 0 := by
+  ext w
+  by_cases hyz : sy = sz <;>
+    by_cases hs1y : s₁ = sy <;>
+    by_cases hs1z : s₁ = sz <;>
+    by_cases hysx : sy = sx <;>
+    (try subst_vars) <;>
+    simp_all [preLieDifferenceGenerators,
+      comparisonSideGenerators_apply_eq_sum_counts,
+      swappedComparisonSideGenerators_apply_eq_sum_counts,
+      matchingLeafGraftings_leaf, matchingLeafGraftings_leaf_match,
+      matchingLeafGraftings_leaf_mismatch, matchingLeafGraftings_leaf_self,
+      matchingLeafGraftings_leaf_leaf_ne, matchingLeafGraftings_nodeLeaf,
+      matchingLeafGraftings_nodeNodeLeaf, matchingLeafGraftings_raw_nodeLeaf,
+      matchingLeafGraftings_raw_nodeNodeLeaf, leaf_conclusion,
+      nodeLeaf, nodeNodeLeaf, eq_comm] <;>
+    (try (repeat' (split_ifs at * <;> simp_all [eq_comm]))) <;>
+    try abel_nf
+
+/--
+Concrete height-six one-leaf-child case: three `nodeLeaf`s already satisfy the
+raw pre-Lie identity.
+-/
+theorem preLieDifferenceGenerators_nodeLeaf_nodeLeaf_nodeLeaf_eq_zero
+    (r₁ : RuleTag) (s₁ sx : MultiSequent)
+    (r₂ : RuleTag) (s₂ sy : MultiSequent)
+    (r₃ : RuleTag) (s₃ sz : MultiSequent) :
+    preLieDifferenceGenerators
+      (nodeLeaf r₁ s₁ sx) (nodeLeaf r₂ s₂ sy) (nodeLeaf r₃ s₃ sz) = 0 := by
+  ext w
+  by_cases hs2z : s₂ = sz <;>
+    by_cases hs1y : s₁ = sy <;>
+    by_cases hs1z : s₁ = sz <;>
+    by_cases hs2x : s₂ = sx <;>
+    (try subst_vars) <;>
+    simp_all [preLieDifferenceGenerators,
+      comparisonSideGenerators_apply_eq_sum_counts,
+      swappedComparisonSideGenerators_apply_eq_sum_counts,
+      matchingLeafGraftings_leaf, matchingLeafGraftings_leaf_match,
+      matchingLeafGraftings_leaf_mismatch, matchingLeafGraftings_leaf_self,
+      matchingLeafGraftings_leaf_leaf_ne, matchingLeafGraftings_nodeLeaf,
+      matchingLeafGraftings_nodeNodeLeaf, matchingLeafGraftings_raw_nodeLeaf,
+      matchingLeafGraftings_raw_nodeNodeLeaf, leaf_conclusion,
+      nodeLeaf, nodeNodeLeaf, eq_comm] <;>
+    (try (repeat' (split_ifs at * <;> simp_all [eq_comm]))) <;>
+    try abel_nf
+
+/-- Coalgebra corollary of the concrete `leaf/nodeLeaf/nodeLeaf` vanishing case. -/
+theorem coproductSupportSummary_comul_linear_preLieDifferenceGenerators_leaf_nodeLeaf_nodeLeaf
+    (sx : MultiSequent)
+    (r₁ : RuleTag) (s₁ sy : MultiSequent)
+    (r₂ : RuleTag) (s₂ sz : MultiSequent) :
+    coproductSupportSummary_comul_linear
+        (preLieDifferenceGenerators
+          (PTree.leaf sx) (nodeLeaf r₁ s₁ sy) (nodeLeaf r₂ s₂ sz)) = 0 := by
+  rw [preLieDifferenceGenerators_leaf_nodeLeaf_nodeLeaf_eq_zero]
+  simp
+
+/-- Coalgebra corollary of the concrete `nodeLeaf/leaf/nodeLeaf` vanishing case. -/
+theorem coproductSupportSummary_comul_linear_preLieDifferenceGenerators_nodeLeaf_leaf_nodeLeaf
+    (r₁ : RuleTag) (s₁ sx : MultiSequent)
+    (sy : MultiSequent)
+    (r₂ : RuleTag) (s₂ sz : MultiSequent) :
+    coproductSupportSummary_comul_linear
+        (preLieDifferenceGenerators
+          (nodeLeaf r₁ s₁ sx) (PTree.leaf sy) (nodeLeaf r₂ s₂ sz)) = 0 := by
+  rw [preLieDifferenceGenerators_nodeLeaf_leaf_nodeLeaf_eq_zero]
+  simp
+
+/-- Coalgebra corollary of the concrete three-`nodeLeaf` vanishing case. -/
+theorem coproductSupportSummary_comul_linear_preLieDifferenceGenerators_nodeLeaf_nodeLeaf_nodeLeaf
+    (r₁ : RuleTag) (s₁ sx : MultiSequent)
+    (r₂ : RuleTag) (s₂ sy : MultiSequent)
+    (r₃ : RuleTag) (s₃ sz : MultiSequent) :
+    coproductSupportSummary_comul_linear
+        (preLieDifferenceGenerators
+          (nodeLeaf r₁ s₁ sx) (nodeLeaf r₂ s₂ sy) (nodeLeaf r₃ s₃ sz)) = 0 := by
+  rw [preLieDifferenceGenerators_nodeLeaf_nodeLeaf_nodeLeaf_eq_zero]
+  simp
+
+/--
+Second mixed all-height-two case: singleton-child, branching, singleton-child.
+-/
+theorem preLieDifferenceGenerators_nodeLeaf_nodeTwoLeaf_nodeLeaf_diag_eq_zero
+    (r1 r r2 : RuleTag) (s2 sz : MultiSequent) :
+    preLieDifferenceGenerators
+      (nodeLeaf r1 sz sz) (nodeTwoLeaf r sz sz sz) (nodeLeaf r2 s2 sz) = 0 := by
+  ext w
+  by_cases hs2 : s2 = sz
+  · subst hs2
+    simp [preLieDifferenceGenerators, comparisonSideGenerators_apply_eq_sum_counts,
+      swappedComparisonSideGenerators_apply_eq_sum_counts,
+      matchingLeafGraftings_leaf, matchingLeafGraftings_nodeLeaf,
+      matchingLeafGraftings_nodeTwoLeaf, matchingLeafGraftings_nodeLeafLeft,
+      matchingLeafGraftings_nodeLeafRight, matchingLeafGraftings_nodeNodeTwoLeaf,
+      matchingLeafGraftings_raw_nodeLeaf, matchingLeafGraftings_raw_nodeTwoLeaf,
+      matchingLeafGraftings_raw_nodeLeafLeft, matchingLeafGraftings_raw_nodeLeafRight,
+      matchingLeafGraftings_raw_nodeNodeTwoLeaf, leaf_conclusion, node_conclusion, nodeLeaf,
+      nodeTwoLeaf, nodeLeafLeft, nodeLeafRight, nodeNodeTwoLeaf, eq_comm] at *
+    abel_nf
+  · simp [preLieDifferenceGenerators, comparisonSideGenerators_apply_eq_sum_counts,
+      swappedComparisonSideGenerators_apply_eq_sum_counts, hs2,
+      matchingLeafGraftings_leaf, matchingLeafGraftings_leaf_match,
+      matchingLeafGraftings_leaf_mismatch, matchingLeafGraftings_leaf_self,
+      matchingLeafGraftings_leaf_leaf_ne, matchingLeafGraftings_nodeLeaf,
+      matchingLeafGraftings_nodeTwoLeaf, matchingLeafGraftings_nodeLeafLeft,
+      matchingLeafGraftings_nodeLeafRight, matchingLeafGraftings_nodeNodeTwoLeaf,
+      matchingLeafGraftings_raw_nodeLeaf, matchingLeafGraftings_raw_nodeTwoLeaf,
+      matchingLeafGraftings_raw_nodeLeafLeft, matchingLeafGraftings_raw_nodeLeafRight,
+      matchingLeafGraftings_raw_nodeNodeTwoLeaf, leaf_conclusion, node_conclusion, nodeLeaf,
+      nodeTwoLeaf, nodeLeafLeft, nodeLeafRight, nodeNodeTwoLeaf, eq_comm] at *
+    try (repeat' (split_ifs at * <;> simp_all [eq_comm]))
+    abel_nf
+
+theorem preLieDifferenceGenerators_nodeLeaf_nodeTwoLeaf_nodeLeaf_eq_zero
+    (r1 : RuleTag) (s1 sx : MultiSequent)
+    (r : RuleTag) (s sy1 sy2 : MultiSequent)
+    (r2 : RuleTag) (s2 sz : MultiSequent) :
+    preLieDifferenceGenerators
+      (nodeLeaf r1 s1 sx) (nodeTwoLeaf r s sy1 sy2) (nodeLeaf r2 s2 sz) = 0 := by
+  ext w
+  by_cases hssz : s = sz <;>
+    by_cases hs1sy1 : s1 = sy1 <;>
+    by_cases hs1sy2 : s1 = sy2 <;>
+    by_cases hssx : s = sx <;>
+    by_cases hs1sz : s1 = sz <;>
+    (try subst_vars) <;>
+    (try
+      exact
+        preLieDifferenceGenerators_nodeLeaf_nodeTwoLeaf_nodeLeaf_diag_eq_zero
+          r1 r r2 s2 sz) <;>
+    simp_all [preLieDifferenceGenerators,
+      comparisonSideGenerators_apply_eq_sum_counts,
+      swappedComparisonSideGenerators_apply_eq_sum_counts,
+      matchingLeafGraftings_leaf, matchingLeafGraftings_leaf_match,
+      matchingLeafGraftings_leaf_mismatch, matchingLeafGraftings_leaf_self,
+      matchingLeafGraftings_leaf_leaf_ne, matchingLeafGraftings_nodeLeaf,
+      matchingLeafGraftings_nodeTwoLeaf, matchingLeafGraftings_nodeLeafLeft,
+      matchingLeafGraftings_nodeLeafRight, matchingLeafGraftings_nodeNodeTwoLeaf,
+      matchingLeafGraftings_raw_nodeLeaf, matchingLeafGraftings_raw_nodeTwoLeaf,
+      matchingLeafGraftings_raw_nodeLeafLeft, matchingLeafGraftings_raw_nodeLeafRight,
+      matchingLeafGraftings_raw_nodeNodeTwoLeaf, leaf_conclusion, node_conclusion, nodeLeaf,
+      nodeTwoLeaf, nodeLeafLeft, nodeLeafRight, nodeNodeTwoLeaf, eq_comm] <;>
+    (try (repeat' (split_ifs at * <;> simp_all [eq_comm]))) <;>
+    try abel_nf
+
+/--
+Third mixed all-height-two case follows from skew-symmetry of the raw defect.
+-/
+theorem preLieDifferenceGenerators_nodeTwoLeaf_nodeLeaf_nodeLeaf_eq_zero
+    (r : RuleTag) (s sx1 sx2 : MultiSequent)
+    (r1 : RuleTag) (s1 sy : MultiSequent)
+    (r2 : RuleTag) (s2 sz : MultiSequent) :
+    preLieDifferenceGenerators
+      (nodeTwoLeaf r s sx1 sx2) (nodeLeaf r1 s1 sy) (nodeLeaf r2 s2 sz) = 0 := by
+  have h :=
+    preLieDifferenceGenerators_nodeLeaf_nodeTwoLeaf_nodeLeaf_eq_zero
+      r1 s1 sy r s sx1 sx2 r2 s2 sz
+  have hswap :=
+    preLieDifferenceGenerators_swap_neg
+      (nodeTwoLeaf r s sx1 sx2) (nodeLeaf r1 s1 sy) (nodeLeaf r2 s2 sz)
+  rw [h] at hswap
+  simpa using hswap
+
+/-- Coalgebra corollary of the mixed `nodeLeaf/nodeTwoLeaf/nodeLeaf` case. -/
+theorem coproductSupportSummary_comul_linear_preLieDifferenceGenerators_nodeLeaf_nodeTwoLeaf_nodeLeaf
+    (r1 : RuleTag) (s1 sx : MultiSequent)
+    (r : RuleTag) (s sy1 sy2 : MultiSequent)
+    (r2 : RuleTag) (s2 sz : MultiSequent) :
+    coproductSupportSummary_comul_linear
+        (preLieDifferenceGenerators
+          (nodeLeaf r1 s1 sx) (nodeTwoLeaf r s sy1 sy2) (nodeLeaf r2 s2 sz)) = 0 := by
+  rw [preLieDifferenceGenerators_nodeLeaf_nodeTwoLeaf_nodeLeaf_eq_zero]
+  simp
+
+/-- Coalgebra corollary of the mixed `nodeTwoLeaf/nodeLeaf/nodeLeaf` case. -/
+theorem coproductSupportSummary_comul_linear_preLieDifferenceGenerators_nodeTwoLeaf_nodeLeaf_nodeLeaf
+    (r : RuleTag) (s sx1 sx2 : MultiSequent)
+    (r1 : RuleTag) (s1 sy : MultiSequent)
+    (r2 : RuleTag) (s2 sz : MultiSequent) :
+    coproductSupportSummary_comul_linear
+        (preLieDifferenceGenerators
+          (nodeTwoLeaf r s sx1 sx2) (nodeLeaf r1 s1 sy) (nodeLeaf r2 s2 sz)) = 0 := by
+  rw [preLieDifferenceGenerators_nodeTwoLeaf_nodeLeaf_nodeLeaf_eq_zero]
+  simp
+
+/--
+Height-four arithmetic: if the total height is exactly four, then exactly one
+tree has height two and the other two have height one.
+-/
+theorem pTree_total_height_eq_four_cases
+    {x y z : PTree}
+    (hheight : PTree.height x + PTree.height y + PTree.height z = 4) :
+    (PTree.height x = 2 ∧ PTree.height y = 1 ∧ PTree.height z = 1) ∨
+      (PTree.height x = 1 ∧ PTree.height y = 2 ∧ PTree.height z = 1) ∨
+        (PTree.height x = 1 ∧ PTree.height y = 1 ∧ PTree.height z = 2) := by
+  have hx : 1 ≤ PTree.height x := pTree_one_le_height x
+  have hy : 1 ≤ PTree.height y := pTree_one_le_height y
+  have hz : 1 ≤ PTree.height z := pTree_one_le_height z
+  omega
+
+/-- A singleton node over a height-one child has height two. -/
+theorem pTree_height_node_singleton_of_height_one
+    {c : PTree} (hc : PTree.height c = 1)
+    (r : RuleTag) (s : MultiSequent) :
+    PTree.height (PTree.node r s [c]) = 2 := by
+  simp [PTree.height, hc]
+
+/--
+Singleton-child height-four target, with the child classified only by height.
+
+This packages the first genuine address-bijection slice: both possible
+height-one child shapes (leaf and nullary rule node) are handled.
+-/
+theorem preLieDifferenceGenerators_leaf_leaf_node_singleton_height_one_eq_zero
+    (sx sy : MultiSequent) (r : RuleTag) (s : MultiSequent)
+    {c : PTree} (hc : PTree.height c = 1) :
+    preLieDifferenceGenerators
+      (PTree.leaf sx) (PTree.leaf sy) (PTree.node r s [c]) = 0 := by
+  rcases pTree_eq_leaf_or_nullary_node_of_height_eq_one hc with
+    ⟨sc, rfl⟩ | ⟨rc, sc, rfl⟩
+  · simpa [nodeLeaf] using
+      preLieDifferenceGenerators_leaf_leaf_nodeLeaf_eq_zero sx sy r s sc
+  · simpa [nodeStump, stump] using
+      preLieDifferenceGenerators_leaf_leaf_nodeStump_eq_zero sx sy r s rc sc
+
+/-- Singleton-child height-four middle tree, with the child classified only by height. -/
+theorem preLieDifferenceGenerators_leaf_node_singleton_height_one_leaf_eq_zero
+    (sx : MultiSequent) (r : RuleTag) (s : MultiSequent)
+    {c : PTree} (hc : PTree.height c = 1) (sz : MultiSequent) :
+    preLieDifferenceGenerators
+      (PTree.leaf sx) (PTree.node r s [c]) (PTree.leaf sz) = 0 := by
+  rcases pTree_eq_leaf_or_nullary_node_of_height_eq_one hc with
+    ⟨sc, rfl⟩ | ⟨rc, sc, rfl⟩
+  · simpa [nodeLeaf] using
+      preLieDifferenceGenerators_leaf_nodeLeaf_leaf_eq_zero sx r s sc sz
+  · simpa [nodeStump, stump] using
+      preLieDifferenceGenerators_leaf_nodeStump_leaf_eq_zero sx r s rc sc sz
+
+/-- Singleton-child height-four first tree, with the child classified only by height. -/
+theorem preLieDifferenceGenerators_node_singleton_height_one_leaf_leaf_eq_zero
+    (r : RuleTag) (s : MultiSequent) {c : PTree}
+    (hc : PTree.height c = 1) (sy sz : MultiSequent) :
+    preLieDifferenceGenerators
+      (PTree.node r s [c]) (PTree.leaf sy) (PTree.leaf sz) = 0 := by
+  rcases pTree_eq_leaf_or_nullary_node_of_height_eq_one hc with
+    ⟨sc, rfl⟩ | ⟨rc, sc, rfl⟩
+  · simpa [nodeLeaf] using
+      preLieDifferenceGenerators_nodeLeaf_leaf_leaf_eq_zero r s sc sy sz
+  · simpa [nodeStump, stump] using
+      preLieDifferenceGenerators_nodeStump_leaf_leaf_eq_zero r s rc sc sy sz
 
 /-- The total height of any triple of derivation trees is at least three. -/
 theorem NMMS_toTree_total_height_ge_three
@@ -2264,6 +4110,159 @@ noncomputable abbrev stableUEACanonicalIota :
       preLieDifferenceStableQuotientUEA :=
   preLieDifferenceStableQuotientUEA_ι_linear
 
+/-! ### Standard UEA algebra laws
+
+The proof-tree quotient carries the non-associative pre-Lie product.  The
+ordinary associative, unital multiplication belongs one level up, in the
+universal enveloping algebra.  These theorem names make that separation
+explicit for later coalgebra and Hopf statements.
+-/
+
+section StableUEAAlgebraLawInterface
+
+theorem stableUEA_mul_assoc
+    (a b c : preLieDifferenceStableQuotientUEA) :
+    (a * b) * c = a * (b * c) := by
+  exact mul_assoc a b c
+
+@[simp] theorem stableUEA_one_mul
+    (a : preLieDifferenceStableQuotientUEA) :
+    (1 : preLieDifferenceStableQuotientUEA) * a = a := by
+  exact one_mul a
+
+@[simp] theorem stableUEA_mul_one
+    (a : preLieDifferenceStableQuotientUEA) :
+    a * (1 : preLieDifferenceStableQuotientUEA) = a := by
+  exact mul_one a
+
+theorem stableUEA_treeGen_mul_assoc
+    (x y z : PTree) :
+    (stableUEA_treeGen x * stableUEA_treeGen y) * stableUEA_treeGen z =
+      stableUEA_treeGen x * (stableUEA_treeGen y * stableUEA_treeGen z) := by
+  exact stableUEA_mul_assoc _ _ _
+
+@[simp] theorem stableUEACanonicalIota_treeGen
+    (x : PTree) :
+    stableUEACanonicalIota
+        (mkPreLieDifferenceStableQuotient (treeGen x)) =
+      stableUEA_treeGen x := by
+  rw [stableUEA_treeGen_eq_ι]
+  rfl
+
+theorem stableUEACanonicalIota_treeGen_mul
+    (x y : PTree) :
+    stableUEACanonicalIota
+        (mkPreLieDifferenceStableQuotient (treeGen x)) *
+      stableUEACanonicalIota
+        (mkPreLieDifferenceStableQuotient (treeGen y)) =
+      stableUEA_treeGen x * stableUEA_treeGen y := by
+  simp
+
+@[simp] theorem stableUEACanonicalIota_map_add
+    (q r : PreLieDifferenceStableQuotient) :
+    stableUEACanonicalIota (q + r) =
+      stableUEACanonicalIota q + stableUEACanonicalIota r := by
+  exact stableUEACanonicalIota.map_add q r
+
+@[simp] theorem stableUEACanonicalIota_map_smul
+    (z : ℤ) (q : PreLieDifferenceStableQuotient) :
+    stableUEACanonicalIota (z • q) =
+      z • stableUEACanonicalIota q := by
+  exact stableUEACanonicalIota.map_smul z q
+
+end StableUEAAlgebraLawInterface
+
+/-! ### Proof-tree UEA and primitive coalgebra spine
+
+This is the algebra/coalgebra continuation of the quotient spine in
+`GrossmanLarssonOudomGuin.lean`.
+
+The carrier has now moved from the non-associative pre-Lie quotient to its
+universal enveloping algebra.  The UEA product is associative and unital, while
+the primitive Oudom-Guin coproduct sends every stable quotient class to
+`ι(q) ⊗ 1 + 1 ⊗ ι(q)` and kills exactly the stable quotient relations.
+-/
+
+section ProofTreeUEAAndCoalgebraSpine
+
+/-- The UEA product is the associative product sitting above proof-tree grafting. -/
+theorem proofTreeSpine_UEA_product_associative
+    (a b c : preLieDifferenceStableQuotientUEA) :
+    (a * b) * c = a * (b * c) := by
+  exact stableUEA_mul_assoc a b c
+
+/-- The UEA unit is a left unit for the associative product. -/
+theorem proofTreeSpine_UEA_left_unit
+    (a : preLieDifferenceStableQuotientUEA) :
+    (1 : preLieDifferenceStableQuotientUEA) * a = a := by
+  exact stableUEA_one_mul a
+
+/-- The UEA unit is a right unit for the associative product. -/
+theorem proofTreeSpine_UEA_right_unit
+    (a : preLieDifferenceStableQuotientUEA) :
+    a * (1 : preLieDifferenceStableQuotientUEA) = a := by
+  exact stableUEA_mul_one a
+
+/-- Associativity specialized to UEA images of decorated proof-tree generators. -/
+theorem proofTreeSpine_UEA_tree_generator_associativity
+    (x y z : PTree) :
+    (stableUEA_treeGen x * stableUEA_treeGen y) * stableUEA_treeGen z =
+      stableUEA_treeGen x * (stableUEA_treeGen y * stableUEA_treeGen z) := by
+  exact stableUEA_treeGen_mul_assoc x y z
+
+/--
+The primitive Oudom-Guin coproduct on the stable quotient has the expected
+primitive formula.
+-/
+theorem proofTreeSpine_primitive_coproduct_on_stable_class
+    (q : PreLieDifferenceStableQuotient) :
+    stableUEA_OGPrimitiveComultiplicationCanonical.comul q =
+      TensorProduct.tmul Int (stableUEACanonicalIota q)
+          (1 : preLieDifferenceStableQuotientUEA) +
+        TensorProduct.tmul Int (1 : preLieDifferenceStableQuotientUEA)
+          (stableUEACanonicalIota q) := by
+  simpa [stableUEACanonicalIota] using
+    stableUEA_OGPrimitiveComultiplicationCanonical_comul_apply q
+
+/-- The primitive Oudom-Guin counit vanishes on every stable quotient class. -/
+theorem proofTreeSpine_primitive_counit_on_stable_class
+    (q : PreLieDifferenceStableQuotient) :
+    stableUEA_OGPrimitiveComultiplicationCanonical.counit q = 0 := by
+  exact stableUEA_OGPrimitiveComultiplicationCanonical_counit_apply q
+
+/--
+The primitive coproduct kills the concrete generator-level pre-Lie defect before
+passing to the quotient.
+-/
+theorem proofTreeSpine_primitive_coproduct_kills_defect_generator
+    (x y z : PTree) :
+    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData
+        (preLieDifferenceGenerators x y z) = 0 := by
+  exact stableUEA_OGPrimitive_comul_linear_preLieDifferenceGenerators x y z
+
+/-- The primitive counit kills the concrete generator-level pre-Lie defect. -/
+theorem proofTreeSpine_primitive_counit_kills_defect_generator
+    (x y z : PTree) :
+    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData
+        (preLieDifferenceGenerators x y z) = 0 := by
+  exact stableUEA_OGPrimitive_counit_linear_preLieDifferenceGenerators x y z
+
+/-- The primitive coproduct kills the whole stable relation submodule. -/
+theorem proofTreeSpine_primitive_coproduct_kills_stable_relation
+    {a : linearProofTreeCarrier}
+    (ha : a ∈ preLieDifferenceStableSubmodule) :
+    stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData a = 0 := by
+  exact stableUEA_OGPrimitive_comul_linear_kills_stableSubmodule ha
+
+/-- The primitive counit kills the whole stable relation submodule. -/
+theorem proofTreeSpine_primitive_counit_kills_stable_relation
+    {a : linearProofTreeCarrier}
+    (ha : a ∈ preLieDifferenceStableSubmodule) :
+    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData a = 0 := by
+  exact stableUEA_OGPrimitive_counit_linear_kills_stableSubmodule ha
+
+end ProofTreeUEAAndCoalgebraSpine
+
 /-! ### Proof-theoretic stable quotients -/
 
 /--
@@ -3372,6 +5371,95 @@ theorem OudomGuinUEAHopfCarrierTarget.counit_derivableStableTreeGen
     H.epsilonOG (derivableStableUEAIota base (derivableStableTreeGen ht)) = 0 := by
   simpa using H.counit_on_treeGen t
 
+/--
+The carrier-correct OG coproduct extends the canonical primitive quotient
+coproduct along the stable UEA insertion.
+
+This is a direct linear-extension theorem from proof-tree generators to the
+stable quotient: no extra GL-side hypothesis is needed for this direction.
+-/
+theorem OudomGuinUEAHopfCarrierTarget.extendsStableQuotientPrimitive_from_treeGen
+    (H : OudomGuinUEAHopfCarrierTarget) :
+    OudomGuinUEAExtendsStableQuotientPrimitive H.DeltaOG := by
+  intro q
+  induction q using Submodule.Quotient.induction_on with
+  | H a =>
+      induction a using Finsupp.induction_linear with
+      | zero =>
+          simp [stableUEACanonicalIota, stableUEA_OGPrimitiveComulFromStableQuotient]
+      | add f g hf hg =>
+          simpa [map_add, hf, hg]
+      | single x n =>
+          have hq :
+              preLieDifferenceStableSubmodule.mkQ (Finsupp.single x n) =
+                n • preLieDifferenceStableSubmodule.mkQ (treeGen x) := by
+            simpa [treeGen] using
+              (preLieDifferenceStableSubmodule.mkQ.map_smul n (treeGen x))
+          have htree :
+              H.DeltaOG
+                  (stableUEACanonicalIota
+                    (preLieDifferenceStableSubmodule.mkQ (treeGen x))) =
+                stableUEA_OGPrimitiveComulFromStableQuotient
+                  (preLieDifferenceStableSubmodule.mkQ (treeGen x)) := by
+            change
+              H.DeltaOG
+                  (stableUEACanonicalIota
+                    (mkPreLieDifferenceStableQuotient (treeGen x))) =
+                stableUEA_OGPrimitiveComulFromStableQuotient
+                  (mkPreLieDifferenceStableQuotient (treeGen x))
+            rw [stableUEACanonicalIota_treeGen,
+              stableUEA_OGPrimitiveComulFromStableQuotient_mk_treeGen]
+            exact H.primitive_treeGen x
+          change
+            H.DeltaOG
+                (stableUEACanonicalIota
+                  (preLieDifferenceStableSubmodule.mkQ (Finsupp.single x n))) =
+              stableUEA_OGPrimitiveComulFromStableQuotient
+                (preLieDifferenceStableSubmodule.mkQ (Finsupp.single x n))
+          rw [hq]
+          simpa [LinearMap.map_smul, mkPreLieDifferenceStableQuotient] using
+            congrArg (fun w => n • w) htree
+
+/-- Formula form of the quotient-wide primitive extension theorem. -/
+theorem OudomGuinUEAHopfCarrierTarget.primitive_stableQuotient
+    (H : OudomGuinUEAHopfCarrierTarget)
+    (q : PreLieDifferenceStableQuotient) :
+    H.DeltaOG (stableUEACanonicalIota q) =
+      TensorProduct.tmul ℤ (stableUEACanonicalIota q) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEACanonicalIota q) :=
+  (H.extendsStableQuotientPrimitive_from_treeGen).apply q
+
+/-- The OG counit vanishes on every inserted stable quotient class. -/
+theorem OudomGuinUEAHopfCarrierTarget.counit_stableQuotient
+    (H : OudomGuinUEAHopfCarrierTarget)
+    (q : PreLieDifferenceStableQuotient) :
+    H.epsilonOG (stableUEACanonicalIota q) = 0 := by
+  induction q using Submodule.Quotient.induction_on with
+  | H a =>
+      induction a using Finsupp.induction_linear with
+      | zero =>
+          simp [stableUEACanonicalIota]
+      | add f g hf hg =>
+          simpa [map_add, hf, hg]
+      | single x n =>
+          have hq :
+              preLieDifferenceStableSubmodule.mkQ (Finsupp.single x n) =
+                n • preLieDifferenceStableSubmodule.mkQ (treeGen x) := by
+            simpa [treeGen] using
+              (preLieDifferenceStableSubmodule.mkQ.map_smul n (treeGen x))
+          change
+            H.epsilonOG
+                (stableUEACanonicalIota
+                  (preLieDifferenceStableSubmodule.mkQ (Finsupp.single x n))) = 0
+          rw [hq]
+          simp only [LinearMap.map_smul, RingHom.id_apply]
+          change
+            n • H.epsilonOG
+                (stableUEACanonicalIota
+                  (mkPreLieDifferenceStableQuotient (treeGen x))) = 0
+          rw [stableUEACanonicalIota_treeGen, H.counit_on_treeGen]
+          simp
+
 theorem OudomGuinUEAHopfCarrierTarget.coassoc
     (H : OudomGuinUEAHopfCarrierTarget) :
     (TensorProduct.assoc ℤ
@@ -3397,6 +5485,89 @@ theorem OudomGuinUEAHopfCarrierTarget.lTensor_counit_comp_comul
         H.DeltaOG =
       (TensorProduct.mk ℤ _ _).flip 1 :=
   H.uea_coalgebra_axioms.lTensor_counit_comp_comul
+
+/-- Pointwise UEA coassociativity for the carrier-correct OG coproduct. -/
+theorem OudomGuinUEAHopfCarrierTarget.coassoc_apply
+    (H : OudomGuinUEAHopfCarrierTarget)
+    (a : preLieDifferenceStableQuotientUEA) :
+    (TensorProduct.assoc ℤ
+        preLieDifferenceStableQuotientUEA
+        preLieDifferenceStableQuotientUEA
+        preLieDifferenceStableQuotientUEA).toLinearMap
+        ((H.DeltaOG.rTensor preLieDifferenceStableQuotientUEA)
+          (H.DeltaOG a)) =
+      (H.DeltaOG.lTensor preLieDifferenceStableQuotientUEA)
+        (H.DeltaOG a) := by
+  simpa [LinearMap.comp_apply] using
+    congrArg (fun f => f a) H.coassoc
+
+/-- Pointwise right counit law for the carrier-correct OG coproduct. -/
+theorem OudomGuinUEAHopfCarrierTarget.rTensor_counit_comp_comul_apply
+    (H : OudomGuinUEAHopfCarrierTarget)
+    (a : preLieDifferenceStableQuotientUEA) :
+    (H.epsilonOG.rTensor preLieDifferenceStableQuotientUEA)
+        (H.DeltaOG a) =
+      (TensorProduct.mk ℤ ℤ preLieDifferenceStableQuotientUEA 1) a := by
+  simpa [LinearMap.comp_apply] using
+    congrArg (fun f => f a) H.rTensor_counit_comp_comul
+
+/-- Pointwise left counit law for the carrier-correct OG coproduct. -/
+theorem OudomGuinUEAHopfCarrierTarget.lTensor_counit_comp_comul_apply
+    (H : OudomGuinUEAHopfCarrierTarget)
+    (a : preLieDifferenceStableQuotientUEA) :
+    (H.epsilonOG.lTensor preLieDifferenceStableQuotientUEA)
+        (H.DeltaOG a) =
+      ((TensorProduct.mk ℤ preLieDifferenceStableQuotientUEA ℤ).flip 1) a := by
+  simpa [LinearMap.comp_apply] using
+    congrArg (fun f => f a) H.lTensor_counit_comp_comul
+
+/-- Coassociativity specialized to proof-tree generators. -/
+theorem OudomGuinUEAHopfCarrierTarget.coassoc_treeGen
+    (H : OudomGuinUEAHopfCarrierTarget) (x : PTree) :
+    (TensorProduct.assoc ℤ
+        preLieDifferenceStableQuotientUEA
+        preLieDifferenceStableQuotientUEA
+        preLieDifferenceStableQuotientUEA).toLinearMap
+        ((H.DeltaOG.rTensor preLieDifferenceStableQuotientUEA)
+          (H.DeltaOG (stableUEA_treeGen x))) =
+      (H.DeltaOG.lTensor preLieDifferenceStableQuotientUEA)
+        (H.DeltaOG (stableUEA_treeGen x)) :=
+  H.coassoc_apply (stableUEA_treeGen x)
+
+/-- Right counit specialized to proof-tree generators. -/
+theorem OudomGuinUEAHopfCarrierTarget.rTensor_counit_comp_comul_treeGen
+    (H : OudomGuinUEAHopfCarrierTarget) (x : PTree) :
+    (H.epsilonOG.rTensor preLieDifferenceStableQuotientUEA)
+        (H.DeltaOG (stableUEA_treeGen x)) =
+      (TensorProduct.mk ℤ ℤ preLieDifferenceStableQuotientUEA 1)
+        (stableUEA_treeGen x) :=
+  H.rTensor_counit_comp_comul_apply (stableUEA_treeGen x)
+
+/-- Left counit specialized to proof-tree generators. -/
+theorem OudomGuinUEAHopfCarrierTarget.lTensor_counit_comp_comul_treeGen
+    (H : OudomGuinUEAHopfCarrierTarget) (x : PTree) :
+    (H.epsilonOG.lTensor preLieDifferenceStableQuotientUEA)
+        (H.DeltaOG (stableUEA_treeGen x)) =
+      ((TensorProduct.mk ℤ preLieDifferenceStableQuotientUEA ℤ).flip 1)
+        (stableUEA_treeGen x) :=
+  H.lTensor_counit_comp_comul_apply (stableUEA_treeGen x)
+
+/-- Coassociativity specialized to actual derivable proof-tree generators. -/
+theorem OudomGuinUEAHopfCarrierTarget.coassoc_derivableStableTreeGen
+    (H : OudomGuinUEAHopfCarrierTarget)
+    {base : BaseRel} {t : PTree}
+    (ht : DerivableTree base t) :
+    (TensorProduct.assoc ℤ
+        preLieDifferenceStableQuotientUEA
+        preLieDifferenceStableQuotientUEA
+        preLieDifferenceStableQuotientUEA).toLinearMap
+        ((H.DeltaOG.rTensor preLieDifferenceStableQuotientUEA)
+          (H.DeltaOG
+            (derivableStableUEAIota base (derivableStableTreeGen ht)))) =
+      (H.DeltaOG.lTensor preLieDifferenceStableQuotientUEA)
+        (H.DeltaOG
+          (derivableStableUEAIota base (derivableStableTreeGen ht))) := by
+  simpa using H.coassoc_treeGen t
 
 theorem OudomGuinUEAHopfCarrierTarget.toMathlibCoalgebra_coassoc
     (H : OudomGuinUEAHopfCarrierTarget) :
@@ -3618,6 +5789,582 @@ theorem oudomGuinUEAHopfCarrierTarget_exists_of_mathlibCoalgebra
       hintertwining, ?_, ?_⟩
   · rfl
   · rfl
+
+/-! ### Proof-theoretic Hopf target: antipode and convolution cancellation -/
+
+section ProofTheoreticHopfTarget
+
+variable [Semiring stableUEATensor]
+variable [Algebra ℤ stableUEATensor]
+
+/--
+The unit coming from the chosen semiring structure on the UEA tensor target.
+This is deliberately separated from the bare tensor-product `One` instance,
+because the algebra-hom API states `map_one` using the semiring unit.
+-/
+noncomputable def stableUEATensorSemiringUnit : stableUEATensor :=
+  @OfNat.ofNat stableUEATensor 1
+    (@One.toOfNat1 stableUEATensor
+      (inferInstanceAs (Semiring stableUEATensor)).toNonAssocSemiring.toAddCommMonoidWithOne.toOne)
+
+/--
+The full Hopf-algebra target on the UEA, tied back to the proof-tree carrier.
+
+`carrier` records the proof-theoretic coalgebra and GL/OG bridge.  `hopf`
+records the bialgebra plus antipode diagrams.  The equalities identify the Hopf
+comultiplication/counit with the carrier-correct proof-tree maps.
+-/
+structure OudomGuinUEAHopfAlgebraTarget where
+  carrier : OudomGuinUEAHopfCarrierTarget
+  hopf : StableUEAHopfData
+  comul_eq : hopf.comul = carrier.DeltaOG
+  counit_eq : hopf.counit = carrier.epsilonOG
+
+/-- Forget the Hopf data and keep the carrier-correct coalgebra target. -/
+def OudomGuinUEAHopfAlgebraTarget.toCarrier
+    (H : OudomGuinUEAHopfAlgebraTarget) :
+    OudomGuinUEAHopfCarrierTarget :=
+  H.carrier
+
+/-- Forget to the packaged Hopf-data witness. -/
+def OudomGuinUEAHopfAlgebraTarget.toHopfData
+    (H : OudomGuinUEAHopfAlgebraTarget) :
+    StableUEAHopfData :=
+  H.hopf
+
+/-- Forget to the packaged bialgebra-data witness. -/
+def OudomGuinUEAHopfAlgebraTarget.toBialgebraData
+    (H : OudomGuinUEAHopfAlgebraTarget) :
+    StableUEABialgebraData :=
+  H.hopf.bialgebra
+
+/--
+The carrier-correct OG coproduct is represented by the algebra hom in the
+bialgebra package.
+-/
+def OudomGuinUEAHopfAlgebraTarget.DeltaOGAlgHom
+    (H : OudomGuinUEAHopfAlgebraTarget) :
+    preLieDifferenceStableQuotientUEA →ₐ[ℤ] stableUEATensor :=
+  H.hopf.bialgebra.comulAlgHom
+
+/--
+The carrier-correct OG counit is represented by the algebra hom in the
+bialgebra package.
+-/
+def OudomGuinUEAHopfAlgebraTarget.epsilonOGAlgHom
+    (H : OudomGuinUEAHopfAlgebraTarget) :
+    preLieDifferenceStableQuotientUEA →ₐ[ℤ] ℤ :=
+  H.hopf.bialgebra.counitAlgHom
+
+@[simp] theorem OudomGuinUEAHopfAlgebraTarget.DeltaOGAlgHom_apply
+    (H : OudomGuinUEAHopfAlgebraTarget)
+    (a : preLieDifferenceStableQuotientUEA) :
+    H.DeltaOGAlgHom a = H.carrier.DeltaOG a := by
+  calc
+    H.DeltaOGAlgHom a = H.hopf.bialgebra.comul a := by
+      exact StableUEABialgebraData.comulAlgHom_apply_simp H.hopf.bialgebra a
+    _ = H.carrier.DeltaOG a := by
+      have h := congrArg (fun f => f a) H.comul_eq
+      simpa [StableUEAHopfData.comul, StableUEABialgebraData.comul] using h
+
+@[simp] theorem OudomGuinUEAHopfAlgebraTarget.epsilonOGAlgHom_apply
+    (H : OudomGuinUEAHopfAlgebraTarget)
+    (a : preLieDifferenceStableQuotientUEA) :
+    H.epsilonOGAlgHom a = H.carrier.epsilonOG a := by
+  calc
+    H.epsilonOGAlgHom a = H.hopf.bialgebra.counit a := by
+      exact StableUEABialgebraData.counitAlgHom_apply_simp H.hopf.bialgebra a
+    _ = H.carrier.epsilonOG a := by
+      have h := congrArg (fun f => f a) H.counit_eq
+      simpa [StableUEAHopfData.counit, StableUEABialgebraData.counit] using h
+
+/-- The OG coproduct is multiplicative on the UEA carrier. -/
+theorem OudomGuinUEAHopfAlgebraTarget.DeltaOG_mul
+    (H : OudomGuinUEAHopfAlgebraTarget)
+    (a b : preLieDifferenceStableQuotientUEA) :
+    H.carrier.DeltaOG (a * b) =
+      H.carrier.DeltaOG a * H.carrier.DeltaOG b := by
+  have h := H.DeltaOGAlgHom.map_mul a b
+  simpa using h
+
+/-- The algebra-hom packaging of the OG coproduct preserves the UEA unit. -/
+@[simp] theorem OudomGuinUEAHopfAlgebraTarget.DeltaOGAlgHom_one
+    (H : OudomGuinUEAHopfAlgebraTarget) :
+    H.DeltaOGAlgHom (1 : preLieDifferenceStableQuotientUEA) =
+      stableUEATensorSemiringUnit := by
+  unfold stableUEATensorSemiringUnit
+  exact H.DeltaOGAlgHom.map_one
+
+/--
+The carrier coproduct agrees with the algebra-hom coproduct on the UEA unit.
+The separate algebra-hom theorem above is the clean unit-preservation statement;
+this theorem is the bridge back to the carrier map.
+-/
+@[simp] theorem OudomGuinUEAHopfAlgebraTarget.DeltaOG_one
+    (H : OudomGuinUEAHopfAlgebraTarget) :
+    H.carrier.DeltaOG (1 : preLieDifferenceStableQuotientUEA) =
+      H.DeltaOGAlgHom (1 : preLieDifferenceStableQuotientUEA) := by
+  exact (H.DeltaOGAlgHom_apply (1 : preLieDifferenceStableQuotientUEA)).symm
+
+/-- The OG counit is multiplicative on the UEA carrier. -/
+theorem OudomGuinUEAHopfAlgebraTarget.epsilonOG_mul
+    (H : OudomGuinUEAHopfAlgebraTarget)
+    (a b : preLieDifferenceStableQuotientUEA) :
+    H.carrier.epsilonOG (a * b) =
+      H.carrier.epsilonOG a * H.carrier.epsilonOG b := by
+  have h := H.epsilonOGAlgHom.map_mul a b
+  simpa using h
+
+/-- The OG counit sends the UEA unit to `1`. -/
+@[simp] theorem OudomGuinUEAHopfAlgebraTarget.epsilonOG_one
+    (H : OudomGuinUEAHopfAlgebraTarget) :
+    H.carrier.epsilonOG (1 : preLieDifferenceStableQuotientUEA) = 1 := by
+  rw [← H.epsilonOGAlgHom_apply]
+  exact H.epsilonOGAlgHom.map_one
+
+/-- The Hopf target inherits carrier-level coassociativity. -/
+theorem OudomGuinUEAHopfAlgebraTarget.coassoc
+    (H : OudomGuinUEAHopfAlgebraTarget) :
+    (TensorProduct.assoc ℤ
+        preLieDifferenceStableQuotientUEA
+        preLieDifferenceStableQuotientUEA
+        preLieDifferenceStableQuotientUEA).toLinearMap ∘ₗ
+        (H.carrier.DeltaOG.rTensor preLieDifferenceStableQuotientUEA) ∘ₗ
+          H.carrier.DeltaOG =
+      (H.carrier.DeltaOG.lTensor preLieDifferenceStableQuotientUEA) ∘ₗ
+        H.carrier.DeltaOG :=
+  H.carrier.coassoc
+
+/-- The Hopf target inherits the right counit diagram. -/
+theorem OudomGuinUEAHopfAlgebraTarget.rTensor_counit_comp_comul
+    (H : OudomGuinUEAHopfAlgebraTarget) :
+    (H.carrier.epsilonOG.rTensor preLieDifferenceStableQuotientUEA) ∘ₗ
+        H.carrier.DeltaOG =
+      TensorProduct.mk ℤ _ _ 1 :=
+  H.carrier.rTensor_counit_comp_comul
+
+/-- The Hopf target inherits the left counit diagram. -/
+theorem OudomGuinUEAHopfAlgebraTarget.lTensor_counit_comp_comul
+    (H : OudomGuinUEAHopfAlgebraTarget) :
+    (H.carrier.epsilonOG.lTensor preLieDifferenceStableQuotientUEA) ∘ₗ
+        H.carrier.DeltaOG =
+      (TensorProduct.mk ℤ _ _).flip 1 :=
+  H.carrier.lTensor_counit_comp_comul
+
+/-- Pointwise coassociativity in the full Hopf target. -/
+theorem OudomGuinUEAHopfAlgebraTarget.coassoc_apply
+    (H : OudomGuinUEAHopfAlgebraTarget)
+    (a : preLieDifferenceStableQuotientUEA) :
+    (TensorProduct.assoc ℤ
+        preLieDifferenceStableQuotientUEA
+        preLieDifferenceStableQuotientUEA
+        preLieDifferenceStableQuotientUEA).toLinearMap
+        ((H.carrier.DeltaOG.rTensor preLieDifferenceStableQuotientUEA)
+          (H.carrier.DeltaOG a)) =
+      (H.carrier.DeltaOG.lTensor preLieDifferenceStableQuotientUEA)
+        (H.carrier.DeltaOG a) :=
+  H.carrier.coassoc_apply a
+
+/-- Pointwise right counit law in the full Hopf target. -/
+theorem OudomGuinUEAHopfAlgebraTarget.rTensor_counit_comp_comul_apply
+    (H : OudomGuinUEAHopfAlgebraTarget)
+    (a : preLieDifferenceStableQuotientUEA) :
+    (H.carrier.epsilonOG.rTensor preLieDifferenceStableQuotientUEA)
+        (H.carrier.DeltaOG a) =
+      (TensorProduct.mk ℤ ℤ preLieDifferenceStableQuotientUEA 1) a :=
+  H.carrier.rTensor_counit_comp_comul_apply a
+
+/-- Pointwise left counit law in the full Hopf target. -/
+theorem OudomGuinUEAHopfAlgebraTarget.lTensor_counit_comp_comul_apply
+    (H : OudomGuinUEAHopfAlgebraTarget)
+    (a : preLieDifferenceStableQuotientUEA) :
+    (H.carrier.epsilonOG.lTensor preLieDifferenceStableQuotientUEA)
+        (H.carrier.DeltaOG a) =
+      ((TensorProduct.mk ℤ preLieDifferenceStableQuotientUEA ℤ).flip 1) a :=
+  H.carrier.lTensor_counit_comp_comul_apply a
+
+/--
+The full Hopf target's OG coproduct extends the primitive stable-quotient
+coproduct along `ι`.
+-/
+theorem OudomGuinUEAHopfAlgebraTarget.extendsStableQuotientPrimitive_from_treeGen
+    (H : OudomGuinUEAHopfAlgebraTarget) :
+    OudomGuinUEAExtendsStableQuotientPrimitive H.carrier.DeltaOG :=
+  H.carrier.extendsStableQuotientPrimitive_from_treeGen
+
+/-- Formula form on arbitrary stable quotient classes. -/
+theorem OudomGuinUEAHopfAlgebraTarget.primitive_stableQuotient
+    (H : OudomGuinUEAHopfAlgebraTarget)
+    (q : PreLieDifferenceStableQuotient) :
+    H.carrier.DeltaOG (stableUEACanonicalIota q) =
+      TensorProduct.tmul ℤ (stableUEACanonicalIota q) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEACanonicalIota q) :=
+  H.carrier.primitive_stableQuotient q
+
+/-- The Hopf target's OG counit vanishes on inserted stable quotient classes. -/
+theorem OudomGuinUEAHopfAlgebraTarget.counit_stableQuotient
+    (H : OudomGuinUEAHopfAlgebraTarget)
+    (q : PreLieDifferenceStableQuotient) :
+    H.carrier.epsilonOG (stableUEACanonicalIota q) = 0 :=
+  H.carrier.counit_stableQuotient q
+
+/--
+On products of inserted stable quotient classes, the OG coproduct is the
+multiplicative extension of the primitive quotient formula.
+-/
+theorem OudomGuinUEAHopfAlgebraTarget.DeltaOG_mul_stableQuotient
+    (H : OudomGuinUEAHopfAlgebraTarget)
+    (q r : PreLieDifferenceStableQuotient) :
+    H.carrier.DeltaOG
+        (stableUEACanonicalIota q * stableUEACanonicalIota r) =
+      (TensorProduct.tmul ℤ (stableUEACanonicalIota q) 1 +
+          TensorProduct.tmul ℤ 1 (stableUEACanonicalIota q)) *
+        (TensorProduct.tmul ℤ (stableUEACanonicalIota r) 1 +
+          TensorProduct.tmul ℤ 1 (stableUEACanonicalIota r)) := by
+  rw [H.DeltaOG_mul, H.primitive_stableQuotient,
+    H.primitive_stableQuotient]
+
+/-- The OG counit vanishes on products of inserted stable quotient classes. -/
+theorem OudomGuinUEAHopfAlgebraTarget.epsilonOG_mul_stableQuotient
+    (H : OudomGuinUEAHopfAlgebraTarget)
+    (q r : PreLieDifferenceStableQuotient) :
+    H.carrier.epsilonOG
+        (stableUEACanonicalIota q * stableUEACanonicalIota r) = 0 := by
+  rw [H.epsilonOG_mul, H.counit_stableQuotient,
+    H.counit_stableQuotient]
+  simp
+
+/--
+The full Hopf target remembers the Grossman-Larson/Oudom-Guin intertwining
+equation `(ι ⊗ ι) ∘ Δ_GL = Δ_OG ∘ ι`.
+-/
+theorem OudomGuinUEAHopfAlgebraTarget.gl_og_intertwining
+    (H : OudomGuinUEAHopfAlgebraTarget) :
+    OudomGuinGrossmanLarssonIntertwiningTarget
+      H.carrier.DeltaGL_unitCompleted
+      stableUEACanonicalIota
+      H.carrier.DeltaOG :=
+  H.carrier.gl_og_intertwining
+
+/-- The GL/OG intertwining equation evaluated on a stable quotient class. -/
+theorem OudomGuinUEAHopfAlgebraTarget.gl_og_intertwining_apply
+    (H : OudomGuinUEAHopfAlgebraTarget)
+    (q : PreLieDifferenceStableQuotient) :
+    stableUEATensorMapFromStableQuotient stableUEACanonicalIota
+        (H.carrier.DeltaGL_unitCompleted q) =
+      H.carrier.DeltaOG (stableUEACanonicalIota q) := by
+  have h := congrArg (fun f => f q) H.gl_og_intertwining
+  simpa [OudomGuinGrossmanLarssonIntertwiningTarget,
+    LinearMap.comp_apply] using h
+
+/--
+The GL/OG intertwining equation evaluated on the class of a concrete proof
+tree.
+-/
+theorem OudomGuinUEAHopfAlgebraTarget.gl_og_intertwining_treeGen
+    (H : OudomGuinUEAHopfAlgebraTarget) (x : PTree) :
+    stableUEATensorMapFromStableQuotient stableUEACanonicalIota
+        (H.carrier.DeltaGL_unitCompleted
+          (mkPreLieDifferenceStableQuotient (treeGen x))) =
+      H.carrier.DeltaOG (stableUEA_treeGen x) := by
+  simpa using
+    H.gl_og_intertwining_apply
+      (mkPreLieDifferenceStableQuotient (treeGen x))
+
+/--
+The GL/OG intertwining equation evaluated on a derivable proof-tree quotient
+class.
+-/
+theorem OudomGuinUEAHopfAlgebraTarget.gl_og_intertwining_derivable
+    (H : OudomGuinUEAHopfAlgebraTarget)
+    {base : BaseRel}
+    (q : DerivablePreLieStableQuotient base) :
+    stableUEATensorMapFromStableQuotient stableUEACanonicalIota
+        (H.carrier.DeltaGL_unitCompleted
+          (derivableStableQuotientToStableQuotient base q)) =
+      H.carrier.DeltaOG (derivableStableUEAIota base q) := by
+  simpa [derivableStableUEAIota] using
+    H.gl_og_intertwining_apply
+      (derivableStableQuotientToStableQuotient base q)
+
+/--
+If the unit-completed GL coproduct has the expected quotient-level primitive
+form, then the Hopf target's OG coproduct extends the primitive quotient map.
+-/
+theorem OudomGuinUEAHopfAlgebraTarget.extendsStableQuotientPrimitive
+    (H : OudomGuinUEAHopfAlgebraTarget)
+    (hleft :
+      GrossmanLarssonUnitCompletedAgreesWithOGPrimitive
+        H.carrier.DeltaGL_unitCompleted) :
+    OudomGuinUEAExtendsStableQuotientPrimitive H.carrier.DeltaOG :=
+  H.carrier.extendsStableQuotientPrimitive hleft
+
+/--
+Under the quotient-level GL primitive-form hypothesis, `Δ_OG` agrees with the
+canonical primitive quotient coproduct after insertion into the UEA.
+-/
+theorem OudomGuinUEAHopfAlgebraTarget.extendsStableQuotientPrimitive_apply
+    (H : OudomGuinUEAHopfAlgebraTarget)
+    (hleft :
+      GrossmanLarssonUnitCompletedAgreesWithOGPrimitive
+        H.carrier.DeltaGL_unitCompleted)
+    (q : PreLieDifferenceStableQuotient) :
+    H.carrier.DeltaOG (stableUEACanonicalIota q) =
+      stableUEA_OGPrimitiveComulFromStableQuotient q :=
+  H.extendsStableQuotientPrimitive hleft q
+
+/--
+The same extension statement in primitive formula form.
+-/
+theorem OudomGuinUEAHopfAlgebraTarget.extendsStableQuotientPrimitive_formula
+    (H : OudomGuinUEAHopfAlgebraTarget)
+    (hleft :
+      GrossmanLarssonUnitCompletedAgreesWithOGPrimitive
+        H.carrier.DeltaGL_unitCompleted)
+    (q : PreLieDifferenceStableQuotient) :
+    H.carrier.DeltaOG (stableUEACanonicalIota q) =
+      TensorProduct.tmul ℤ (stableUEACanonicalIota q) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEACanonicalIota q) :=
+  (H.extendsStableQuotientPrimitive hleft).apply q
+
+/-- The Hopf target inherits the primitive coproduct formula on proof trees. -/
+theorem OudomGuinUEAHopfAlgebraTarget.primitive_treeGen
+    (H : OudomGuinUEAHopfAlgebraTarget) (x : PTree) :
+    H.carrier.DeltaOG (stableUEA_treeGen x) =
+      TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+        TensorProduct.tmul ℤ 1 (stableUEA_treeGen x) :=
+  H.carrier.primitive_treeGen x
+
+/--
+On products of proof-tree generators, the OG coproduct is determined
+multiplicatively by the primitive formula.
+-/
+theorem OudomGuinUEAHopfAlgebraTarget.DeltaOG_mul_treeGen
+    (H : OudomGuinUEAHopfAlgebraTarget) (x y : PTree) :
+    H.carrier.DeltaOG (stableUEA_treeGen x * stableUEA_treeGen y) =
+      (TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+          TensorProduct.tmul ℤ 1 (stableUEA_treeGen x)) *
+        (TensorProduct.tmul ℤ (stableUEA_treeGen y) 1 +
+          TensorProduct.tmul ℤ 1 (stableUEA_treeGen y)) := by
+  rw [H.DeltaOG_mul, H.primitive_treeGen, H.primitive_treeGen]
+
+/-- The OG counit vanishes on products of proof-tree generators. -/
+theorem OudomGuinUEAHopfAlgebraTarget.epsilonOG_mul_treeGen
+    (H : OudomGuinUEAHopfAlgebraTarget) (x y : PTree) :
+    H.carrier.epsilonOG (stableUEA_treeGen x * stableUEA_treeGen y) = 0 := by
+  rw [H.epsilonOG_mul, H.carrier.counit_on_treeGen,
+    H.carrier.counit_on_treeGen]
+  simp
+
+/--
+For derivable proof trees, the product coproduct is still the multiplicative
+extension of the primitive formula.
+-/
+theorem OudomGuinUEAHopfAlgebraTarget.DeltaOG_mul_derivableStableTreeGen
+    (H : OudomGuinUEAHopfAlgebraTarget)
+    {base : BaseRel} {x y : PTree}
+    (hx : DerivableTree base x) (hy : DerivableTree base y) :
+    H.carrier.DeltaOG
+        (derivableStableUEAIota base (derivableStableTreeGen hx) *
+          derivableStableUEAIota base (derivableStableTreeGen hy)) =
+      (TensorProduct.tmul ℤ
+          (derivableStableUEAIota base (derivableStableTreeGen hx)) 1 +
+        TensorProduct.tmul ℤ 1
+          (derivableStableUEAIota base (derivableStableTreeGen hx))) *
+      (TensorProduct.tmul ℤ
+          (derivableStableUEAIota base (derivableStableTreeGen hy)) 1 +
+        TensorProduct.tmul ℤ 1
+          (derivableStableUEAIota base (derivableStableTreeGen hy))) := by
+  simpa using H.DeltaOG_mul_treeGen x y
+
+/-- The OG counit vanishes on products of derivable proof-tree generators. -/
+theorem OudomGuinUEAHopfAlgebraTarget.epsilonOG_mul_derivableStableTreeGen
+    (H : OudomGuinUEAHopfAlgebraTarget)
+    {base : BaseRel} {x y : PTree}
+    (hx : DerivableTree base x) (hy : DerivableTree base y) :
+    H.carrier.epsilonOG
+        (derivableStableUEAIota base (derivableStableTreeGen hx) *
+          derivableStableUEAIota base (derivableStableTreeGen hy)) = 0 := by
+  simpa using H.epsilonOG_mul_treeGen x y
+
+/-- The antipode negates proof-tree generators. -/
+theorem OudomGuinUEAHopfAlgebraTarget.antipode_treeGen
+    (H : OudomGuinUEAHopfAlgebraTarget) (x : PTree) :
+    H.hopf.antipode (stableUEA_treeGen x) = -stableUEA_treeGen x :=
+  H.hopf.antipode_on_generators x
+
+/--
+The antipode negates every derivable proof-tree generator after insertion into
+the UEA.  This is the proof-theoretic content of primitive antipodes.
+-/
+theorem OudomGuinUEAHopfAlgebraTarget.antipode_derivableStableTreeGen
+    (H : OudomGuinUEAHopfAlgebraTarget)
+    {base : BaseRel} {t : PTree}
+    (ht : DerivableTree base t) :
+    H.hopf.antipode
+        (derivableStableUEAIota base (derivableStableTreeGen ht)) =
+      -derivableStableUEAIota base (derivableStableTreeGen ht) := by
+  simpa using H.antipode_treeGen t
+
+/--
+The left convolution antipode diagram as an equality of linear maps using the
+carrier-correct OG coproduct and counit.
+-/
+theorem OudomGuinUEAHopfAlgebraTarget.antipode_left_cancellation_map
+    (H : OudomGuinUEAHopfAlgebraTarget) :
+    H.hopf.mulTensor ∘ₗ
+        (LinearMap.rTensor preLieDifferenceStableQuotientUEA
+          H.hopf.antipode) ∘ₗ
+        H.carrier.DeltaOG =
+      H.hopf.unitLinear ∘ₗ H.carrier.epsilonOG := by
+  simpa [StableUEAHopfData.comul, StableUEAHopfData.counit,
+    ← H.comul_eq, ← H.counit_eq]
+    using H.hopf.antipode_axioms.1
+
+/--
+The right convolution antipode diagram as an equality of linear maps using the
+carrier-correct OG coproduct and counit.
+-/
+theorem OudomGuinUEAHopfAlgebraTarget.antipode_right_cancellation_map
+    (H : OudomGuinUEAHopfAlgebraTarget) :
+    H.hopf.mulTensor ∘ₗ
+        (LinearMap.lTensor preLieDifferenceStableQuotientUEA
+          H.hopf.antipode) ∘ₗ
+        H.carrier.DeltaOG =
+      H.hopf.unitLinear ∘ₗ H.carrier.epsilonOG := by
+  simpa [StableUEAHopfData.comul, StableUEAHopfData.counit,
+    ← H.comul_eq, ← H.counit_eq]
+    using H.hopf.antipode_axioms.2
+
+/-- The left convolution antipode diagram, expressed using the carrier maps. -/
+theorem OudomGuinUEAHopfAlgebraTarget.antipode_left_cancellation
+    (H : OudomGuinUEAHopfAlgebraTarget)
+    (a : preLieDifferenceStableQuotientUEA) :
+    H.hopf.mulTensor
+        ((LinearMap.rTensor preLieDifferenceStableQuotientUEA H.hopf.antipode)
+          (H.carrier.DeltaOG a)) =
+      H.hopf.unitLinear (H.carrier.epsilonOG a) := by
+  have h := congrArg (fun f => f a) H.hopf.antipode_axioms.1
+  simpa [LinearMap.comp_apply, StableUEAHopfData.comul,
+    StableUEAHopfData.counit, ← H.comul_eq, ← H.counit_eq] using h
+
+/-- The right convolution antipode diagram, expressed using the carrier maps. -/
+theorem OudomGuinUEAHopfAlgebraTarget.antipode_right_cancellation
+    (H : OudomGuinUEAHopfAlgebraTarget)
+    (a : preLieDifferenceStableQuotientUEA) :
+    H.hopf.mulTensor
+        ((LinearMap.lTensor preLieDifferenceStableQuotientUEA H.hopf.antipode)
+          (H.carrier.DeltaOG a)) =
+      H.hopf.unitLinear (H.carrier.epsilonOG a) := by
+  have h := congrArg (fun f => f a) H.hopf.antipode_axioms.2
+  simpa [LinearMap.comp_apply, StableUEAHopfData.comul,
+    StableUEAHopfData.counit, ← H.comul_eq, ← H.counit_eq] using h
+
+/--
+On proof-tree generators, the left antipode cancellation diagram collapses to
+the unit applied to zero, because proof-tree generators have zero counit.
+-/
+theorem OudomGuinUEAHopfAlgebraTarget.antipode_left_cancels_treeGen
+    (H : OudomGuinUEAHopfAlgebraTarget) (x : PTree) :
+    H.hopf.mulTensor
+        ((LinearMap.rTensor preLieDifferenceStableQuotientUEA H.hopf.antipode)
+          (H.carrier.DeltaOG (stableUEA_treeGen x))) =
+      H.hopf.unitLinear 0 := by
+  rw [H.antipode_left_cancellation, H.carrier.counit_on_treeGen]
+
+/--
+On proof-tree generators, the left antipode cancellation diagram is actually
+zero, not merely `unitLinear 0`.
+-/
+theorem OudomGuinUEAHopfAlgebraTarget.antipode_left_cancels_treeGen_zero
+    (H : OudomGuinUEAHopfAlgebraTarget) (x : PTree) :
+    H.hopf.mulTensor
+        ((LinearMap.rTensor preLieDifferenceStableQuotientUEA H.hopf.antipode)
+          (H.carrier.DeltaOG (stableUEA_treeGen x))) = 0 := by
+  rw [H.antipode_left_cancels_treeGen]
+  exact LinearMap.map_zero H.hopf.unitLinear
+
+/--
+On proof-tree generators, the right antipode cancellation diagram collapses to
+the unit applied to zero, because proof-tree generators have zero counit.
+-/
+theorem OudomGuinUEAHopfAlgebraTarget.antipode_right_cancels_treeGen
+    (H : OudomGuinUEAHopfAlgebraTarget) (x : PTree) :
+    H.hopf.mulTensor
+        ((LinearMap.lTensor preLieDifferenceStableQuotientUEA H.hopf.antipode)
+          (H.carrier.DeltaOG (stableUEA_treeGen x))) =
+      H.hopf.unitLinear 0 := by
+  rw [H.antipode_right_cancellation, H.carrier.counit_on_treeGen]
+
+/--
+On proof-tree generators, the right antipode cancellation diagram is actually
+zero, not merely `unitLinear 0`.
+-/
+theorem OudomGuinUEAHopfAlgebraTarget.antipode_right_cancels_treeGen_zero
+    (H : OudomGuinUEAHopfAlgebraTarget) (x : PTree) :
+    H.hopf.mulTensor
+        ((LinearMap.lTensor preLieDifferenceStableQuotientUEA H.hopf.antipode)
+          (H.carrier.DeltaOG (stableUEA_treeGen x))) = 0 := by
+  rw [H.antipode_right_cancels_treeGen]
+  exact LinearMap.map_zero H.hopf.unitLinear
+
+/--
+The left antipode cancellation diagram for actual derivable proof-tree
+generators.
+-/
+theorem OudomGuinUEAHopfAlgebraTarget.antipode_left_cancels_derivableStableTreeGen
+    (H : OudomGuinUEAHopfAlgebraTarget)
+    {base : BaseRel} {t : PTree}
+    (ht : DerivableTree base t) :
+    H.hopf.mulTensor
+        ((LinearMap.rTensor preLieDifferenceStableQuotientUEA H.hopf.antipode)
+          (H.carrier.DeltaOG
+            (derivableStableUEAIota base (derivableStableTreeGen ht)))) =
+      H.hopf.unitLinear 0 := by
+  simpa using H.antipode_left_cancels_treeGen t
+
+/--
+For actual derivable proof-tree generators, left antipode cancellation is zero.
+-/
+theorem OudomGuinUEAHopfAlgebraTarget.antipode_left_cancels_derivableStableTreeGen_zero
+    (H : OudomGuinUEAHopfAlgebraTarget)
+    {base : BaseRel} {t : PTree}
+    (ht : DerivableTree base t) :
+    H.hopf.mulTensor
+        ((LinearMap.rTensor preLieDifferenceStableQuotientUEA H.hopf.antipode)
+          (H.carrier.DeltaOG
+            (derivableStableUEAIota base (derivableStableTreeGen ht)))) = 0 := by
+  simpa using H.antipode_left_cancels_treeGen_zero t
+
+/--
+The right antipode cancellation diagram for actual derivable proof-tree
+generators.
+-/
+theorem OudomGuinUEAHopfAlgebraTarget.antipode_right_cancels_derivableStableTreeGen
+    (H : OudomGuinUEAHopfAlgebraTarget)
+    {base : BaseRel} {t : PTree}
+    (ht : DerivableTree base t) :
+    H.hopf.mulTensor
+        ((LinearMap.lTensor preLieDifferenceStableQuotientUEA H.hopf.antipode)
+          (H.carrier.DeltaOG
+            (derivableStableUEAIota base (derivableStableTreeGen ht)))) =
+      H.hopf.unitLinear 0 := by
+  simpa using H.antipode_right_cancels_treeGen t
+
+/--
+For actual derivable proof-tree generators, right antipode cancellation is zero.
+-/
+theorem OudomGuinUEAHopfAlgebraTarget.antipode_right_cancels_derivableStableTreeGen_zero
+    (H : OudomGuinUEAHopfAlgebraTarget)
+    {base : BaseRel} {t : PTree}
+    (ht : DerivableTree base t) :
+    H.hopf.mulTensor
+        ((LinearMap.lTensor preLieDifferenceStableQuotientUEA H.hopf.antipode)
+          (H.carrier.DeltaOG
+            (derivableStableUEAIota base (derivableStableTreeGen ht)))) = 0 := by
+  simpa using H.antipode_right_cancels_treeGen_zero t
+
+end ProofTheoreticHopfTarget
 
 /--
 Main UEA Hopf-carrier existence target.  This is the architectural replacement
@@ -5042,6 +7789,47 @@ theorem preLieDifferenceGeneratorFlatmapNatCountBalanced_iff
     exact Int.ofNat.inj (hcount w)
 
 /--
+Global form of the remaining base combinatorial input: every concrete two-step
+comparison pair of raw flatmaps has matching output multiplicities.
+-/
+def AllPreLieDifferenceGeneratorFlatmapsCountBalanced : Prop :=
+  ∀ x y z : PTree, PreLieDifferenceGeneratorFlatmapCountBalanced x y z
+
+/--
+Global `Nat`-valued version of the remaining base combinatorial input.
+-/
+def AllPreLieDifferenceGeneratorFlatmapsNatCountBalanced : Prop :=
+  ∀ x y z : PTree, PreLieDifferenceGeneratorFlatmapNatCountBalanced x y z
+
+/--
+Pointwise two-step output count balance implies coefficientwise vanishing of the
+raw generator-level pre-Lie difference.
+-/
+theorem preLieDifferenceGenerators_eq_zero_of_countBalanced
+    (x y z : PTree)
+    (hcount : PreLieDifferenceGeneratorFlatmapCountBalanced x y z) :
+    preLieDifferenceGenerators x y z = 0 := by
+  ext w
+  rw [preLieDifferenceGenerators, Finsupp.sub_apply,
+    comparisonSideGenerators_apply_eq_sum_counts,
+    swappedComparisonSideGenerators_apply_eq_sum_counts]
+  exact sub_eq_zero.mpr
+    ((preLieDifferenceGeneratorFlatmapCountBalanced_iff x y z).mp hcount w)
+
+/--
+Global two-step output count balance implies coefficientwise vanishing of every
+raw generator-level pre-Lie difference.
+-/
+theorem preLieDifferenceGenerators_eq_zero_of_globalCountBalance
+    (hbal : AllPreLieDifferenceGeneratorFlatmapsCountBalanced)
+    (x y z : PTree) :
+    preLieDifferenceGenerators x y z = 0 := by
+  apply preLieDifferenceGenerators_eq_zero_of_countBalanced
+  unfold AllPreLieDifferenceGeneratorFlatmapsCountBalanced at hbal
+  exact hbal x y z
+
+
+/--
 The `Nat`-valued and `Int`-valued formulations of the three-step pointwise
 multiplicity balance are equivalent.
 -/
@@ -5074,6 +7862,129 @@ theorem preLieDifferenceGeneratorFlatmapNatCountBalanced_of_countBalanced
     (hcount : PreLieDifferenceGeneratorFlatmapCountBalanced x y z) :
     PreLieDifferenceGeneratorFlatmapNatCountBalanced x y z :=
   (preLieDifferenceGeneratorFlatmapNatCountBalanced_iff x y z).mpr hcount
+
+/--
+The named two-step multiplicity problem is exactly the address-witness output
+multiplicity problem.
+
+The address-witness lists remember where each two-step graft was performed.
+After projecting to `Prod.snd`, they forget the address data and recover the
+two named raw flatmap output lists.  Thus the remaining generator-level
+pre-Lie count theorem can be attacked purely as an address-witness bijection.
+-/
+theorem preLieDifferenceGeneratorFlatmapCountBalanced_iff_addrWitness_count_balance
+    (x y z : PTree) :
+    PreLieDifferenceGeneratorFlatmapCountBalanced x y z ↔
+      ∀ w : PTree,
+        (((twoStepAddrWitnessesLeft x y z).map Prod.snd).count w : Int) =
+          (((twoStepAddrWitnessesRight x y z).map Prod.snd).count w : Int) := by
+  constructor
+  · intro hcount w
+    simpa [PreLieDifferenceGeneratorFlatmapCountBalanced,
+      preLieDifferenceGeneratorFlatmapLeft,
+      preLieDifferenceGeneratorFlatmapRight]
+      using hcount w
+  · intro hcount w
+    simpa [PreLieDifferenceGeneratorFlatmapCountBalanced,
+      preLieDifferenceGeneratorFlatmapLeft,
+      preLieDifferenceGeneratorFlatmapRight]
+      using hcount w
+
+/--
+`Nat`-valued version of the same address-witness/flatmap multiplicity
+translation.
+-/
+theorem preLieDifferenceGeneratorFlatmapNatCountBalanced_iff_addrWitness_natCount_balance
+    (x y z : PTree) :
+    PreLieDifferenceGeneratorFlatmapNatCountBalanced x y z ↔
+      ∀ w : PTree,
+        ((twoStepAddrWitnessesLeft x y z).map Prod.snd).count w =
+          ((twoStepAddrWitnessesRight x y z).map Prod.snd).count w := by
+  constructor
+  · intro hcount w
+    simpa [PreLieDifferenceGeneratorFlatmapNatCountBalanced,
+      preLieDifferenceGeneratorFlatmapLeft,
+      preLieDifferenceGeneratorFlatmapRight]
+      using hcount w
+  · intro hcount w
+    simpa [PreLieDifferenceGeneratorFlatmapNatCountBalanced,
+      preLieDifferenceGeneratorFlatmapLeft,
+      preLieDifferenceGeneratorFlatmapRight]
+      using hcount w
+
+/--
+Address-witness output multiplicity balance implies the named flatmap
+multiplicity balance.
+-/
+theorem preLieDifferenceGeneratorFlatmapCountBalanced_of_addrWitness_count_balance
+    (x y z : PTree)
+    (hcount : ∀ w : PTree,
+      (((twoStepAddrWitnessesLeft x y z).map Prod.snd).count w : Int) =
+        (((twoStepAddrWitnessesRight x y z).map Prod.snd).count w : Int)) :
+    PreLieDifferenceGeneratorFlatmapCountBalanced x y z :=
+  (preLieDifferenceGeneratorFlatmapCountBalanced_iff_addrWitness_count_balance
+    x y z).mpr hcount
+
+/--
+Address-witness output multiplicity balance, in `Nat` form, implies the named
+flatmap multiplicity balance.
+-/
+theorem preLieDifferenceGeneratorFlatmapNatCountBalanced_of_addrWitness_natCount_balance
+    (x y z : PTree)
+    (hcount : ∀ w : PTree,
+      ((twoStepAddrWitnessesLeft x y z).map Prod.snd).count w =
+        ((twoStepAddrWitnessesRight x y z).map Prod.snd).count w) :
+    PreLieDifferenceGeneratorFlatmapNatCountBalanced x y z :=
+  (preLieDifferenceGeneratorFlatmapNatCountBalanced_iff_addrWitness_natCount_balance
+    x y z).mpr hcount
+
+/--
+The named two-step permutation balance is exactly permutation balance of the
+address-witness output lists.
+-/
+theorem preLieDifferenceGeneratorFlatmapPermBalanced_iff_addrWitness_output_perm
+    (x y z : PTree) :
+    PreLieDifferenceGeneratorFlatmapPermBalanced x y z ↔
+      List.Perm
+        ((twoStepAddrWitnessesLeft x y z).map Prod.snd)
+        ((twoStepAddrWitnessesRight x y z).map Prod.snd) := by
+  constructor
+  · intro hperm
+    simpa [PreLieDifferenceGeneratorFlatmapPermBalanced,
+      preLieDifferenceGeneratorFlatmapLeft,
+      preLieDifferenceGeneratorFlatmapRight]
+      using hperm
+  · intro hperm
+    simpa [PreLieDifferenceGeneratorFlatmapPermBalanced,
+      preLieDifferenceGeneratorFlatmapLeft,
+      preLieDifferenceGeneratorFlatmapRight]
+      using hperm
+
+/--
+An address-witness output permutation gives the named flatmap permutation.
+-/
+theorem preLieDifferenceGeneratorFlatmapPermBalanced_of_addrWitness_output_perm
+    (x y z : PTree)
+    (hperm :
+      List.Perm
+        ((twoStepAddrWitnessesLeft x y z).map Prod.snd)
+        ((twoStepAddrWitnessesRight x y z).map Prod.snd)) :
+    PreLieDifferenceGeneratorFlatmapPermBalanced x y z :=
+  (preLieDifferenceGeneratorFlatmapPermBalanced_iff_addrWitness_output_perm
+    x y z).mpr hperm
+
+/--
+The existing address-witness count-to-permutation theorem now yields the named
+flatmap permutation balance directly.
+-/
+theorem preLieDifferenceGeneratorFlatmapPermBalanced_of_addrWitness_count_balance
+    (x y z : PTree)
+    (hcount : ∀ w : PTree,
+      (((twoStepAddrWitnessesLeft x y z).map Prod.snd).count w : Int) =
+        (((twoStepAddrWitnessesRight x y z).map Prod.snd).count w : Int)) :
+    PreLieDifferenceGeneratorFlatmapPermBalanced x y z := by
+  apply preLieDifferenceGeneratorFlatmapPermBalanced_of_addrWitness_output_perm
+  exact twoStepAddrWitnesses_map_snd_perm_of_count_balance x y z hcount
 
 /--
 The original `Int`-valued higher flatmap balance follows from its `Nat`-valued
@@ -5950,17 +8861,24 @@ So the difference is zero.  The formal Lean proof requires lemmas relating
 -/
 
 /--
-Global form of the remaining base combinatorial input: every concrete two-step
-comparison pair of raw flatmaps has matching output multiplicities.
+Global address-witness form of the remaining base combinatorial input.
+
+This is now the preferred critical-path theorem: for each output tree `w`, the
+two address-level enumerators for the two pre-Lie associator sides produce `w`
+with the same multiplicity.
 -/
-def AllPreLieDifferenceGeneratorFlatmapsCountBalanced : Prop :=
-  ∀ x y z : PTree, PreLieDifferenceGeneratorFlatmapCountBalanced x y z
+def AllTwoStepAddrWitnessOutputCountBalanced : Prop :=
+  ∀ x y z w : PTree,
+    (((twoStepAddrWitnessesLeft x y z).map Prod.snd).count w : Int) =
+      (((twoStepAddrWitnessesRight x y z).map Prod.snd).count w : Int)
 
 /--
-Global `Nat`-valued version of the remaining base combinatorial input.
+Global `Nat`-valued address-witness form of the same critical-path theorem.
 -/
-def AllPreLieDifferenceGeneratorFlatmapsNatCountBalanced : Prop :=
-  ∀ x y z : PTree, PreLieDifferenceGeneratorFlatmapNatCountBalanced x y z
+def AllTwoStepAddrWitnessOutputNatCountBalanced : Prop :=
+  ∀ x y z w : PTree,
+    ((twoStepAddrWitnessesLeft x y z).map Prod.snd).count w =
+      ((twoStepAddrWitnessesRight x y z).map Prod.snd).count w
 
 /--
 Global `Int`-valued higher flatmap balance.
@@ -5987,6 +8905,85 @@ theorem allPreLieDifferenceGeneratorFlatmapsCountBalanced_iff_natCountBalanced :
   · intro hbal x y z
     exact preLieDifferenceGeneratorFlatmapCountBalanced_of_natCountBalanced
       x y z (hbal x y z)
+
+/--
+The global flatmap count-balance theorem is equivalent to the global
+address-witness output count-balance theorem.
+-/
+theorem allPreLieDifferenceGeneratorFlatmapsCountBalanced_iff_addrWitness_countBalanced :
+    AllPreLieDifferenceGeneratorFlatmapsCountBalanced ↔
+      AllTwoStepAddrWitnessOutputCountBalanced := by
+  constructor
+  · intro hbal x y z w
+    exact
+      (preLieDifferenceGeneratorFlatmapCountBalanced_iff_addrWitness_count_balance
+        x y z).mp (hbal x y z) w
+  · intro hbal x y z
+    exact
+      (preLieDifferenceGeneratorFlatmapCountBalanced_iff_addrWitness_count_balance
+        x y z).mpr (hbal x y z)
+
+/--
+The global `Nat`-valued flatmap count-balance theorem is equivalent to the
+global `Nat`-valued address-witness output count-balance theorem.
+-/
+theorem allPreLieDifferenceGeneratorFlatmapsNatCountBalanced_iff_addrWitness_natCountBalanced :
+    AllPreLieDifferenceGeneratorFlatmapsNatCountBalanced ↔
+      AllTwoStepAddrWitnessOutputNatCountBalanced := by
+  constructor
+  · intro hbal x y z w
+    exact
+      (preLieDifferenceGeneratorFlatmapNatCountBalanced_iff_addrWitness_natCount_balance
+        x y z).mp (hbal x y z) w
+  · intro hbal x y z
+    exact
+      (preLieDifferenceGeneratorFlatmapNatCountBalanced_iff_addrWitness_natCount_balance
+        x y z).mpr (hbal x y z)
+
+/--
+Global address-witness output count balance is enough to prove global flatmap
+count balance, hence all downstream corrected-counit reductions.
+-/
+theorem allPreLieDifferenceGeneratorFlatmapsCountBalanced_of_allAddrWitness_countBalanced
+    (hbal : AllTwoStepAddrWitnessOutputCountBalanced) :
+    AllPreLieDifferenceGeneratorFlatmapsCountBalanced :=
+  (allPreLieDifferenceGeneratorFlatmapsCountBalanced_iff_addrWitness_countBalanced).mpr hbal
+
+/--
+`Nat`-valued version of the previous implication.
+-/
+theorem allPreLieDifferenceGeneratorFlatmapsNatCountBalanced_of_allAddrWitness_natCountBalanced
+    (hbal : AllTwoStepAddrWitnessOutputNatCountBalanced) :
+    AllPreLieDifferenceGeneratorFlatmapsNatCountBalanced :=
+  (allPreLieDifferenceGeneratorFlatmapsNatCountBalanced_iff_addrWitness_natCountBalanced).mpr hbal
+
+/--
+Global address-witness output count balance is enough to kill every concrete
+pre-Lie difference generator under the corrected counit.
+
+This is the cleanest critical-path wrapper: once the quotient side produces the
+address-witness balance theorem, the concrete corrected-counit vanishing step
+is immediate.
+-/
+theorem correctedCounit_linear_preLieDifferenceGenerators_of_globalAddrWitness_countBalance
+    (hbal : AllTwoStepAddrWitnessOutputCountBalanced)
+    (x y z : PTree) :
+    correctedCounit_linear (preLieDifferenceGenerators x y z) = 0 := by
+  apply correctedCounit_linear_preLieDifferenceGenerators_of_addrWitness_count_balance
+  intro w
+  exact hbal x y z w
+
+/--
+`Nat`-valued address-witness balance gives the same corrected-counit vanishing
+statement.
+-/
+theorem correctedCounit_linear_preLieDifferenceGenerators_of_globalAddrWitness_natCountBalance
+    (hbal : AllTwoStepAddrWitnessOutputNatCountBalanced)
+    (x y z : PTree) :
+    correctedCounit_linear (preLieDifferenceGenerators x y z) = 0 := by
+  apply correctedCounit_linear_preLieDifferenceGenerators_of_addrWitness_count_balance
+  intro w
+  exact congrArg Int.ofNat (hbal x y z w)
 
 /--
 The global `Nat`- and `Int`-valued higher balance hypotheses are equivalent.
@@ -6111,6 +9108,50 @@ theorem correctedCounit_linear_kills_preLieDifferenceSubmodule_of_globalNatCount
     correctedCounit_linear a = 0 := by
   exact correctedCounit_linear_kills_preLieDifferenceSubmodule_of_globalCountBalance
     ((allPreLieDifferenceGeneratorFlatmapsCountBalanced_iff_natCountBalanced).2 hbal) ha
+
+/--
+Global address-witness balance is also enough to kill the entire concrete
+pre-Lie defect submodule.
+-/
+theorem correctedCounit_linear_kills_preLieDifferenceSubmodule_of_globalAddrWitness_countBalance
+    (hbal : AllTwoStepAddrWitnessOutputCountBalanced)
+    {a : linearProofTreeCarrier}
+    (ha : a ∈ preLieDifferenceSubmodule) :
+    correctedCounit_linear a = 0 := by
+  change a ∈ Submodule.span ℤ preLieDifferenceGeneratorSet at ha
+  refine Submodule.span_induction ?_ ?_ ?_ ?_ ha
+  · intro b hb
+    rcases hb with ⟨x, y, z, rfl⟩
+    exact
+      correctedCounit_linear_preLieDifferenceGenerators_of_globalAddrWitness_countBalance
+        hbal x y z
+  · simpa [correctedCounit_linear]
+  · intro x y _ _ hx hy
+    simp [correctedCounit_linear_add, hx, hy]
+  · intro n x _ hx
+    simpa [correctedCounit_linear_smul, hx]
+
+/--
+`Nat`-valued global address-witness balance gives the same submodule-vanishing
+statement.
+-/
+theorem correctedCounit_linear_kills_preLieDifferenceSubmodule_of_globalAddrWitness_natCountBalance
+    (hbal : AllTwoStepAddrWitnessOutputNatCountBalanced)
+    {a : linearProofTreeCarrier}
+    (ha : a ∈ preLieDifferenceSubmodule) :
+    correctedCounit_linear a = 0 := by
+  change a ∈ Submodule.span ℤ preLieDifferenceGeneratorSet at ha
+  refine Submodule.span_induction ?_ ?_ ?_ ?_ ha
+  · intro b hb
+    rcases hb with ⟨x, y, z, rfl⟩
+    exact
+      correctedCounit_linear_preLieDifferenceGenerators_of_globalAddrWitness_natCountBalance
+        hbal x y z
+  · simpa [correctedCounit_linear]
+  · intro x y _ _ hx hy
+    simp [correctedCounit_linear_add, hx, hy]
+  · intro n x _ hx
+    simpa [correctedCounit_linear_smul, hx]
 
 /--
 If the stable closure coincides with the concrete pre-Lie defect submodule,

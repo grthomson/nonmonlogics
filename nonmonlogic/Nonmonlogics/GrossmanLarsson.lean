@@ -2,8 +2,10 @@ import Mathlib.Data.Multiset.Basic
 import Mathlib.Data.Multiset.ZeroCons
 import Mathlib.Data.List.Basic
 import Mathlib.Data.List.Count
+import Mathlib.Data.List.Nodup
 import Mathlib.Data.List.Perm.Basic
 import Mathlib.Data.List.Perm.Subperm
+import Mathlib.Data.List.Sublists
 import Mathlib.Algebra.MonoidAlgebra.Basic
 import Mathlib.Algebra.FreeMonoid.Basic
 import Mathlib.LinearAlgebra.TensorProduct.Basic
@@ -358,6 +360,40 @@ theorem toTree_respectsRuleArity {base : BaseRel} {s : MultiSequent}
     PTree.RespectsRuleArity (NMMS.toTree d) := by
   induction d <;> simp [NMMS.toTree, RuleTag.arity, *]
 
+/--
+If the forgotten proof tree of an `NMMS` derivation is a rule node, then its
+immediate subtrees have exactly the arity dictated by the root inference rule.
+This is the rule-constructor/branching invariant used by tree induction.
+-/
+theorem toTree_node_children_length_eq_ruleArity
+    {base : BaseRel} {s : MultiSequent}
+    (d : NMMS base s)
+    {r : RuleTag} {s' : MultiSequent} {cs : List PTree}
+    (h : NMMS.toTree d = PTree.node r s' cs) :
+    cs.length = r.arity := by
+  have hres : PTree.RespectsRuleArity (NMMS.toTree d) :=
+    toTree_respectsRuleArity d
+  rw [h] at hres
+  have hnode :
+      cs.length = r.arity ∧
+        ∀ c, c ∈ cs → PTree.RespectsRuleArity c := by
+    simpa [PTree.RespectsRuleArity] using hres
+  exact hnode.1
+
+/--
+Every `NMMS` rule node has at most two immediate premise subtrees.  This is the
+formal version of the proof-theoretic fact that the propositional rules here are
+unary or binary.
+-/
+theorem toTree_node_children_length_le_two
+    {base : BaseRel} {s : MultiSequent}
+    (d : NMMS base s)
+    {r : RuleTag} {s' : MultiSequent} {cs : List PTree}
+    (h : NMMS.toTree d = PTree.node r s' cs) :
+    cs.length ≤ 2 := by
+  rw [toTree_node_children_length_eq_ruleArity d h]
+  exact RuleTag.arity_le_two r
+
 /-! ## Base-relation extension and induced derivation/tree transport -/
 
 /--
@@ -572,6 +608,36 @@ theorem derivableTree_respectsRuleArity
     PTree.RespectsRuleArity t := by
   rcases ht with ⟨s, d, rfl⟩
   exact toTree_respectsRuleArity d
+
+/--
+If a derivable proof tree is a rule node, its child list has the arity of the
+root rule.  Derivability therefore constrains the raw tree carrier by the
+logical rule constructors.
+-/
+theorem derivableTree_node_children_length_eq_ruleArity
+    {base : BaseRel} {t : PTree}
+    (ht : DerivableTree base t)
+    {r : RuleTag} {s : MultiSequent} {cs : List PTree}
+    (h : t = PTree.node r s cs) :
+    cs.length = r.arity := by
+  have hres : PTree.RespectsRuleArity t :=
+    derivableTree_respectsRuleArity ht
+  rw [h] at hres
+  have hnode :
+      cs.length = r.arity ∧
+        ∀ c, c ∈ cs → PTree.RespectsRuleArity c := by
+    simpa [PTree.RespectsRuleArity] using hres
+  exact hnode.1
+
+/-- Derivable proof-tree nodes are at most binary. -/
+theorem derivableTree_node_children_length_le_two
+    {base : BaseRel} {t : PTree}
+    (ht : DerivableTree base t)
+    {r : RuleTag} {s : MultiSequent} {cs : List PTree}
+    (h : t = PTree.node r s cs) :
+    cs.length ≤ 2 := by
+  rw [derivableTree_node_children_length_eq_ruleArity ht h]
+  exact RuleTag.arity_le_two r
 
 theorem derivableTree_conclusion
     {base : BaseRel} {t : PTree}
@@ -1680,6 +1746,48 @@ def sublists : List α → List (List α)
       let rest := sublists xs
       rest ++ rest.map (x :: ·)
 
+/--
+Our locally-defined sublist enumerator is mathlib's `List.sublists'`.
+This lets the cut enumeration use the standard `List.Sublist` API rather
+than treating `sublists` as an opaque implementation detail.
+-/
+theorem sublists_eq_list_sublists' {α : Type} (xs : List α) :
+    sublists xs = List.sublists' xs := by
+  induction xs with
+  | nil =>
+      simp [sublists]
+  | cons x xs ih =>
+      simp [sublists, ih]
+
+/-- Membership in our sublist enumerator is exactly mathlib `List.Sublist`. -/
+theorem mem_sublists_iff_sublist {α : Type} {xs ys : List α} :
+    ys ∈ sublists xs ↔ List.Sublist ys xs := by
+  rw [sublists_eq_list_sublists']
+  exact List.mem_sublists'
+
+/-- `filterMap` preserves mathlib's list-sublist relation. -/
+theorem filterMap_sublist_filterMap
+    {α β : Type} {xs ys : List α} (f : α → Option β)
+    (hsub : List.Sublist xs ys) :
+    List.Sublist (xs.filterMap f) (ys.filterMap f) := by
+  induction hsub with
+  | slnil =>
+      simp
+  | cons a hsub ih =>
+      cases ha : f a with
+      | none =>
+          simpa [List.filterMap_cons, ha] using ih
+      | some b =>
+          simpa [List.filterMap_cons, ha] using
+            (List.sublist_cons_of_sublist b ih)
+  | cons₂ a hsub ih =>
+      cases ha : f a with
+      | none =>
+          simpa [List.filterMap_cons, ha] using ih
+      | some b =>
+          simpa [List.filterMap_cons, ha] using
+            (List.Sublist.cons_cons b ih)
+
 def isAntichainBool (addrs : List Address) : Bool :=
   addrs.mapIdx (fun i a =>
     addrs.mapIdx (fun j b =>
@@ -1712,27 +1820,134 @@ theorem isAntichainBool_eq_true_implies
     exact (List.all_eq_true.mp hanti _ hmem)
   have hinner :
       i == j || !comparableBool addrs[i] addrs[j] = true := by
-    have hmem :
-        (i == j || !comparableBool addrs[i] addrs[j]) ∈
-            addrs.mapIdx (fun j b =>
-              i == j || !comparableBool addrs[i] b) := by
-      rw [List.mem_mapIdx]
-      refine ⟨j, hj, ?_⟩
-      rfl
-    exact (List.all_eq_true.mp houter _ hmem)
+    let inner := addrs.mapIdx (fun j b =>
+      i == j || !comparableBool addrs[i] b)
+    have houter' : inner.all id = true := by
+      simpa [inner] using houter
+    have hjinner : j < inner.length := by
+      simpa [inner, List.length_mapIdx] using hj
+    have hget : inner[j]'hjinner = true := by
+      exact List.all_eq_true.mp houter' (inner[j]'hjinner)
+        (List.getElem_mem (l := inner) (n := j) (h := hjinner))
+    simpa [inner, List.getElem_mapIdx] using hget
   by_cases hij : i = j
   · subst j
     have hab : a = b := by
       exact haeq.symm.trans hbeq
     exact hne hab
   · have hinnerFalse : comparableBool addrs[i] addrs[j] = false := by
-      simpa [hij] using hinner
+      have hbij : (i == j) = false := by
+        simp [hij]
+      simp [hbij] at hinner
+      exact hinner
     have hcomp' : comparable addrs[i] addrs[j] := by
       simpa [haeq, hbeq] using hcomp
     have hcompBool :
         comparableBool addrs[i] addrs[j] = true :=
       (comparableBool_eq_true_iff_comparable addrs[i] addrs[j]).mpr hcomp'
     simp [hinnerFalse] at hcompBool
+
+/--
+The boolean antichain test also enforces absence of duplicate addresses.
+This is the positional part of the test: two equal addresses at different
+indices are comparable, so the boolean test rejects them.
+-/
+theorem isAntichainBool_eq_true_implies_nodup
+    {addrs : List Address}
+    (hanti : isAntichainBool addrs = true) :
+    addrs.Nodup := by
+  rw [List.nodup_iff_injective_getElem]
+  intro i j heq
+  by_contra hij
+  have houter :
+      (addrs.mapIdx (fun j b =>
+        i.1 == j || !comparableBool addrs[i.1] b)).all id = true := by
+    have hmem :
+        ((addrs.mapIdx (fun j b =>
+          i.1 == j || !comparableBool addrs[i.1] b)).all id) ∈
+            addrs.mapIdx (fun i a =>
+              (addrs.mapIdx (fun j b =>
+                i == j || !comparableBool a b)).all id) := by
+      rw [List.mem_mapIdx]
+      refine ⟨i, i.2, ?_⟩
+      rfl
+    exact (List.all_eq_true.mp hanti _ hmem)
+  have hinner :
+      i.1 == j.1 || !comparableBool addrs[i.1] addrs[j.1] = true := by
+    let inner := addrs.mapIdx (fun j b =>
+      i.1 == j || !comparableBool addrs[i.1] b)
+    have houter' : inner.all id = true := by
+      simpa [inner] using houter
+    have hjinner : j.1 < inner.length := by
+      simpa [inner, List.length_mapIdx] using j.2
+    have hget : inner[j.1]'hjinner = true := by
+      exact List.all_eq_true.mp houter' (inner[j.1]'hjinner)
+        (List.getElem_mem (l := inner) (n := j.1) (h := hjinner))
+    simpa [inner, List.getElem_mapIdx] using hget
+  have hbij : (i.1 == j.1) = false := by
+    have hijNat : i.1 ≠ j.1 := by
+      intro hNat
+      exact hij (Fin.ext hNat)
+    simp [hijNat]
+  have hcompFalse : comparableBool addrs[i.1] addrs[j.1] = false := by
+    simp [hbij] at hinner
+    exact hinner
+  have hcomp : comparable addrs[i.1] addrs[j.1] := by
+    have heq' : addrs[i.1] = addrs[j.1] := by
+      simpa using heq
+    rw [heq']
+    exact comparable_refl _
+  have hcompTrue :
+      comparableBool addrs[i.1] addrs[j.1] = true :=
+    (comparableBool_eq_true_iff_comparable _ _).mpr hcomp
+  simp [hcompFalse] at hcompTrue
+
+/--
+Conversely, a duplicate-free Prop-level antichain satisfies the boolean
+antichain test.
+-/
+theorem isAntichainBool_eq_true_of_nodup
+    {addrs : List Address}
+    (hnodup : addrs.Nodup)
+    (hanti :
+      ∀ a, a ∈ addrs →
+        ∀ b, b ∈ addrs →
+          a ≠ b → ¬ comparable a b) :
+    isAntichainBool addrs = true := by
+  unfold isAntichainBool
+  apply List.all_eq_true.mpr
+  intro outer houter
+  rw [List.mem_mapIdx] at houter
+  rcases houter with ⟨i, hi, houter_eq⟩
+  subst outer
+  apply List.all_eq_true.mpr
+  intro inner hinner
+  rw [List.mem_mapIdx] at hinner
+  rcases hinner with ⟨j, hj, hinner_eq⟩
+  subst inner
+  by_cases hij : i = j
+  · simp [hij]
+  · have hne : addrs[i] ≠ addrs[j] := by
+      intro heq
+      exact hij ((List.Nodup.getElem_inj_iff hnodup).mp heq)
+    have hnot :
+        ¬ comparable addrs[i] addrs[j] :=
+      hanti addrs[i] (List.getElem_mem (l := addrs) (n := i) (h := hi))
+        addrs[j] (List.getElem_mem (l := addrs) (n := j) (h := hj)) hne
+    have hcompBool :
+        comparableBool addrs[i] addrs[j] = false := by
+      cases hc : comparableBool addrs[i] addrs[j]
+      · rfl
+      · exact False.elim
+          (hnot ((comparableBool_eq_true_iff_comparable _ _).mp hc))
+    simp [hij, hcompBool]
+
+/-- Prop-level validity of every listed address gives the boolean validity test. -/
+theorem all_validAddress_eq_true_of_forall_valid
+    {t : PTree} {cut : List Address}
+    (hvalid : ∀ a, a ∈ cut → ValidAddress t a) :
+    cut.all (fun a => validAddress t a) = true := by
+  exact List.all_eq_true.mpr hvalid
 
 def allAdmissibleCuts (t : PTree) : List (List Address) :=
   (sublists (allAddresses t)).filter (fun cut =>
@@ -1765,6 +1980,43 @@ def isAdmissibleCut_of_mem_allAdmissibleCuts
           simp [hv, hanti] at hbool
       rfl
     exact isAntichainBool_eq_true_implies hanti a ha b hb hne hcomp
+
+/--
+The finite cut enumerator carries the expected standard sublist witness:
+every listed cut is literally a sublist of the tree's address list.
+-/
+theorem cut_sublist_allAddresses_of_mem_allAdmissibleCuts
+    {t : PTree} {cut : List Address}
+    (hcut : cut ∈ allAdmissibleCuts t) :
+    List.Sublist cut (allAddresses t) := by
+  unfold allAdmissibleCuts at hcut
+  exact mem_sublists_iff_sublist.mp (List.mem_filter.mp hcut).1
+
+/--
+Package the three mathematical ingredients for membership in the finite
+admissible-cut enumerator: a sublist witness, boolean-valid addresses, and a
+duplicate-free Prop-level antichain.
+-/
+theorem mem_allAdmissibleCuts_of_sublist_valid_antichain
+    {t : PTree} {cut : List Address}
+    (hsub : List.Sublist cut (allAddresses t))
+    (hnodup : cut.Nodup)
+    (hvalid : ∀ a, a ∈ cut → ValidAddress t a)
+    (hanti :
+      ∀ a, a ∈ cut →
+        ∀ b, b ∈ cut →
+          a ≠ b → ¬ comparable a b) :
+    cut ∈ allAdmissibleCuts t := by
+  unfold allAdmissibleCuts
+  refine List.mem_filter.2 ?_
+  constructor
+  · exact mem_sublists_iff_sublist.mpr hsub
+  · have hvalidBool :
+        cut.all (fun a => validAddress t a) = true :=
+      all_validAddress_eq_true_of_forall_valid hvalid
+    have hantiBool : isAntichainBool cut = true :=
+      isAntichainBool_eq_true_of_nodup hnodup hanti
+    simp [hvalidBool, hantiBool]
 
 def coproductTerm (t : PTree) (cut : List Address) : Forest × PTree :=
   (cut.filterMap (subtreeAt t), remainderGo cut [] t)
@@ -1813,6 +2065,14 @@ def restrictCut (cut : List Address) (i : Nat) : List Address :=
     match addr with
     | [] => none
     | j :: rest => if j = i then some rest else none)
+
+/-- Restricting a cut preserves the sublist relation. -/
+theorem restrictCut_sublist_restrictCut
+    {cut cut' : List Address} {i : Nat}
+    (hsub : List.Sublist cut cut') :
+    List.Sublist (restrictCut cut i) (restrictCut cut' i) := by
+  unfold restrictCut
+  exact filterMap_sublist_filterMap _ hsub
 
 /-- Restrict a cut by an arbitrary address prefix. -/
 def restrictCutAt : List Address → Address → List Address
@@ -2099,6 +2359,847 @@ private theorem mapIdx_mapIdx
     (f : Nat → α → β) (g : Nat → β → γ) :
     (xs.mapIdx f).mapIdx g = xs.mapIdx (fun i x => g i (f i x)) := by
   simpa using mapIdx_mapIdx_from xs 0 f g
+
+private theorem getElem_mapIdx_self
+    {α β : Type _} (xs : List α) (f : Nat → α → β)
+    (i : Nat) (hi : i < xs.length) :
+    (xs.mapIdx f)[i]'(by simpa [List.length_mapIdx] using hi) =
+      f i xs[i] := by
+  induction xs generalizing i f with
+  | nil =>
+      cases hi
+  | cons x xs ih =>
+      cases i with
+      | zero =>
+          simp [List.mapIdx_cons]
+      | succ i =>
+          have hi' : i < xs.length := Nat.succ_lt_succ_iff.mp (by simpa using hi)
+          simpa [List.mapIdx_cons] using
+            ih (fun j x => f (j + 1) x) i hi'
+
+/-- A child size is bounded by the sum of sizes of a list containing it. -/
+theorem size_le_foldr_size_of_mem
+    {t : PTree} :
+    ∀ {cs : List PTree}, t ∈ cs →
+      t.size ≤ cs.foldr (fun t n => t.size + n) 0
+  | [], h => by
+      simp at h
+  | c :: cs, h => by
+      simp at h
+      rcases h with htc | h
+      · cases htc
+        exact Nat.le_add_right _ _
+      · exact Nat.le_trans
+          (size_le_foldr_size_of_mem (t := t) (cs := cs) h)
+          (Nat.le_add_left
+            (cs.foldr (fun t n => t.size + n) 0) c.size)
+
+/--
+Pushing a fixed address prefix through a flattened list of indexed child
+blocks is the same as pushing it through each block before flattening.
+-/
+private theorem map_prefix_flatten_mapIdx_cons_from
+    {α : Type _} (xs : List α) (blocks : α → List Address)
+    (addr : Address) (k : Nat) :
+    (List.map (fun a => addr ++ a)
+        ((xs.mapIdx
+          (fun i x => (blocks x).map (fun a => (k + i) :: a))).flatten)) =
+      (xs.mapIdx
+        (fun i x => (blocks x).map (fun a => addr ++ ((k + i) :: a)))).flatten := by
+  induction xs generalizing k with
+  | nil =>
+      simp
+  | cons x xs ih =>
+      simp only [List.mapIdx_cons, List.flatten_cons, List.map_append]
+      congr 1
+      · simp [List.map_map, List.append_assoc]
+      · simpa [Nat.add_assoc, Nat.add_left_comm, Nat.add_comm] using ih (k + 1)
+
+/--
+Once the fuel is at least the size of the tree, `allAddressesGo` is independent
+of the particular fuel and is just the ordinary address list with a prefix added.
+-/
+theorem allAddressesGo_eq_map_prefix_allAddresses
+    (n : Nat) (t : PTree) (addr : Address)
+    (hn : t.size ≤ n) :
+    allAddressesGo n t addr = (allAddresses t).map (fun a => addr ++ a) := by
+  let P : Nat → Prop :=
+    fun m => ∀ t : PTree, t.size = m →
+      ∀ n addr, t.size ≤ n →
+        allAddressesGo n t addr = (allAddresses t).map (fun a => addr ++ a)
+  have hP : ∀ m, (∀ k < m, P k) → P m := by
+    intro m ih t hsize n addr hn
+    cases t with
+    | leaf s =>
+        cases n with
+        | zero =>
+            simp [PTree.size] at hn
+        | succ n =>
+            simp [allAddresses, allAddressesGo, PTree.size]
+    | node r s cs =>
+        cases n with
+        | zero =>
+            simp [PTree.size] at hn
+        | succ n =>
+            let total := cs.foldr (fun t n => t.size + n) 0
+            have htotal : total ≤ n := by
+              have h : 1 + total ≤ n + 1 := by
+                simpa [PTree.size, total] using hn
+              omega
+            have hleft :
+                cs.mapIdx
+                    (fun i child => allAddressesGo n child (addr ++ [i])) =
+                  cs.mapIdx
+                    (fun i child =>
+                      (allAddresses child).map (fun a => addr ++ (i :: a))) := by
+              apply mapIdx_congr'
+              intro i child hmem
+              have hchild_total : child.size ≤ total := by
+                simpa [total] using
+                  (size_le_foldr_size_of_mem (t := child) (cs := cs) hmem)
+              have hchild_n : child.size ≤ n :=
+                Nat.le_trans hchild_total htotal
+              have hlt : child.size < (PTree.node r s cs).size := by
+                exact child_size_lt_parent (PTree.node r s cs) child (by
+                  unfold IsImmediateSubtree PTree.children
+                  exact hmem)
+              have hrec : P child.size := ih child.size (by simpa [hsize] using hlt)
+              have h := hrec child rfl n (addr ++ [i]) hchild_n
+              simpa [List.append_assoc] using h
+            have hright :
+                cs.mapIdx
+                    (fun i child => allAddressesGo total child [i]) =
+                  cs.mapIdx
+                    (fun i child =>
+                      (allAddresses child).map (fun a => i :: a)) := by
+              apply mapIdx_congr'
+              intro i child hmem
+              have hchild_total : child.size ≤ total := by
+                simpa [total] using
+                  (size_le_foldr_size_of_mem (t := child) (cs := cs) hmem)
+              have hlt : child.size < (PTree.node r s cs).size := by
+                exact child_size_lt_parent (PTree.node r s cs) child (by
+                  unfold IsImmediateSubtree PTree.children
+                  exact hmem)
+              have hrec : P child.size := ih child.size (by simpa [hsize] using hlt)
+              have h := hrec child rfl total [i] hchild_total
+              simpa using h
+            have hright' :
+                cs.mapIdx
+                    (fun i child => allAddressesGo total child [i]) =
+                  cs.mapIdx
+                    (fun i child =>
+                      (allAddressesGo child.size child []).map (fun a => i :: a)) := by
+              simpa [allAddresses] using hright
+            have hmap :
+                (List.map (fun a => addr ++ a)
+                    ((cs.mapIdx
+                      (fun i child =>
+                        (allAddresses child).map (fun a => i :: a))).flatten)) =
+                  (cs.mapIdx
+                    (fun i child =>
+                      (allAddresses child).map
+                        (fun a => addr ++ (i :: a)))).flatten := by
+              simpa using
+                (map_prefix_flatten_mapIdx_cons_from cs allAddresses addr 0)
+            have hnode :
+                allAddresses (PTree.node r s cs) =
+                  [] ::
+                    (cs.mapIdx (fun i child =>
+                      (allAddresses child).map (fun a => i :: a))).flatten := by
+              unfold allAddresses
+              calc
+                allAddressesGo (PTree.node r s cs).size (PTree.node r s cs) [] =
+                    allAddressesGo (1 + total) (PTree.node r s cs) [] := by
+                  simp [PTree.size, total]
+                _ =
+                    [] ::
+                      (cs.mapIdx
+                        (fun i child => allAddressesGo total child [i])).flatten := by
+                  have hsucc : 1 + total = Nat.succ total := by omega
+                  rw [hsucc]
+                  rfl
+                _ =
+                    [] ::
+                      (cs.mapIdx (fun i child =>
+                        (allAddressesGo child.size child []).map
+                          (fun a => i :: a))).flatten := by
+                  rw [hright']
+            calc
+              allAddressesGo (n + 1) (PTree.node r s cs) addr =
+                  addr ::
+                    (cs.mapIdx
+                      (fun i child => allAddressesGo n child (addr ++ [i]))).flatten := by
+                rfl
+              _ =
+                  addr ::
+                    (cs.mapIdx
+                      (fun i child =>
+                        (allAddresses child).map (fun a => addr ++ (i :: a)))).flatten := by
+                rw [hleft]
+              _ = (allAddresses (PTree.node r s cs)).map (fun a => addr ++ a) := by
+                rw [hnode]
+                simp only [List.map_cons]
+                rw [hmap]
+                simp
+  have hstrong : ∀ m, P m := by
+    intro m
+    refine Nat.strong_induction_on m ?_
+    intro m ih
+    exact hP m ih
+  exact hstrong t.size t rfl n addr hn
+
+/--
+The address enumerator for a node is the root address followed by the child
+address enumerators, each prefixed by its child index.
+-/
+theorem allAddresses_node
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree) :
+    allAddresses (PTree.node r s cs) =
+      [] ::
+        (cs.mapIdx (fun i child =>
+          (allAddresses child).map (fun a => i :: a))).flatten := by
+  let total := cs.foldr (fun t n => t.size + n) 0
+  have hchildren :
+      cs.mapIdx (fun i child => allAddressesGo total child [i]) =
+        cs.mapIdx (fun i child =>
+          (allAddressesGo child.size child []).map (fun a => i :: a)) := by
+    apply mapIdx_congr'
+    intro i child hmem
+    have hchild_total : child.size ≤ total := by
+      simpa [total] using
+        (size_le_foldr_size_of_mem (t := child) (cs := cs) hmem)
+    have h :=
+      allAddressesGo_eq_map_prefix_allAddresses total child [i] hchild_total
+    simpa [allAddresses] using h
+  unfold allAddresses
+  calc
+    allAddressesGo (PTree.node r s cs).size (PTree.node r s cs) [] =
+        allAddressesGo (1 + total) (PTree.node r s cs) [] := by
+      simp [PTree.size, total]
+    _ =
+        [] ::
+          (cs.mapIdx
+            (fun i child => allAddressesGo total child [i])).flatten := by
+      have hsucc : 1 + total = Nat.succ total := by omega
+      rw [hsucc]
+      rfl
+    _ =
+        [] ::
+          (cs.mapIdx (fun i child =>
+            (allAddressesGo child.size child []).map
+              (fun a => i :: a))).flatten := by
+      rw [hchildren]
+
+@[simp] theorem restrictCut_append
+    (xs ys : List Address) (i : Nat) :
+    restrictCut (xs ++ ys) i =
+      restrictCut xs i ++ restrictCut ys i := by
+  simp [restrictCut, List.filterMap_append]
+
+@[simp] theorem restrictCut_map_cons_same
+    (xs : List Address) (i : Nat) :
+    restrictCut (xs.map (fun a => i :: a)) i = xs := by
+  induction xs with
+  | nil =>
+      simp [restrictCut]
+  | cons a xs ih =>
+      simpa [restrictCut] using congrArg (fun ys => a :: ys) ih
+
+theorem restrictCut_map_cons_ne
+    (xs : List Address) {i j : Nat} (hij : j ≠ i) :
+    restrictCut (xs.map (fun a => j :: a)) i = [] := by
+  induction xs with
+  | nil =>
+      simp [restrictCut]
+  | cons a xs ih =>
+      simpa [restrictCut, hij] using ih
+
+theorem restrictCut_map_cons_succ_succ
+    (xs : List Address) (i j : Nat) :
+    restrictCut (xs.map (fun a => (j + 1) :: a)) (i + 1) =
+      restrictCut (xs.map (fun a => j :: a)) i := by
+  induction xs with
+  | nil =>
+      simp [restrictCut]
+  | cons a xs ih =>
+      by_cases hji : j = i
+      · subst j
+        simpa [restrictCut] using congrArg (fun ys => a :: ys) ih
+      ·
+        have hsucc : j + 1 ≠ i + 1 := by omega
+        simpa [restrictCut, hji, hsucc] using ih
+
+/--
+If every indexed block begins at an index strictly above `l`, then restricting
+the flattened indexed block list to `l` produces no child addresses.
+-/
+theorem restrictCut_flatten_mapIdx_cons_lists_lt
+    (xss : List (List Address)) (k l : Nat) (hlt : l < k) :
+    restrictCut
+        ((xss.mapIdx (fun j xs => xs.map (fun a => (k + j) :: a))).flatten)
+        l = [] := by
+  induction xss generalizing k l with
+  | nil =>
+      simp [restrictCut]
+  | cons xs xss ih =>
+      simp only [List.mapIdx_cons, List.flatten_cons, restrictCut_append]
+      have hfirst : restrictCut (xs.map (fun a => k :: a)) l = [] := by
+        apply restrictCut_map_cons_ne
+        omega
+      have hrest :
+          restrictCut
+              ((xss.mapIdx
+                (fun j xs => xs.map (fun a => (k + (j + 1)) :: a))).flatten)
+              l = [] := by
+        have h := ih (k + 1) l (by omega)
+        simpa [Nat.add_assoc, Nat.add_left_comm, Nat.add_comm] using h
+      simp [hfirst, hrest]
+
+theorem restrictCut_flatten_mapIdx_succ_zero
+    (xss : List (List Address)) (k : Nat) :
+    restrictCut
+        ((xss.mapIdx (fun j xs => xs.map (fun a => (k + 1 + j) :: a))).flatten)
+        k = [] := by
+  simpa [Nat.add_assoc, Nat.add_left_comm, Nat.add_comm] using
+    (restrictCut_flatten_mapIdx_cons_lists_lt xss (k + 1) k (by omega))
+
+/--
+Offset form of the indexed-block selector.  This is the clean induction lemma:
+the block with external index `k + i` is the `i`th local block.
+-/
+theorem restrictCut_flatten_mapIdx_cons_lists_from
+    (xss : List (List Address)) (k i : Nat) (hi : i < xss.length) :
+    restrictCut
+        ((xss.mapIdx (fun j xs => xs.map (fun a => (k + j) :: a))).flatten)
+        (k + i) =
+      xss[i] := by
+  induction xss generalizing k i with
+  | nil =>
+      cases hi
+  | cons xs xss ih =>
+      cases i with
+      | zero =>
+          simp only [List.mapIdx_cons, List.flatten_cons, restrictCut_append]
+          have hfirst : restrictCut (xs.map (fun a => k :: a)) k = xs := by
+            exact restrictCut_map_cons_same xs k
+          have hrest :
+              restrictCut
+                  ((xss.mapIdx
+                    (fun j xs => xs.map (fun a => (k + (j + 1)) :: a))).flatten)
+                  k = [] := by
+            have h := restrictCut_flatten_mapIdx_succ_zero xss k
+            simpa [Nat.add_assoc, Nat.add_left_comm, Nat.add_comm] using h
+          simp [hfirst, hrest]
+      | succ i =>
+          simp only [List.mapIdx_cons, List.flatten_cons, restrictCut_append]
+          have hfirst :
+              restrictCut (xs.map (fun a => k :: a)) (k + (i + 1)) = [] := by
+            apply restrictCut_map_cons_ne
+            omega
+          have hi' : i < xss.length := by
+            exact Nat.succ_lt_succ_iff.mp (by simpa using hi)
+          have hrest :
+              restrictCut
+                  ((xss.mapIdx
+                    (fun j xs => xs.map (fun a => (k + (j + 1)) :: a))).flatten)
+                  (k + (i + 1)) =
+                xss[i]'hi' := by
+            have h := ih (k + 1) i hi'
+            simpa [Nat.add_assoc, Nat.add_left_comm, Nat.add_comm] using h
+          simp [hfirst, hrest]
+
+/--
+The list-level selector theorem: restricting the flattened list of indexed
+child blocks selects exactly the block at that index.
+-/
+theorem restrictCut_flatten_mapIdx_cons_lists
+    (xss : List (List Address)) (i : Nat) (hi : i < xss.length) :
+    restrictCut
+        ((xss.mapIdx (fun j xs => xs.map (fun a => j :: a))).flatten)
+        i =
+      xss[i] := by
+  simpa using restrictCut_flatten_mapIdx_cons_lists_from xss 0 i hi
+
+/--
+Above the last indexed block there are no addresses with that leading child
+index.  This is the complementary selector lemma to
+`restrictCut_flatten_mapIdx_cons_lists`.
+-/
+theorem restrictCut_flatten_mapIdx_cons_lists_ge_from
+    (xss : List (List Address)) (k i : Nat)
+    (hge : k + xss.length ≤ i) :
+    restrictCut
+        ((xss.mapIdx (fun j xs => xs.map (fun a => (k + j) :: a))).flatten)
+        i = [] := by
+  induction xss generalizing k i with
+  | nil =>
+      simp [restrictCut]
+  | cons xs xss ih =>
+      simp only [List.mapIdx_cons, List.flatten_cons, restrictCut_append]
+      have hfirst : restrictCut (xs.map (fun a => k :: a)) i = [] := by
+        have hki : k ≠ i := by
+          intro hki
+          subst i
+          have hlt : k < k + (xs :: xss).length := by
+            exact Nat.lt_add_of_pos_right (by simp)
+          exact (not_le_of_gt hlt) hge
+        exact restrictCut_map_cons_ne xs (i := i) (j := k) hki
+      have hrest :
+          restrictCut
+              ((xss.mapIdx
+                (fun j xs => xs.map (fun a => (k + (j + 1)) :: a))).flatten)
+              i = [] := by
+        have hgeCons : k + (xss.length + 1) ≤ i := by
+          simpa [Nat.add_assoc, Nat.add_left_comm, Nat.add_comm] using hge
+        have hge' : (k + 1) + xss.length ≤ i := by omega
+        have h := ih (k + 1) i hge'
+        simpa [Nat.add_assoc, Nat.add_left_comm, Nat.add_comm] using h
+      simp [hfirst, hrest]
+
+/-- Out-of-range indexed-block selector. -/
+theorem restrictCut_flatten_mapIdx_cons_lists_ge
+    (xss : List (List Address)) (i : Nat) (hge : xss.length ≤ i) :
+    restrictCut
+        ((xss.mapIdx (fun j xs => xs.map (fun a => j :: a))).flatten)
+        i = [] := by
+  have hge' : 0 + xss.length ≤ i := by simpa using hge
+  simpa using restrictCut_flatten_mapIdx_cons_lists_ge_from xss 0 i hge'
+
+/--
+Full node-address decomposition at the enumerator level: restricting the
+address list of a rule node to child `i` gives exactly the address list of
+that child.
+-/
+theorem restrictCut_allAddresses_node
+    {r : RuleTag} {s : MultiSequent} {cs : List PTree}
+    (i : Nat) (hi : i < cs.length) :
+    restrictCut (allAddresses (PTree.node r s cs)) i =
+      allAddresses cs[i] := by
+  rw [allAddresses_node]
+  have hlists :
+      restrictCut
+          (((cs.map allAddresses).mapIdx
+              (fun j xs => xs.map (fun a => j :: a))).flatten)
+          i =
+        (cs.map allAddresses)[i]'(by simpa using hi) :=
+    restrictCut_flatten_mapIdx_cons_lists
+      (cs.map allAddresses) i (by simpa using hi)
+  simpa [mapIdx_map] using hlists
+
+/--
+If `i` is not a child index of a node, then no node address begins with `i`.
+-/
+theorem restrictCut_allAddresses_node_not_lt
+    {r : RuleTag} {s : MultiSequent} {cs : List PTree}
+    (i : Nat) (hi : ¬ i < cs.length) :
+    restrictCut (allAddresses (PTree.node r s cs)) i = [] := by
+  rw [allAddresses_node]
+  have hge : (cs.map allAddresses).length ≤ i := by
+    simpa using Nat.le_of_not_gt hi
+  have h :=
+    restrictCut_flatten_mapIdx_cons_lists_ge
+      (cs.map allAddresses) i hge
+  simpa [mapIdx_map] using h
+
+/-- Restricting a sublist of a node's address list gives a sublist of the child address list. -/
+theorem restrictCut_sublist_allAddresses_node
+    {r : RuleTag} {s : MultiSequent} {cs : List PTree}
+    {cut : List Address}
+    (hsub : List.Sublist cut (allAddresses (PTree.node r s cs)))
+    (i : Nat) (hi : i < cs.length) :
+    List.Sublist (restrictCut cut i) (allAddresses cs[i]) := by
+  have h := restrictCut_sublist_restrictCut (i := i) hsub
+  rw [restrictCut_allAddresses_node (r := r) (s := s) (cs := cs) i hi] at h
+  exact h
+
+/-- Restricting a duplicate-free cut remains duplicate-free. -/
+theorem restrictCut_nodup_of_nodup
+    {cut : List Address} {i : Nat}
+    (hnodup : cut.Nodup) :
+    (restrictCut cut i).Nodup := by
+  unfold restrictCut
+  apply hnodup.filterMap
+  intro a a' b hb hb'
+  cases a with
+  | nil =>
+      have hfalse : False := by
+        simpa [Option.mem_def] using hb
+      exact False.elim hfalse
+  | cons j rest =>
+      cases a' with
+      | nil =>
+          have hfalse : False := by
+            simpa [Option.mem_def] using hb'
+          exact False.elim hfalse
+      | cons j' rest' =>
+          by_cases hj : j = i
+          · by_cases hj' : j' = i
+            · subst j
+              subst j'
+              have hbEq : rest = b := by
+                simpa [Option.mem_def] using hb
+              have hbEq' : rest' = b := by
+                simpa [Option.mem_def] using hb'
+              exact congrArg (fun x => i :: x) (hbEq.trans hbEq'.symm)
+            · have hfalse : False := by
+                simpa [hj, hj', Option.mem_def] using hb'
+              exact False.elim hfalse
+          · have hfalse : False := by
+              simpa [hj, Option.mem_def] using hb
+            exact False.elim hfalse
+
+/-- Every boolean-enumerated cut is duplicate-free. -/
+theorem nodup_of_mem_allAdmissibleCuts
+    {t : PTree} {cut : List Address}
+    (hcut : cut ∈ allAdmissibleCuts t) :
+    cut.Nodup := by
+  unfold allAdmissibleCuts at hcut
+  rcases List.mem_filter.mp hcut with ⟨_hsub, hbool⟩
+  have hanti : isAntichainBool cut = true := by
+    cases hvalid : cut.all (fun a => validAddress t a) <;>
+      cases hanti : isAntichainBool cut <;>
+        simp [hvalid, hanti] at hbool
+    rfl
+  exact isAntichainBool_eq_true_implies_nodup hanti
+
+/-- The root address is comparable with every address. -/
+theorem comparable_root_left (a : Address) : comparable [] a := by
+  left
+  exact ⟨a, by simp [isAncestorOf]⟩
+
+/--
+An admissible cut containing the root is exactly the singleton root cut.
+This is the usual rooted-tree cut fact: once the root is cut, no address below
+it can also occur in the same admissible cut.
+-/
+theorem eq_singleton_root_of_mem_allAdmissibleCuts_of_root_mem
+    {t : PTree} {cut : List Address}
+    (hcut : cut ∈ allAdmissibleCuts t)
+    (hroot : [] ∈ cut) :
+    cut = [[]] := by
+  have hnodup : cut.Nodup := nodup_of_mem_allAdmissibleCuts hcut
+  let cutProp : IsAdmissibleCut t := isAdmissibleCut_of_mem_allAdmissibleCuts hcut
+  have hallRoot : ∀ a, a ∈ cut → a = [] := by
+    intro a ha
+    by_contra hne
+    have hne' : [] ≠ a := by
+      intro h
+      exact hne h.symm
+    exact cutProp.antichain [] hroot a ha hne' (comparable_root_left a)
+  cases cut with
+  | nil =>
+      cases hroot
+  | cons a rest =>
+      have ha : a = [] := hallRoot a (by simp)
+      subst a
+      have hnotRootRest : [] ∉ rest := by
+        exact (List.nodup_cons.mp hnodup).1
+      cases rest with
+      | nil =>
+          rfl
+      | cons b rest' =>
+          have hb : b = [] := hallRoot b (by simp)
+          subst b
+          exact False.elim (hnotRootRest (by simp))
+
+/--
+The full node-cut decomposition for the finite admissible-cut enumerator:
+if `cut` is enumerated as an admissible cut of a rule node, then its
+restriction to each premise subtree is enumerated as an admissible cut there.
+-/
+theorem restrictCut_mem_allAdmissibleCuts_of_mem_node
+    {r : RuleTag} {s : MultiSequent} {cs : List PTree}
+    {cut : List Address}
+    (hcut : cut ∈ allAdmissibleCuts (PTree.node r s cs))
+    (i : Nat) (hi : i < cs.length) :
+    restrictCut cut i ∈ allAdmissibleCuts cs[i] := by
+  have hsubParent :
+      List.Sublist cut (allAddresses (PTree.node r s cs)) :=
+    cut_sublist_allAddresses_of_mem_allAdmissibleCuts hcut
+  have hsubChild :
+      List.Sublist (restrictCut cut i) (allAddresses cs[i]) :=
+    restrictCut_sublist_allAddresses_node hsubParent i hi
+  have hnodupChild : (restrictCut cut i).Nodup :=
+    restrictCut_nodup_of_nodup (nodup_of_mem_allAdmissibleCuts hcut)
+  let cutProp :
+      IsAdmissibleCut cs[i] :=
+    isAdmissibleCut_restrictCut
+      (isAdmissibleCut_of_mem_allAdmissibleCuts hcut) i hi
+  exact
+    mem_allAdmissibleCuts_of_sublist_valid_antichain
+      hsubChild hnodupChild cutProp.valid cutProp.antichain
+
+/--
+The root cut of a rule node has the expected Grossman-Larson coproduct term:
+the whole node is pruned off, and the remainder is the conclusion leaf.
+-/
+@[simp] theorem coproductTerm_singleton_root_node
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree) :
+    coproductTerm (PTree.node r s cs) [[]] =
+      ([PTree.node r s cs], PTree.leaf s) := by
+  simp [coproductTerm, remainderGo, subtreeAt]
+
+/--
+If the root is not cut, the remainder of a rule node is obtained by taking the
+remainders of its immediate premise subtrees under the restricted cuts.
+-/
+theorem remainderGo_node_root_not_mem
+    {r : RuleTag} {s : MultiSequent} {cs : List PTree}
+    {cut : List Address}
+    (hroot : [] ∉ cut) :
+    remainderGo cut [] (PTree.node r s cs) =
+      PTree.node r s
+        (cs.attach.mapIdx (fun i child =>
+          remainderGo (restrictCut cut i) [] child.1)) := by
+  simp [remainderGo, hroot, remainderGo_restrictCut_eq]
+
+/--
+Membership form of the root-free node pruning decomposition: every pruned
+subtree of a root-free cut of a rule node comes from exactly one of the child
+restrictions, and conversely every child-restricted pruned subtree is pruned by
+the parent cut.  This is the address-level bridge needed before upgrading to
+permutation/counting statements about the whole forest enumerator.
+-/
+theorem mem_filterMap_subtreeAt_node_iff_exists_restrictCut
+    {r : RuleTag} {s : MultiSequent} {cs : List PTree}
+    {cut : List Address} {u : PTree}
+    (hroot : [] ∉ cut) :
+    u ∈ cut.filterMap (subtreeAt (PTree.node r s cs)) ↔
+      ∃ i, ∃ hi : i < cs.length,
+        u ∈ (restrictCut cut i).filterMap (subtreeAt cs[i]) := by
+  constructor
+  · intro hu
+    rcases List.mem_filterMap.mp hu with ⟨addr, haddr, hsub⟩
+    cases addr with
+    | nil =>
+        exact False.elim (hroot haddr)
+    | cons i rest =>
+        by_cases hi : i < cs.length
+        · refine ⟨i, hi, ?_⟩
+          apply List.mem_filterMap.mpr
+          refine ⟨rest, ?_, ?_⟩
+          · exact (mem_restrictCut_iff (cut := cut) (i := i) (addr := rest)).mpr haddr
+          · simpa [subtreeAt, hi] using hsub
+        · simp [subtreeAt, hi] at hsub
+  · intro hu
+    rcases hu with ⟨i, hi, hmem⟩
+    rcases List.mem_filterMap.mp hmem with ⟨rest, hrest, hsub⟩
+    apply List.mem_filterMap.mpr
+    refine ⟨i :: rest, ?_, ?_⟩
+    · exact (mem_restrictCut_iff (cut := cut) (i := i) (addr := rest)).mp hrest
+    · simpa [subtreeAt, hi] using hsub
+
+/-- Navigating below the `i`-th child of a node is the same as navigating in that child. -/
+theorem subtreeAt_node_cons_eq
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree)
+    (i : Nat) (addr : Address) (hi : i < cs.length) :
+    subtreeAt (PTree.node r s cs) (i :: addr) = subtreeAt cs[i] addr := by
+  simp only [subtreeAt]
+  exact dif_pos hi
+
+/--
+The forest part of a node cut, after regrouping addresses by child, is exactly
+the flattened list of the forest parts of the restricted child cuts.
+
+This upgrades the address-level decomposition to the coproduct-facing
+decomposition: the pruned subtree forest of a root-free node cut is obtained by
+taking the pruned subtree forests of its premise subtrees and concatenating
+them in child order.
+-/
+theorem filterMap_subtreeAt_node_flatten_restrictCut_map_cons
+    (r : RuleTag) (s : MultiSequent) (cs : List PTree) (cut : List Address) :
+    List.filterMap (subtreeAt (PTree.node r s cs))
+        ((cs.attach.mapIdx (fun i _child =>
+          (restrictCut cut i).map (fun a => i :: a))).flatten) =
+      (cs.attach.mapIdx (fun i child =>
+        (restrictCut cut i).filterMap (subtreeAt child.1))).flatten := by
+  rw [List.filterMap_flatten]
+  apply congrArg List.flatten
+  exact List.ext_getElem
+    (by simp [List.length_mapIdx])
+    (by
+      intro i _hiLeft hiRight
+      have hi : i < cs.length := by
+        simpa [List.length_mapIdx] using hiRight
+      rw [List.getElem_map, List.getElem_mapIdx, List.getElem_mapIdx]
+      simp only [List.getElem_attach]
+      rw [List.filterMap_map]
+      exact List.filterMap_congr (by
+        intro addr _haddr
+        exact subtreeAt_node_cons_eq r s cs i addr hi))
+
+/--
+Counting form of `restrictCut`: occurrences of a child-local address in the
+restricted cut are exactly occurrences of the prefixed address in the parent
+cut.
+-/
+theorem count_restrictCut
+    (cut : List Address) (i : Nat) (addr : Address) :
+    (restrictCut cut i).count addr = cut.count (i :: addr) := by
+  induction cut with
+  | nil =>
+      simp [restrictCut]
+  | cons a cut ih =>
+      cases a with
+      | nil =>
+          simpa [restrictCut] using ih
+      | cons j rest =>
+          by_cases hji : j = i
+          · subst j
+            by_cases hrest : rest = addr
+            · subst rest
+              simpa [restrictCut] using congrArg Nat.succ ih
+            · have hneq : i :: rest ≠ i :: addr := by
+                intro h
+                exact hrest (List.cons.inj h).2
+              simpa [restrictCut, hrest, hneq] using ih
+          · have hneq : j :: rest ≠ i :: addr := by
+              intro h
+              exact hji (List.cons.inj h).1
+            simpa [restrictCut, hji, hneq] using ih
+
+/--
+For a root-free subcut of a node, regrouping its addresses by child index and
+then forgetting the grouping gives a permutation of the original address list.
+
+The statement is intentionally a permutation, not a definitional equality:
+the grouped form is the canonical forest/coproduct order, while `cut` is the
+sublist order inherited from the node-address enumerator.
+-/
+theorem rootFree_sublist_node_cut_perm_flatten_restrictCut_map_cons
+    {r : RuleTag} {s : MultiSequent} {cs : List PTree}
+    {cut : List Address}
+    (hsub : List.Sublist cut (allAddresses (PTree.node r s cs)))
+    (hroot : [] ∉ cut) :
+    List.Perm cut
+      ((cs.attach.mapIdx (fun i _child =>
+        (restrictCut cut i).map (fun a => i :: a))).flatten) := by
+  classical
+  let grouped : List Address :=
+    ((cs.attach.mapIdx (fun i _child =>
+      (restrictCut cut i).map (fun a => i :: a))).flatten)
+  have hrestrict_grouped :
+      ∀ i, restrictCut grouped i = restrictCut cut i := by
+    intro i
+    by_cases hi : i < cs.length
+    · have hsel :
+          restrictCut
+              (((cs.mapIdx (fun j _child => restrictCut cut j)).mapIdx
+                (fun j xs => xs.map (fun a => j :: a))).flatten)
+              i =
+            (cs.mapIdx (fun j _child => restrictCut cut j))[i]'(by simpa using hi) :=
+        restrictCut_flatten_mapIdx_cons_lists
+          (cs.mapIdx (fun j _child => restrictCut cut j))
+          i (by simpa using hi)
+      have hget :
+          (cs.mapIdx (fun j _child => restrictCut cut j))[i]'(by simpa using hi) =
+            restrictCut cut i := by
+        simpa using
+          getElem_mapIdx_self cs (fun j _child => restrictCut cut j) i hi
+      have hgrouped_eq :
+          grouped =
+            ((cs.mapIdx (fun j _child => restrictCut cut j)).mapIdx
+                (fun j xs => xs.map (fun a => j :: a))).flatten := by
+        have hattach :
+            grouped =
+              (cs.mapIdx
+                (fun i _child => (restrictCut cut i).map (fun a => i :: a))).flatten := by
+          exact
+            congrArg List.flatten
+              (mapIdx_attach_eq_mapIdx cs
+                (fun i (_child : PTree) =>
+                  (restrictCut cut i).map (fun a => i :: a)))
+        have hidx :
+            ((cs.mapIdx (fun j _child => restrictCut cut j)).mapIdx
+                (fun j xs => xs.map (fun a => j :: a))).flatten =
+              (cs.mapIdx
+                (fun i _child => (restrictCut cut i).map (fun a => i :: a))).flatten := by
+          rw [mapIdx_mapIdx]
+        exact hattach.trans hidx.symm
+      rw [hgrouped_eq]
+      exact hsel.trans hget
+    · have hcut_nil : restrictCut cut i = [] := by
+        have hsub' := restrictCut_sublist_restrictCut (i := i) hsub
+        have hall :
+            restrictCut (allAddresses (PTree.node r s cs)) i = [] :=
+          restrictCut_allAddresses_node_not_lt (r := r) (s := s) (cs := cs) i hi
+        rw [hall] at hsub'
+        exact List.eq_nil_of_sublist_nil hsub'
+      have hgrouped_nil : restrictCut grouped i = [] := by
+        have hge : (cs.mapIdx (fun j _child => restrictCut cut j)).length ≤ i := by
+          simpa [List.length_mapIdx] using Nat.le_of_not_gt hi
+        have h :=
+          restrictCut_flatten_mapIdx_cons_lists_ge
+            (cs.mapIdx (fun j _child => restrictCut cut j)) i hge
+        have hgrouped_eq :
+            grouped =
+              ((cs.mapIdx (fun j _child => restrictCut cut j)).mapIdx
+                  (fun j xs => xs.map (fun a => j :: a))).flatten := by
+          have hattach :
+              grouped =
+                (cs.mapIdx
+                  (fun i _child => (restrictCut cut i).map (fun a => i :: a))).flatten := by
+            exact
+              congrArg List.flatten
+                (mapIdx_attach_eq_mapIdx cs
+                  (fun i (_child : PTree) =>
+                    (restrictCut cut i).map (fun a => i :: a)))
+          have hidx :
+              ((cs.mapIdx (fun j _child => restrictCut cut j)).mapIdx
+                  (fun j xs => xs.map (fun a => j :: a))).flatten =
+                (cs.mapIdx
+                  (fun i _child => (restrictCut cut i).map (fun a => i :: a))).flatten := by
+            rw [mapIdx_mapIdx]
+          exact hattach.trans hidx.symm
+        rw [hgrouped_eq]
+        exact h
+      simp [hgrouped_nil, hcut_nil]
+  rw [List.perm_iff_count]
+  intro addr
+  cases addr with
+  | nil =>
+      have hroot_grouped : [] ∉ grouped := by
+        intro hmem
+        rcases List.mem_flatten.mp hmem with ⟨block, hblock, hnil⟩
+        rw [List.mem_mapIdx] at hblock
+        rcases hblock with ⟨i, hi, hblock⟩
+        subst block
+        rcases List.mem_map.mp hnil with ⟨a, _ha, hcons⟩
+        cases hcons
+      simp [grouped, List.count_eq_zero_of_not_mem hroot,
+        List.count_eq_zero_of_not_mem hroot_grouped]
+  | cons i rest =>
+      calc
+        cut.count (i :: rest) =
+            (restrictCut cut i).count rest := by
+              rw [count_restrictCut]
+        _ = (restrictCut grouped i).count rest := by
+              rw [hrestrict_grouped]
+        _ = grouped.count (i :: rest) := by
+              rw [count_restrictCut]
+
+/--
+Forest-level version of the root-free node cut permutation theorem.
+
+The earlier address theorem says the cut addresses are a permutation of the
+child-indexed restricted addresses.  Applying `subtreeAt` to both sides gives
+the corresponding statement for the forest component of the coproduct term.
+-/
+theorem rootFree_sublist_node_cut_perm_filterMap_subtreeAt_flatten_restrictCut
+    {r : RuleTag} {s : MultiSequent} {cs : List PTree}
+    {cut : List Address}
+    (hsub : List.Sublist cut (allAddresses (PTree.node r s cs)))
+    (hroot : Not (List.Mem ([] : Address) cut)) :
+    List.Perm (cut.filterMap (subtreeAt (PTree.node r s cs)))
+      ((cs.attach.mapIdx (fun i child =>
+        (restrictCut cut i).filterMap (subtreeAt child.1))).flatten) := by
+  have haddr :=
+    rootFree_sublist_node_cut_perm_flatten_restrictCut_map_cons
+      (r := r) (s := s) (cs := cs) hsub hroot
+  have hfilter := haddr.filterMap (subtreeAt (PTree.node r s cs))
+  simpa [filterMap_subtreeAt_node_flatten_restrictCut_map_cons r s cs cut]
+    using hfilter
 
 theorem remainderGo_remainderGo_eq
     (cut₁ cut₂ : List Address) (addr : Address) (t : PTree) :

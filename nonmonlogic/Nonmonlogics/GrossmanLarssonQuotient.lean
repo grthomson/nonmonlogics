@@ -1161,6 +1161,189 @@ def SwappedRightFiber
   { h : TwoStepWitnessRight y x z w // classOfRightWitness h = q }
 
 /--
+All left witness fibers at fixed output `w`, with the quotient class carried
+explicitly.
+-/
+def AllLeftFibers
+    (x y z w : PTree) :=
+  Σ q : TwoStepQuotient x y z w, LeftFiber x y z w q
+
+/--
+All right witness fibers at fixed output `w`, with the quotient class carried
+explicitly.
+-/
+def AllRightFibers
+    (x y z w : PTree) :=
+  Σ q : TwoStepQuotient x y z w, RightFiber x y z w q
+
+/--
+All swapped-right witness fibers at fixed output `w`, with the swapped quotient
+class carried explicitly.
+-/
+def AllSwappedRightFibers
+    (x y z w : PTree) :=
+  Σ q : TwoStepQuotient y x z w, SwappedRightFiber x y z w q
+
+/--
+Package a raw left witness as a point of the sigma of all left fibers.
+-/
+def allLeftFibersOfWitness
+    (x y z w : PTree) :
+    TwoStepWitnessLeft x y z w → AllLeftFibers x y z w
+  | h => ⟨classOfLeftWitness h, ⟨h, rfl⟩⟩
+
+/--
+Forget the quotient bookkeeping from a point of the sigma of all left fibers.
+-/
+def witnessOfAllLeftFibers
+    (x y z w : PTree) :
+    AllLeftFibers x y z w → TwoStepWitnessLeft x y z w
+  | ⟨_, h⟩ => h.1
+
+/--
+Package a raw right witness as a point of the sigma of all right fibers.
+-/
+def allRightFibersOfWitness
+    (x y z w : PTree) :
+    TwoStepWitnessRight x y z w → AllRightFibers x y z w
+  | h => ⟨classOfRightWitness h, ⟨h, rfl⟩⟩
+
+/--
+Forget the quotient bookkeeping from a point of the sigma of all right fibers.
+-/
+def witnessOfAllRightFibers
+    (x y z w : PTree) :
+    AllRightFibers x y z w → TwoStepWitnessRight x y z w
+  | ⟨_, h⟩ => h.1
+
+/--
+Package a swapped-right raw witness as a point of the sigma of all
+swapped-right fibers.
+-/
+def allSwappedRightFibersOfWitness
+    (x y z w : PTree) :
+    TwoStepWitnessRight y x z w → AllSwappedRightFibers x y z w
+  | h => ⟨classOfRightWitness h, ⟨h, rfl⟩⟩
+
+/--
+Forget the swapped quotient bookkeeping from a point of the sigma of all
+swapped-right fibers.
+-/
+def witnessOfAllSwappedRightFibers
+    (x y z w : PTree) :
+    AllSwappedRightFibers x y z w → TwoStepWitnessRight y x z w
+  | ⟨_, h⟩ => h.1
+
+/-- Raw left witnesses are equivalent to the sigma of all left fibers. -/
+def allLeftFibersEquivWitness
+    (x y z w : PTree) :
+    TwoStepWitnessLeft x y z w ≃ AllLeftFibers x y z w where
+  toFun := allLeftFibersOfWitness x y z w
+  invFun := witnessOfAllLeftFibers x y z w
+  left_inv := by
+    intro h
+    rfl
+  right_inv := by
+    intro h
+    cases h with
+    | mk q hq =>
+        cases hq with
+        | mk h hh =>
+            cases hh
+            rfl
+
+/-- Raw right witnesses are equivalent to the sigma of all right fibers. -/
+def allRightFibersEquivWitness
+    (x y z w : PTree) :
+    TwoStepWitnessRight x y z w ≃ AllRightFibers x y z w where
+  toFun := allRightFibersOfWitness x y z w
+  invFun := witnessOfAllRightFibers x y z w
+  left_inv := by
+    intro h
+    rfl
+  right_inv := by
+    intro h
+    cases h with
+    | mk q hq =>
+        cases hq with
+        | mk h hh =>
+            cases hh
+            rfl
+
+/--
+Raw swapped-right witnesses are equivalent to the sigma of all swapped-right
+fibers.
+-/
+def allSwappedRightFibersEquivWitness
+    (x y z w : PTree) :
+    TwoStepWitnessRight y x z w ≃ AllSwappedRightFibers x y z w where
+  toFun := allSwappedRightFibersOfWitness x y z w
+  invFun := witnessOfAllSwappedRightFibers x y z w
+  left_inv := by
+    intro h
+    rfl
+  right_inv := by
+    intro h
+    cases h with
+    | mk q hq =>
+        cases hq with
+        | mk h hh =>
+            cases hh
+            rfl
+
+/-- Cardinal form of the left witness/fiber-sigma equivalence. -/
+theorem Cardinal.mk_allLeftFibers_eq
+    (x y z w : PTree) :
+    Cardinal.mk (AllLeftFibers x y z w) =
+      Cardinal.mk (TwoStepWitnessLeft x y z w) := by
+  exact Cardinal.mk_congr (allLeftFibersEquivWitness x y z w).symm
+
+/-- Cardinal form of the right witness/fiber-sigma equivalence. -/
+theorem Cardinal.mk_allRightFibers_eq
+    (x y z w : PTree) :
+    Cardinal.mk (AllRightFibers x y z w) =
+      Cardinal.mk (TwoStepWitnessRight x y z w) := by
+  exact Cardinal.mk_congr (allRightFibersEquivWitness x y z w).symm
+
+/-- Cardinal form of the swapped-right witness/fiber-sigma equivalence. -/
+theorem Cardinal.mk_allSwappedRightFibers_eq
+    (x y z w : PTree) :
+    Cardinal.mk (AllSwappedRightFibers x y z w) =
+      Cardinal.mk (TwoStepWitnessRight y x z w) := by
+  exact Cardinal.mk_congr (allSwappedRightFibersEquivWitness x y z w).symm
+
+/--
+Fixed-output raw witness cardinal balance.
+
+This is the witness-level bridge target sitting between the quotient-class
+comparison and the coalgebra list-count statements: for each output `w`, the
+left and swapped-right raw two-step witness types have the same cardinality.
+-/
+def WitnessFiberCardinalityBalanced
+    (x y z w : PTree) : Prop :=
+  Cardinal.mk (TwoStepWitnessLeft x y z w) =
+    Cardinal.mk (TwoStepWitnessRight y x z w)
+
+/--
+Equivalent sigma-over-class form of fixed-output witness cardinal balance.
+
+This packages the same statement in the fibrewise language natural for the
+quotient development.
+-/
+theorem witnessFiberCardinalityBalanced_iff_sigmaFibers
+    (x y z w : PTree) :
+    WitnessFiberCardinalityBalanced x y z w ↔
+      Cardinal.mk (AllLeftFibers x y z w) =
+        Cardinal.mk (AllSwappedRightFibers x y z w) := by
+  constructor
+  · intro h
+    rw [Cardinal.mk_allLeftFibers_eq, Cardinal.mk_allSwappedRightFibers_eq]
+    exact h
+  · intro h
+    rw [Cardinal.mk_allLeftFibers_eq, Cardinal.mk_allSwappedRightFibers_eq] at h
+    exact h
+
+/--
 A quotient class is in left support iff its left fibre is inhabited.
 -/
 theorem inLeftSupport_iff_nonempty_LeftFiber
@@ -4127,6 +4310,16 @@ def HasSwappedRightOuterContributionClass
     (x y z w : PTree)
     (q' : TwoStepQuotient y x z w) : Prop :=
   ∃ h : OuterRightWitness y x z w, outerRightWitnessClass h = q'
+
+/--
+Swapped right-outer support is just ordinary right-outer support after swapping
+the first two primitive inputs.
+-/
+theorem hasSwappedRightOuterContributionClass_iff_hasRightOuterContributionClass
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w) :
+    HasSwappedRightOuterContributionClass x y z w q' ↔
+      HasRightOuterContributionClass y x z w q' := Iff.rfl
 
 
 /-- Every left outer-supporting class has a swapped right-outer partner. -/
@@ -8472,6 +8665,21 @@ theorem outer_supported_left_contribution_class_has_degree1_outer_partner
     outer_supported_left_class_has_unique_swapped_right_outer_partner
       x y z w ⟨s.1, hs⟩
 
+/--
+Repackaged in the original swapped-right-contribution-class language: a
+swapped right-outer-supported class has a canonical outer-supported left
+partner, unique among outer sources.
+-/
+theorem swapped_right_outer_contribution_class_has_degree1_outer_left_partner
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (ht : HasSwappedRightOuterContributionClass x y z w t.1) :
+    ∃! s : OuterLeftContributionClasses x y z w,
+      transportOuterLeftContributionClass x y z w s = ⟨t.1, ht⟩ := by
+  exact
+    swapped_right_outer_class_has_unique_outer_left_partner
+      x y z w ⟨t.1, ht⟩
+
 /-!
 ## Global outer/inner decomposition of contribution classes
 -/
@@ -8951,6 +9159,160 @@ noncomputable def innerContributionCommute
   left_inv := transportSwappedInnerContributionClassToLeft_left_inv x y z w
   right_inv := transportLeftInnerContributionClassToSwapped_right_inv x y z w
 
+/--
+Any swapped right-inner-supported class mapping back to `s` must be the
+canonical transported inner partner of `s`.
+-/
+theorem transportLeftInnerContributionClassToSwapped_unique
+    (x y z w : PTree)
+    (s : LeftInnerContributionClasses x y z w)
+    (t : SwappedRightInnerContributionClasses x y z w)
+    (ht : transportSwappedInnerContributionClassToLeft x y z w t = s) :
+    t = transportLeftInnerContributionClassToSwapped x y z w s := by
+  calc
+    t = transportLeftInnerContributionClassToSwapped x y z w
+          (transportSwappedInnerContributionClassToLeft x y z w t) := by
+            symm
+            exact (innerContributionCommute x y z w).right_inv t
+    _ = transportLeftInnerContributionClassToSwapped x y z w s := by
+          rw [ht]
+
+/--
+Any inner-supported left class mapping forward to `t` must be the canonical
+inverse-transported source of `t`.
+-/
+theorem transportSwappedInnerContributionClassToLeft_unique
+    (x y z w : PTree)
+    (s : LeftInnerContributionClasses x y z w)
+    (t : SwappedRightInnerContributionClasses x y z w)
+    (hs : transportLeftInnerContributionClassToSwapped x y z w s = t) :
+    s = transportSwappedInnerContributionClassToLeft x y z w t := by
+  calc
+    s = transportSwappedInnerContributionClassToLeft x y z w
+          (transportLeftInnerContributionClassToSwapped x y z w s) := by
+            symm
+            exact (innerContributionCommute x y z w).left_inv s
+    _ = transportSwappedInnerContributionClassToLeft x y z w t := by
+          rw [hs]
+
+/--
+Inner-supported left classes have a unique swapped right-inner partner at the
+class level.
+-/
+theorem inner_supported_left_class_has_unique_swapped_right_inner_partner
+    (x y z w : PTree)
+    (s : LeftInnerContributionClasses x y z w) :
+    ∃! t : SwappedRightInnerContributionClasses x y z w,
+      transportSwappedInnerContributionClassToLeft x y z w t = s := by
+  refine ⟨transportLeftInnerContributionClassToSwapped x y z w s, ?_, ?_⟩
+  · exact (innerContributionCommute x y z w).left_inv s
+  · intro t ht
+    exact transportLeftInnerContributionClassToSwapped_unique x y z w s t ht
+
+/--
+Swapped right-inner-supported classes have a unique inner-supported left
+partner at the class level.
+-/
+theorem swapped_right_inner_class_has_unique_left_inner_partner
+    (x y z w : PTree)
+    (t : SwappedRightInnerContributionClasses x y z w) :
+    ∃! s : LeftInnerContributionClasses x y z w,
+      transportLeftInnerContributionClassToSwapped x y z w s = t := by
+  refine ⟨transportSwappedInnerContributionClassToLeft x y z w t, ?_, ?_⟩
+  · exact (innerContributionCommute x y z w).right_inv t
+  · intro s hs
+    exact transportSwappedInnerContributionClassToLeft_unique x y z w s t hs
+
+/--
+Repackaged in the original left-contribution-class language: an inner-supported
+left class has a canonical swapped right-inner partner, unique among inner
+targets.
+-/
+theorem inner_supported_left_contribution_class_has_degree1_inner_partner
+    (x y z w : PTree)
+    (s : LeftContributionClasses x y z w)
+    (hs : HasLeftInnerContributionClass x y z w s.1) :
+    ∃! t : SwappedRightInnerContributionClasses x y z w,
+      transportSwappedInnerContributionClassToLeft x y z w t = ⟨s.1, hs⟩ := by
+  exact
+    inner_supported_left_class_has_unique_swapped_right_inner_partner
+      x y z w ⟨s.1, hs⟩
+
+/--
+Repackaged in the original swapped-right-contribution-class language: a
+swapped right-inner-supported class has a canonical left inner-supported
+partner, unique among inner sources.
+-/
+theorem swapped_right_inner_contribution_class_has_degree1_left_inner_partner
+    (x y z w : PTree)
+    (t : RightContributionClasses x y z w)
+    (ht : HasSwappedRightInnerContributionClass x y z w t.1) :
+    ∃! s : LeftInnerContributionClasses x y z w,
+      transportLeftInnerContributionClassToSwapped x y z w s = ⟨t.1, ht⟩ := by
+  exact
+    swapped_right_inner_class_has_unique_left_inner_partner
+      x y z w ⟨t.1, ht⟩
+
+/-- Inner right-partner fibre over a fixed left inner-supported class. -/
+def InnerRightContributionFiber
+    (x y z w : PTree)
+    (s : LeftInnerContributionClasses x y z w) :=
+  { t : SwappedRightInnerContributionClasses x y z w //
+      transportSwappedInnerContributionClassToLeft x y z w t = s }
+
+/-- Inner left-partner fibre over a fixed swapped right-inner-supported class. -/
+def InnerLeftContributionFiber
+    (x y z w : PTree)
+    (t : SwappedRightInnerContributionClasses x y z w) :=
+  { s : LeftInnerContributionClasses x y z w //
+      transportLeftInnerContributionClassToSwapped x y z w s = t }
+
+/-- The canonical inner right partner lies in the inner right fibre. -/
+noncomputable def canonicalInnerRightContributionFiberPoint
+    (x y z w : PTree)
+    (s : LeftInnerContributionClasses x y z w) :
+    InnerRightContributionFiber x y z w s :=
+  ⟨transportLeftInnerContributionClassToSwapped x y z w s,
+    (innerContributionCommute x y z w).left_inv s⟩
+
+/-- The canonical inner left partner lies in the inner left fibre. -/
+noncomputable def canonicalInnerLeftContributionFiberPoint
+    (x y z w : PTree)
+    (t : SwappedRightInnerContributionClasses x y z w) :
+    InnerLeftContributionFiber x y z w t :=
+  ⟨transportSwappedInnerContributionClassToLeft x y z w t,
+    (innerContributionCommute x y z w).right_inv t⟩
+
+/-- The inner right-partner fibre is degree 1. -/
+theorem InnerRightContributionFiber_subsingleton
+    (x y z w : PTree)
+    (s : LeftInnerContributionClasses x y z w) :
+    Subsingleton (InnerRightContributionFiber x y z w s) := by
+  refine ⟨?_⟩
+  intro u v
+  apply Subtype.ext
+  calc
+    u.1 = transportLeftInnerContributionClassToSwapped x y z w s := by
+      exact transportLeftInnerContributionClassToSwapped_unique x y z w s u.1 u.2
+    _ = v.1 := by
+      symm
+      exact transportLeftInnerContributionClassToSwapped_unique x y z w s v.1 v.2
+
+/-- The inner left-partner fibre is degree 1. -/
+theorem InnerLeftContributionFiber_subsingleton
+    (x y z w : PTree)
+    (t : SwappedRightInnerContributionClasses x y z w) :
+    Subsingleton (InnerLeftContributionFiber x y z w t) := by
+  refine ⟨?_⟩
+  intro s₁ s₂
+  apply Subtype.ext
+  calc
+    s₁.1 = transportSwappedInnerContributionClassToLeft x y z w t := by
+      exact transportSwappedInnerContributionClassToLeft_unique x y z w s₁.1 t s₁.2
+    _ = s₂.1 := by
+      symm
+      exact transportSwappedInnerContributionClassToLeft_unique x y z w s₂.1 t s₂.2
+
 /-- Cardinal of the left inner contribution sector. -/
 noncomputable def innerLeftContributionCard
     (x y z w : PTree) : Cardinal :=
@@ -9001,6 +9363,153 @@ noncomputable def totalLeftContributionCard
 noncomputable def totalRightContributionCard
     (x y z w : PTree) : Cardinal :=
   Cardinal.lift (Cardinal.mk (RightContributionClasses x y z w))
+
+/--
+Any left-support class is automatically a left contribution class: a raw left
+witness is either outer or inner by construction.
+-/
+theorem InLeftSupportClass.to_isLeftContributionClass
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : InLeftSupportClass x y z w q) :
+    IsLeftContributionClass x y z w q := by
+  rcases hq with ⟨h, rfl⟩
+  cases h with
+  | outer a b z' haz hbw =>
+      exact Or.inl ⟨OuterLeftWitness.mk a b z' haz hbw, rfl⟩
+  | inner a b y' hay hbw =>
+      exact Or.inr ⟨⟨⟨TwoStepWitnessLeft.inner a b y' hay hbw, trivial⟩, rfl⟩⟩
+
+/--
+Any swapped-right support class is automatically a swapped-right contribution
+class: a raw swapped-right witness is either outer or inner by construction.
+-/
+theorem InRightSupportSwapped.to_isRightContributionClass
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : InRightSupportClass y x z w q') :
+    IsRightContributionClass x y z w q' := by
+  rcases hq' with ⟨h, rfl⟩
+  cases h with
+  | outer a b z' haz hbw =>
+      exact Or.inl ⟨OuterRightWitness.mk a b z' haz hbw, rfl⟩
+  | inner a b y' hay hbw =>
+      exact Or.inr ⟨⟨⟨TwoStepWitnessRight.inner a b y' hay hbw, trivial⟩, rfl⟩⟩
+
+/--
+If every left fibre is degree `≤ 1`, then the sigma of all left fibres is
+equivalent to the carrier of left contribution classes.
+-/
+noncomputable def allLeftFibersEquivLeftContributionClasses_of_subsingleton
+    (x y z w : PTree)
+    (hsub : ∀ q : TwoStepQuotient x y z w, Subsingleton (LeftFiber x y z w q)) :
+    AllLeftFibers x y z w ≃ LeftContributionClasses x y z w where
+  toFun
+    | ⟨q, hf⟩ =>
+        ⟨q,
+          InLeftSupportClass.to_isLeftContributionClass x y z w q
+            ((inLeftSupport_iff_nonempty_LeftFiber x y z w q).2 ⟨hf⟩)⟩
+  invFun := fun s =>
+    ⟨s.1,
+      Classical.choice
+        ((inLeftSupport_iff_nonempty_LeftFiber x y z w s.1).1
+          (IsLeftContributionClass.to_inLeftSupport x y z w s.1 s.2))⟩
+  left_inv := by
+    intro t
+    rcases t with ⟨q, hf⟩
+    apply Sigma.ext
+    · rfl
+    · exact
+        heq_of_eq
+          ((hsub q).elim _ _)
+  right_inv := by
+    intro s
+    apply Subtype.ext
+    rfl
+
+/--
+If every swapped-right fibre is degree `≤ 1`, then the sigma of all
+swapped-right fibres is equivalent to the carrier of swapped-right contribution
+classes.
+-/
+noncomputable def allSwappedRightFibersEquivRightContributionClasses_of_subsingleton
+    (x y z w : PTree)
+    (hsub : ∀ q' : TwoStepQuotient y x z w, Subsingleton (SwappedRightFiber x y z w q')) :
+    AllSwappedRightFibers x y z w ≃ RightContributionClasses x y z w where
+  toFun
+    | ⟨q', hf⟩ =>
+        ⟨q',
+          InRightSupportSwapped.to_isRightContributionClass x y z w q'
+            ((inRightSupportSwapped_iff_nonempty_SwappedRightFiber x y z w q').2 ⟨hf⟩)⟩
+  invFun := fun t =>
+    ⟨t.1,
+      Classical.choice
+        ((inRightSupportSwapped_iff_nonempty_SwappedRightFiber x y z w t.1).1
+          (IsRightContributionClass.to_inRightSupport x y z w t.1 t.2))⟩
+  left_inv := by
+    intro t
+    rcases t with ⟨q', hf⟩
+    apply Sigma.ext
+    · rfl
+    · exact
+        heq_of_eq
+          ((hsub q').elim _ _)
+  right_inv := by
+    intro t
+    apply Subtype.ext
+    rfl
+
+/--
+Under degree-1 control on all left fibres, total left contribution-cardinality
+is exactly the cardinality of the sigma of all left fibres.
+-/
+theorem totalLeftContributionCard_eq_allLeftFibers_of_subsingleton
+    (x y z w : PTree)
+    (hsub : ∀ q : TwoStepQuotient x y z w, Subsingleton (LeftFiber x y z w q)) :
+    totalLeftContributionCard x y z w =
+      Cardinal.lift (Cardinal.mk (AllLeftFibers x y z w)) := by
+  unfold totalLeftContributionCard
+  exact congrArg Cardinal.lift
+    (Cardinal.mk_congr
+      (allLeftFibersEquivLeftContributionClasses_of_subsingleton x y z w hsub).symm)
+
+/--
+Under degree-1 control on all swapped-right fibres, total swapped-right
+contribution-cardinality is exactly the cardinality of the sigma of all
+swapped-right fibres.
+-/
+theorem totalRightContributionCard_eq_allSwappedRightFibers_of_subsingleton
+    (x y z w : PTree)
+    (hsub : ∀ q' : TwoStepQuotient y x z w, Subsingleton (SwappedRightFiber x y z w q')) :
+    totalRightContributionCard x y z w =
+      Cardinal.lift (Cardinal.mk (AllSwappedRightFibers x y z w)) := by
+  unfold totalRightContributionCard
+  exact congrArg Cardinal.lift
+    (Cardinal.mk_congr
+      (allSwappedRightFibersEquivRightContributionClasses_of_subsingleton x y z w hsub).symm)
+
+/--
+This is the exact witness-level bridge promised by the quotient development:
+if class-level total cardinalities match, and each quotient fibre contains at
+most one raw witness, then the raw witness fibres also match in cardinality.
+-/
+theorem witnessFiberCardinalityBalanced_of_totalContributionCard_eq_and_subsingletonFibers
+    (x y z w : PTree)
+    (hLeftSub :
+      ∀ q : TwoStepQuotient x y z w, Subsingleton (LeftFiber x y z w q))
+    (hRightSub :
+      ∀ q' : TwoStepQuotient y x z w, Subsingleton (SwappedRightFiber x y z w q'))
+    (hcard : totalLeftContributionCard x y z w = totalRightContributionCard x y z w) :
+    WitnessFiberCardinalityBalanced x y z w := by
+  apply (witnessFiberCardinalityBalanced_iff_sigmaFibers x y z w).2
+  apply Cardinal.lift_inj.mp
+  calc
+    Cardinal.lift (Cardinal.mk (AllLeftFibers x y z w))
+      = totalLeftContributionCard x y z w := by
+          exact (totalLeftContributionCard_eq_allLeftFibers_of_subsingleton x y z w hLeftSub).symm
+    _ = totalRightContributionCard x y z w := hcard
+    _ = Cardinal.lift (Cardinal.mk (AllSwappedRightFibers x y z w)) := by
+          exact totalRightContributionCard_eq_allSwappedRightFibers_of_subsingleton x y z w hRightSub
 
 /-- Left total classes which are not outer-supported. -/
 def LeftResidualContributionClasses
@@ -11572,6 +12081,113 @@ def HasRightInnerContributionClass
   Nonempty (RightInnerFiberData x y z w q)
 
 /--
+Swapped right-inner support is just ordinary right-inner support after swapping
+the first two primitive inputs.
+-/
+theorem hasSwappedRightInnerContributionClass_iff_hasRightInnerContributionClass
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w) :
+    HasSwappedRightInnerContributionClass x y z w q' ↔
+      HasRightInnerContributionClass y x z w q' := by
+  constructor
+  · rintro ⟨h⟩
+    rcases h with ⟨h, hh⟩
+    rcases h with ⟨hw, hinner⟩
+    refine ⟨⟨⟨hw, ?_⟩, ?_⟩⟩
+    · cases hw <;> try cases hinner <;> trivial
+    · simpa [SwappedRightInnerFiberData, RightInnerFiberData,
+        swappedRightInnerWitnessClass, rightInnerWitnessClass,
+        SwappedRightInnerWitnessData, RightInnerWitnessData] using hh
+  · rintro ⟨h⟩
+    rcases h with ⟨h, hh⟩
+    rcases h with ⟨hw, hinner⟩
+    refine ⟨⟨⟨hw, ?_⟩, ?_⟩⟩
+    · cases hw <;> try cases hinner <;> trivial
+    · simpa [SwappedRightInnerFiberData, RightInnerFiberData,
+        swappedRightInnerWitnessClass, rightInnerWitnessClass,
+        SwappedRightInnerWitnessData, RightInnerWitnessData] using hh
+
+/--
+The same `properOverlap` class also carries right-inner support on the
+original carrier.
+-/
+theorem properOverlap_class_has_rightInner_support :
+    let q :=
+      codeClass
+        (TwoStepCode.leftOuter
+          [0] [0, 0] properOverlapTree1
+          properOverlap_self_matchingWitness
+          properOverlap_outer_matchingWitness)
+    HasRightInnerContributionClass
+      properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 q := by
+  dsimp
+  refine ⟨⟨TwoStepWitnessRight.inner
+      [0] [0] properOverlapTree1
+      properOverlap_self_matchingWitness
+      properOverlap_inner_matchingWitness, trivial⟩, ?_⟩
+  simpa [rightInnerWitnessClass, classOfRightWitness, codeOfRightWitness]
+    using properOverlap_leftOuter_rightInner_sameClass.symm
+
+/--
+So the global swapped-right no-overlap hypothesis is false in general: the
+explicit `properOverlap` class carries both swapped-right outer and swapped-right
+inner support.
+-/
+theorem properOverlap_not_noRightOuterInnerOverlap :
+    ¬ NoRightOuterInnerOverlap
+      properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 := by
+  intro hNo
+  let q :=
+    codeClass
+      (TwoStepCode.leftOuter
+        [0] [0, 0] properOverlapTree1
+        properOverlap_self_matchingWitness
+        properOverlap_outer_matchingWitness)
+  have hOut : HasSwappedRightOuterContributionClass
+      properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 q := by
+    simpa using
+      (hasSwappedRightOuterContributionClass_iff_hasRightOuterContributionClass
+        properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 q).2
+        properOverlap_class_has_rightOuter_support
+  have hIn : HasSwappedRightInnerContributionClass
+      properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 q := by
+    simpa using
+      (hasSwappedRightInnerContributionClass_iff_hasRightInnerContributionClass
+        properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 q).2
+        properOverlap_class_has_rightInner_support
+  exact hNo q ⟨hOut, hIn⟩
+
+/--
+Consequently, the stronger swapped-right outer/inner class-disjointness
+hypothesis also fails on the `properOverlap` example.
+-/
+theorem properOverlap_not_swappedRightOuterInnerClassDisjoint :
+    ¬ SwappedRightOuterInnerClassDisjoint
+      properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 := by
+  intro hDisj
+  let hOut : OuterRightWitness
+      properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 :=
+    OuterRightWitness.mk
+      [0] [0, 0] properOverlapTree1
+      properOverlap_self_matchingWitness
+      properOverlap_outer_matchingWitness
+  let hIn : SwappedRightInnerWitnessData
+      properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 :=
+    ⟨TwoStepWitnessRight.inner
+      [0] [0] properOverlapTree1
+      properOverlap_self_matchingWitness
+      properOverlap_inner_matchingWitness, trivial⟩
+  have hEq :
+      outerRightWitnessClass hOut =
+        swappedRightInnerWitnessClass
+          properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 hIn := by
+    simpa [hOut, hIn, outerRightWitnessClass, swappedRightInnerWitnessClass,
+      classOfRightWitness, codeOfRightWitness] using
+      (properOverlap_leftOuter_rightOuter_sameClass.symm.trans
+        properOverlap_leftOuter_rightInner_sameClass)
+  exact hDisj hOut hIn hEq
+
+/--
 Raw overlap is controlled by the quotient on the left-to-right comparison:
 every left-outer witness and every right-inner witness determine the same class.
 -/
@@ -11953,6 +12569,164 @@ theorem properOverlap_class_not_residualLeft :
   exact hres.2.1 properOverlap_class_is_leftToRightOverlapNoise
 
 /--
+The concrete left contribution class carried by the `properOverlap` example.
+-/
+def properOverlap_leftContributionClass :
+    LeftContributionClasses
+      properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 :=
+  let q :=
+    codeClass
+      (TwoStepCode.leftOuter
+        [0] [0, 0] properOverlapTree1
+        properOverlap_self_matchingWitness
+        properOverlap_outer_matchingWitness)
+  ⟨q, Or.inl properOverlap_class_has_mixed_left_support.1⟩
+
+/--
+The concrete right contribution class carried by the `properOverlap` example.
+-/
+def properOverlap_rightContributionClass :
+    RightContributionClasses
+      properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 :=
+  let q :=
+    codeClass
+      (TwoStepCode.leftOuter
+        [0] [0, 0] properOverlapTree1
+        properOverlap_self_matchingWitness
+        properOverlap_outer_matchingWitness)
+  ⟨q, Or.inl
+    ((hasSwappedRightOuterContributionClass_iff_hasRightOuterContributionClass
+      properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 q).2
+      properOverlap_class_has_rightOuter_support)⟩
+
+/--
+In the `properOverlap` example, all left contribution classes collapse to the
+same quotient class.
+-/
+theorem properOverlap_leftContributionClasses_subsingleton :
+    Subsingleton
+      (LeftContributionClasses
+        properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2) := by
+  refine ⟨?_⟩
+  intro s t
+  apply Subtype.ext
+  let q :=
+    codeClass
+      (TwoStepCode.leftOuter
+        [0] [0, 0] properOverlapTree1
+        properOverlap_self_matchingWitness
+        properOverlap_outer_matchingWitness)
+  have hqRout : HasRightOuterContributionClass
+      properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 q := by
+    exact properOverlap_class_has_rightOuter_support
+  have hqRin : HasRightInnerContributionClass
+      properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 q := by
+    exact properOverlap_class_has_rightInner_support
+  have hsq : s.1 = q := by
+    rcases leftContributionClass_outer_or_inner
+        properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 s with
+      hsOut | hsIn
+    · exact
+        HasLeftOuterContributionClass.eq_rightInnerContributionClass
+          properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2
+          s.1 q hsOut hqRin
+    · exact
+        (HasRightOuterContributionClass.eq_leftInnerContributionClass
+          properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2
+          q s.1 hqRout hsIn).symm
+  have htq : t.1 = q := by
+    rcases leftContributionClass_outer_or_inner
+        properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 t with
+      htOut | htIn
+    · exact
+        HasLeftOuterContributionClass.eq_rightInnerContributionClass
+          properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2
+          t.1 q htOut hqRin
+    · exact
+        (HasRightOuterContributionClass.eq_leftInnerContributionClass
+          properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2
+          q t.1 hqRout htIn).symm
+  exact hsq.trans htq.symm
+
+/--
+In the `properOverlap` example, all right contribution classes collapse to the
+same quotient class.
+
+This is the concrete overlap-count check: proper overlap does not create two
+distinct right contribution classes; it yields exactly one.
+-/
+theorem properOverlap_rightContributionClasses_subsingleton :
+    Subsingleton
+      (RightContributionClasses
+        properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2) := by
+  refine ⟨?_⟩
+  intro s t
+  apply Subtype.ext
+  let q :=
+    codeClass
+      (TwoStepCode.leftOuter
+        [0] [0, 0] properOverlapTree1
+        properOverlap_self_matchingWitness
+        properOverlap_outer_matchingWitness)
+  have hqLout : HasLeftOuterContributionClass
+      properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 q := by
+    exact properOverlap_class_has_mixed_left_support.1
+  have hqLin : HasLeftInnerContributionClass
+      properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 q := by
+    exact properOverlap_class_has_mixed_left_support.2
+  have hsq : s.1 = q := by
+    rcases rightContributionClass_outer_or_inner
+        properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 s with
+      hsOut | hsIn
+    · exact
+        HasRightOuterContributionClass.eq_leftInnerContributionClass
+          properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2
+          s.1 q
+          ((hasSwappedRightOuterContributionClass_iff_hasRightOuterContributionClass
+            properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 s.1).1 hsOut)
+          hqLin
+    · exact
+        (HasLeftOuterContributionClass.eq_rightInnerContributionClass
+          properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2
+          q s.1 hqLout
+          ((hasSwappedRightInnerContributionClass_iff_hasRightInnerContributionClass
+            properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 s.1).1 hsIn)).symm
+  have htq : t.1 = q := by
+    rcases rightContributionClass_outer_or_inner
+        properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 t with
+      htOut | htIn
+    · exact
+        HasRightOuterContributionClass.eq_leftInnerContributionClass
+          properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2
+          t.1 q
+          ((hasSwappedRightOuterContributionClass_iff_hasRightOuterContributionClass
+            properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 t.1).1 htOut)
+          hqLin
+    · exact
+        (HasLeftOuterContributionClass.eq_rightInnerContributionClass
+          properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2
+          q t.1 hqLout
+          ((hasSwappedRightInnerContributionClass_iff_hasRightInnerContributionClass
+            properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2 t.1).1 htIn)).symm
+  exact hsq.trans htq.symm
+
+/-- The `properOverlap` left contribution carrier has exactly one element. -/
+noncomputable def properOverlap_leftContributionClasses_unique :
+    Unique
+      (LeftContributionClasses
+        properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2) where
+  default := properOverlap_leftContributionClass
+  uniq s := (properOverlap_leftContributionClasses_subsingleton).elim s _
+
+/-- The `properOverlap` right contribution carrier has exactly one element. -/
+noncomputable def properOverlap_rightContributionClasses_unique :
+    Unique
+      (RightContributionClasses
+        properOverlapTree0 properOverlapTree0 properOverlapTree0 properOverlapTree2) where
+  default := properOverlap_rightContributionClass
+  uniq s := (properOverlap_rightContributionClasses_subsingleton).elim s _
+
+/--
 Swapped-right noise classes are those contribution classes on the swapped side
 that come from quotient-trivial overlap noise on the left.
 -/
@@ -11964,6 +12738,24 @@ def SwappedRightNoiseContributionClass
       SwappedTwoStepClass x y z w q q' ∧
       (LeftToRightOverlapNoiseClass x y z w q ∨
         RightToLeftOverlapNoiseClass x y z w q)
+
+/--
+Every swapped-right noise class remembers an explicit left noise partner.
+
+This is just the definitional payload of the swapped-right noise sector, but it
+is convenient to have it packaged as a named theorem for later transport and
+counting arguments.
+-/
+theorem SwappedRightNoiseContributionClass.exists_leftNoise
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : SwappedRightNoiseContributionClass x y z w q') :
+    ∃ q : TwoStepQuotient x y z w,
+      SwappedTwoStepClass x y z w q q' ∧
+      (LeftToRightOverlapNoiseClass x y z w q ∨
+        RightToLeftOverlapNoiseClass x y z w q) := by
+  rcases hq' with ⟨_, q, hs, hnoise⟩
+  exact ⟨q, hs, hnoise⟩
 
 /--
 Swapped-right residual classes are those swapped contribution classes that come
@@ -12386,6 +13178,20 @@ def MixedResidualSwappedRightContributionClass
     HasSwappedRightInnerContributionClass x y z w q'
 
 /--
+Residual-local right-side outer/inner no-overlap.
+
+This is the honest hypothesis relevant to the residual comparison: it only
+rules out simultaneous outer and inner support on swapped-right classes that
+already lie in the residual sector.
+-/
+def NoResidualRightOuterInnerOverlap
+    (x y z w : PTree) : Prop :=
+  ∀ q' : TwoStepQuotient y x z w,
+    ResidualSwappedRightContributionClass x y z w q' →
+    ¬ (HasSwappedRightOuterContributionClass x y z w q' ∧
+      HasSwappedRightInnerContributionClass x y z w q')
+
+/--
 Every residual left class is either pure outer, pure inner, or mixed.
 
 So if residual partner functionality fails, the mixed residual sector is the
@@ -12481,6 +13287,68 @@ theorem residualSwappedRightContributionClass_trichotomy
   · by_cases hOuter : HasSwappedRightOuterContributionClass x y z w q'
     · exact Or.inr (Or.inr ⟨hq', hOuter, hqIn⟩)
     · exact Or.inr (Or.inl ⟨hq', hqIn, hOuter⟩)
+
+/--
+Under right-side outer/inner no-overlap, the mixed residual swapped-right
+sector is empty.
+-/
+theorem mixedResidualSwappedRightContributionClass_false_of_no_overlap
+    (x y z w : PTree)
+    (hNo : NoRightOuterInnerOverlap x y z w)
+    (q' : TwoStepQuotient y x z w) :
+    ¬ MixedResidualSwappedRightContributionClass x y z w q' := by
+  intro hMixed
+  exact hNo q' ⟨hMixed.2.1, hMixed.2.2⟩
+
+/--
+Under right-side outer/inner no-overlap, every residual swapped-right class is
+therefore pure outer or pure inner.
+-/
+theorem residualSwappedRightContributionClass_pure_dichotomy_of_no_overlap
+    (x y z w : PTree)
+    (hNo : NoRightOuterInnerOverlap x y z w)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : ResidualSwappedRightContributionClass x y z w q') :
+    PureOuterResidualSwappedRightContributionClass x y z w q' ∨
+      PureInnerResidualSwappedRightContributionClass x y z w q' := by
+  rcases residualSwappedRightContributionClass_trichotomy x y z w q' hq' with
+    hPureOut | hPureIn | hMixed
+  · exact Or.inl hPureOut
+  · exact Or.inr hPureIn
+  · exact False.elim
+      ((mixedResidualSwappedRightContributionClass_false_of_no_overlap
+          x y z w hNo q') hMixed)
+
+/--
+Residual-local version: under no outer/inner overlap on the residual
+swapped-right sector, the mixed residual swapped-right fragment is empty.
+-/
+theorem mixedResidualSwappedRightContributionClass_false_of_no_residual_overlap
+    (x y z w : PTree)
+    (hNo : NoResidualRightOuterInnerOverlap x y z w)
+    (q' : TwoStepQuotient y x z w) :
+    ¬ MixedResidualSwappedRightContributionClass x y z w q' := by
+  intro hMixed
+  exact hNo q' hMixed.1 ⟨hMixed.2.1, hMixed.2.2⟩
+
+/--
+Residual-local version: every residual swapped-right class is pure outer or
+pure inner once mixed residual overlap is excluded on that sector.
+-/
+theorem residualSwappedRightContributionClass_pure_dichotomy_of_no_residual_overlap
+    (x y z w : PTree)
+    (hNo : NoResidualRightOuterInnerOverlap x y z w)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : ResidualSwappedRightContributionClass x y z w q') :
+    PureOuterResidualSwappedRightContributionClass x y z w q' ∨
+      PureInnerResidualSwappedRightContributionClass x y z w q' := by
+  rcases residualSwappedRightContributionClass_trichotomy x y z w q' hq' with
+    hPureOut | hPureIn | hMixed
+  · exact Or.inl hPureOut
+  · exact Or.inr hPureIn
+  · exact False.elim
+      ((mixedResidualSwappedRightContributionClass_false_of_no_residual_overlap
+          x y z w hNo q') hMixed)
 
 /--
 Residual swapped-right classes carrying outer support.
@@ -12996,6 +13864,36 @@ def PureResidualSwappedRightContributionClass
   OuterResidualSwappedRightContributionClass x y z w q' ∨
     InnerResidualSwappedRightContributionClass x y z w q'
 
+/--
+Under right-side outer/inner no-overlap, every residual swapped-right class is
+pure on the swapped side.
+-/
+theorem residualSwappedRightContributionClass_is_pure_of_no_overlap
+    (x y z w : PTree)
+    (hNo : NoRightOuterInnerOverlap x y z w)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : ResidualSwappedRightContributionClass x y z w q') :
+    PureResidualSwappedRightContributionClass x y z w q' := by
+  rcases residualSwappedRightContributionClass_pure_dichotomy_of_no_overlap
+      x y z w hNo q' hq' with hPureOut | hPureIn
+  · exact Or.inl ⟨hPureOut.1, hPureOut.2.1⟩
+  · exact Or.inr ⟨hPureIn.1, hPureIn.2.1⟩
+
+/--
+Residual-local version: every residual swapped-right class is pure once
+outer/inner overlap is excluded on the residual swapped-right sector.
+-/
+theorem residualSwappedRightContributionClass_is_pure_of_no_residual_overlap
+    (x y z w : PTree)
+    (hNo : NoResidualRightOuterInnerOverlap x y z w)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : ResidualSwappedRightContributionClass x y z w q') :
+    PureResidualSwappedRightContributionClass x y z w q' := by
+  rcases residualSwappedRightContributionClass_pure_dichotomy_of_no_residual_overlap
+      x y z w hNo q' hq' with hPureOut | hPureIn
+  · exact Or.inl ⟨hPureOut.1, hPureOut.2.1⟩
+  · exact Or.inr ⟨hPureIn.1, hPureIn.2.1⟩
+
 /-- Residual left classes are exactly pure left classes. -/
 theorem residualLeftContributionClass_is_pure
     (x y z w : PTree)
@@ -13076,6 +13974,36 @@ theorem residualSwappedRightContributionClass_has_pureLeftPartner
   exact ⟨q, hs, residualLeftContributionClass_is_pure x y z w q hq⟩
 
 /--
+To prove residual-local right-side no-overlap, it is enough to show that pure
+outer residual left sources can never land in swapped-right inner support, and
+pure inner residual left sources can never land in swapped-right outer support.
+
+This isolates the exact “wrong support cannot occur” obligations without
+hard-coding any new quotient decomposition.
+-/
+theorem noResidualRightOuterInnerOverlap_of_purePartner_support_exclusion
+    (x y z w : PTree)
+    (hOut :
+      ∀ {q : TwoStepQuotient x y z w}
+        {q' : TwoStepQuotient y x z w},
+        PureOuterResidualLeftContributionClass x y z w q →
+        SwappedTwoStepClass x y z w q q' →
+        ¬ HasSwappedRightInnerContributionClass x y z w q')
+    (hIn :
+      ∀ {q : TwoStepQuotient x y z w}
+        {q' : TwoStepQuotient y x z w},
+        PureInnerResidualLeftContributionClass x y z w q →
+        SwappedTwoStepClass x y z w q q' →
+        ¬ HasSwappedRightOuterContributionClass x y z w q') :
+    NoResidualRightOuterInnerOverlap x y z w := by
+  intro q' hq' hBoth
+  rcases residualSwappedRightContributionClass_has_pureLeftPartner x y z w q' hq' with
+    ⟨q, hs, hPure⟩
+  rcases hPure with hPureOut | hPureIn
+  · exact hOut hPureOut hs hBoth.2
+  · exact hIn hPureIn hs hBoth.1
+
+/--
 The noise sector for class-level left associator contributions.
 
 These are exactly the quotient-trivial overlap classes that should be ignored
@@ -13086,6 +14014,34 @@ def LeftNoiseContributionClass
     (q : TwoStepQuotient x y z w) : Prop :=
   LeftToRightOverlapNoiseClass x y z w q ∨
     RightToLeftOverlapNoiseClass x y z w q
+
+/--
+Left noise classes are simultaneously outer- and inner-visible.
+
+This is the union-level form of the two oriented overlap-noise visibility
+lemmas proved earlier.
+-/
+theorem LeftNoiseContributionClass.visible
+    (x y z w : PTree)
+    {q : TwoStepQuotient x y z w}
+    (hq : LeftNoiseContributionClass x y z w q) :
+    ClassHasOuterRepresentative x y z w q ∧
+      ClassHasInnerRepresentative x y z w q := by
+  rcases hq with hq | hq
+  · exact LeftToRightOverlapNoiseClass.visible x y z w hq
+  · exact RightToLeftOverlapNoiseClass.visible x y z w hq
+
+/--
+Any left noise class is, in particular, a genuine left contribution class.
+-/
+theorem LeftNoiseContributionClass.to_isLeftContributionClass
+    (x y z w : PTree)
+    {q : TwoStepQuotient x y z w}
+    (hq : LeftNoiseContributionClass x y z w q) :
+    IsLeftContributionClass x y z w q := by
+  rcases hq with hq | hq
+  · exact Or.inl hq.1
+  · exact Or.inr hq.2
 
 /-- Residual left contribution classes as an actual subtype. -/
 def ResidualAssociatorLeftClasses
@@ -13104,6 +14060,110 @@ def PureInnerResidualAssociatorLeftClasses
     (x y z w : PTree) :=
   { q : TwoStepQuotient x y z w //
       PureInnerResidualLeftContributionClass x y z w q }
+
+/-- Pure residual swapped-right contribution classes as a subtype. -/
+def PureResidualSwappedRightContributionClasses
+    (x y z w : PTree) :=
+  { q' : TwoStepQuotient y x z w //
+      PureResidualSwappedRightContributionClass x y z w q' }
+
+/--
+Residual left classes are nonempty exactly when pure residual swapped-right
+classes are nonempty.
+
+This packages the existing residual-sector existence lemmas into a clean
+subtype-level transfer statement for the next cardinality phase.
+-/
+theorem residualAssociatorLeftClasses_nonempty_iff_pureResidualSwappedRightContributionClasses_nonempty
+    (x y z w : PTree) :
+    Nonempty (ResidualAssociatorLeftClasses x y z w) ↔
+      Nonempty (PureResidualSwappedRightContributionClasses x y z w) := by
+  constructor
+  · intro h
+    rcases h with ⟨⟨q, hq⟩⟩
+    rcases residualLeftContributionClass_exists_pureSwappedRightPartner x y z w q hq with
+      ⟨q', _, hq'⟩
+    exact ⟨⟨q', hq'⟩⟩
+  · intro h
+    rcases h with ⟨⟨q', hq'⟩⟩
+    have hres' : ResidualSwappedRightContributionClass x y z w q' := by
+      cases hq' with
+      | inl hOuter =>
+          exact hOuter.1
+      | inr hInner =>
+          exact hInner.1
+    rcases residualSwappedRightContributionClass_has_pureLeftPartner x y z w q' hres' with
+      ⟨q, _, hq⟩
+    cases hq with
+    | inl hOuter =>
+        exact ⟨⟨q, hOuter.1⟩⟩
+    | inr hInner =>
+        exact ⟨⟨q, hInner.1⟩⟩
+
+/-- Residual swapped-right contribution classes as a subtype. -/
+def ResidualSwappedRightContributionClasses
+    (x y z w : PTree) :=
+  { q' : TwoStepQuotient y x z w //
+      ResidualSwappedRightContributionClass x y z w q' }
+
+/--
+Swapped-right outer residual contribution classes, with the outer tag carried
+explicitly.
+-/
+def OuterResidualSwappedRightContributionClasses
+    (x y z w : PTree) :=
+  { q' : TwoStepQuotient y x z w //
+      OuterResidualSwappedRightContributionClass x y z w q' }
+
+/--
+Swapped-right inner residual contribution classes, with the inner tag carried
+explicitly.
+-/
+def InnerResidualSwappedRightContributionClasses
+    (x y z w : PTree) :=
+  { q' : TwoStepQuotient y x z w //
+      InnerResidualSwappedRightContributionClass x y z w q' }
+
+/--
+Under residual-local no-overlap, residual swapped-right classes split into the
+outer-pure and inner-pure tagged sectors.
+-/
+noncomputable def residualSwappedRightContributionClasses_pureSplit_of_no_residual_overlap
+    (x y z w : PTree)
+    (hNo : NoResidualRightOuterInnerOverlap x y z w) :
+    ResidualSwappedRightContributionClasses x y z w ≃
+      OuterResidualSwappedRightContributionClasses x y z w ⊕
+        InnerResidualSwappedRightContributionClasses x y z w where
+  toFun := fun t =>
+    if hOut : HasSwappedRightOuterContributionClass x y z w t.1 then
+      Sum.inl ⟨t.1, t.2, hOut⟩
+    else
+      Sum.inr ⟨t.1, t.2,
+        by
+          rcases residualSwappedRightContributionClass_pure_dichotomy_of_no_residual_overlap
+              x y z w hNo t.1 t.2 with hPureOut | hPureIn
+          · exact False.elim (hOut hPureOut.2.1)
+          · exact hPureIn.2.1⟩
+  invFun := fun u =>
+    Sum.elim
+      (fun t => ⟨t.1, t.2.1⟩)
+      (fun t => ⟨t.1, t.2.1⟩)
+      u
+  left_inv := by
+    intro t
+    by_cases hOut : HasSwappedRightOuterContributionClass x y z w t.1
+    · simp [hOut]
+    · simp [hOut]
+  right_inv := by
+    intro u
+    cases u with
+    | inl t =>
+        simp [t.2.2]
+    | inr t =>
+        have hNotOut : ¬ HasSwappedRightOuterContributionClass x y z w t.1 := by
+          intro hOut
+          exact hNo t.1 t.2.1 ⟨hOut, t.2.2⟩
+        simp [hNotOut]
 
 /--
 Every left contribution class is either quotient-trivial noise, pure outer
@@ -13195,6 +14255,106 @@ theorem rightContributionClass_noise_or_has_pureLeftResidualPartner
   · exact Or.inl hNoise
   · exact Or.inr
       (residualSwappedRightContributionClass_has_pureLeftPartner x y z w q' hRes)
+
+/-- Left noise contribution classes as a subtype. -/
+def LeftNoiseContributionClasses
+    (x y z w : PTree) :=
+  { q : TwoStepQuotient x y z w //
+      LeftNoiseContributionClass x y z w q }
+
+/-- Swapped-right noise contribution classes as a subtype. -/
+def SwappedRightNoiseContributionClasses
+    (x y z w : PTree) :=
+  { q' : TwoStepQuotient y x z w //
+      SwappedRightNoiseContributionClass x y z w q' }
+
+/-- Swapped-right contribution classes outside the noise floor. -/
+def RightNonNoiseContributionClasses
+    (x y z w : PTree) :=
+  { q' : TwoStepQuotient y x z w //
+      IsRightContributionClass x y z w q' ∧
+        ¬ SwappedRightNoiseContributionClass x y z w q' }
+
+/--
+Total left contribution classes split into the noise floor and the residual
+sector.
+
+This is the decomposition that isolates the only remaining unbalanced piece of
+the class-level associator comparison.
+-/
+noncomputable def leftContributionClasses_noisePlusResidual
+    (x y z w : PTree) :
+    LeftContributionClasses x y z w ≃
+      LeftNoiseContributionClasses x y z w ⊕
+        ResidualAssociatorLeftClasses x y z w where
+  toFun := fun s =>
+    if hNoise : LeftNoiseContributionClass x y z w s.1 then
+      Sum.inl ⟨s.1, hNoise⟩
+    else
+      Sum.inr ⟨s.1, by
+        rcases leftContributionClass_overlapNoise_or_residual x y z w s.1 s.2 with
+          hLR | hRL | hRes
+        · exact False.elim (hNoise (Or.inl hLR))
+        · exact False.elim (hNoise (Or.inr hRL))
+        · exact hRes⟩
+  invFun := fun u =>
+    Sum.elim
+      (fun s => ⟨s.1, LeftNoiseContributionClass.to_isLeftContributionClass x y z w s.2⟩)
+      (fun s => ⟨s.1, s.2.1⟩)
+      u
+  left_inv := by
+    intro s
+    by_cases hNoise : LeftNoiseContributionClass x y z w s.1
+    · simp [hNoise]
+    · simp [hNoise]
+  right_inv := by
+    intro u
+    cases u with
+    | inl s =>
+        simp [s.2]
+    | inr s =>
+        have hNotNoise : ¬ LeftNoiseContributionClass x y z w s.1 := by
+          intro hNoise
+          rcases hNoise with hLR | hRL
+          · exact s.2.2.1 hLR
+          · exact s.2.2.2 hRL
+        simp [hNotNoise]
+
+/--
+Total swapped-right contribution classes split into the transported noise floor
+and its complement.
+
+This is the honest right-hand decomposition currently available in live code:
+membership in the noise floor is decidable, but disjointness of
+noise-versus-residual has not yet been proved.
+-/
+noncomputable def rightContributionClasses_noisePlusNonNoise
+    (x y z w : PTree) :
+    RightContributionClasses x y z w ≃
+      SwappedRightNoiseContributionClasses x y z w ⊕
+        RightNonNoiseContributionClasses x y z w where
+  toFun := fun t =>
+    if hNoise : SwappedRightNoiseContributionClass x y z w t.1 then
+      Sum.inl ⟨t.1, hNoise⟩
+    else
+      Sum.inr ⟨t.1, t.2, hNoise⟩
+  invFun := fun u =>
+    Sum.elim
+      (fun t => ⟨t.1, t.2.1⟩)
+      (fun t => ⟨t.1, t.2.1⟩)
+      u
+  left_inv := by
+    intro t
+    by_cases hNoise : SwappedRightNoiseContributionClass x y z w t.1
+    · simp [hNoise]
+    · simp [hNoise]
+  right_inv := by
+    intro u
+    cases u with
+    | inl t =>
+        simp [t.2]
+    | inr t =>
+        simp [t.2.2]
 
 /--
 Class-level associator shape for the quotient carrier.
@@ -13338,6 +14498,2068 @@ theorem classLevel_preLieComparison
     right
     refine ⟨hIn, ?_⟩
     exact pureInnerResidualAssociatorComparison x y z w ⟨q, hIn⟩
+
+/--
+Exact converse obstruction for the outer pure sector.
+
+This says that whenever a swapped-right residual class is seen through its
+outer transport, the transported-back left class is still a pure outer residual
+class. Without this hypothesis, the forward outer bijection exists but the
+backward outer bijection need not be available.
+-/
+def OuterResidualBackTransportPure
+    (x y z w : PTree) : Prop :=
+  ∀ t : OuterResidualSwappedRightContributionClasses x y z w,
+    PureOuterResidualLeftContributionClass x y z w
+      (transportSwappedRightOuterContributionClass x y z w ⟨t.1, t.2.2⟩).1
+
+/--
+Exact converse obstruction for the inner pure sector.
+
+This is the inner analogue of `OuterResidualBackTransportPure`.
+-/
+def InnerResidualBackTransportPure
+    (x y z w : PTree) : Prop :=
+  ∀ t : InnerResidualSwappedRightContributionClasses x y z w,
+    PureInnerResidualLeftContributionClass x y z w
+      (transportSwappedInnerContributionClassToLeft x y z w ⟨t.1, t.2.2⟩).1
+
+/--
+Under the explicit outer back-transport purity hypothesis, the pure outer left
+sector is equivalent to the swapped-right outer residual sector.
+-/
+noncomputable def pureOuterResidualAssociatorComparisonEquiv
+    (x y z w : PTree)
+    (hback : OuterResidualBackTransportPure x y z w) :
+    PureOuterResidualAssociatorLeftClasses x y z w ≃
+      OuterResidualSwappedRightContributionClasses x y z w where
+  toFun := fun s =>
+    let t := transportOuterLeftContributionClass x y z w ⟨s.1, s.2.2.1⟩
+    ⟨t.1, ⟨⟨Or.inl t.2,
+      s.1,
+      transportOuterLeftContributionClass_swapped x y z w ⟨s.1, s.2.2.1⟩,
+      s.2.1⟩, t.2⟩⟩
+  invFun := fun t =>
+    let s := transportSwappedRightOuterContributionClass x y z w ⟨t.1, t.2.2⟩
+    ⟨s.1, hback t⟩
+  left_inv := by
+    intro s
+    apply Subtype.ext
+    dsimp
+    exact congrArg Subtype.val
+      (transportSwappedRightOuterContributionClass_left_inv x y z w
+        ⟨s.1, s.2.2.1⟩)
+  right_inv := by
+    intro t
+    apply Subtype.ext
+    dsimp
+    exact congrArg Subtype.val
+      (transportOuterLeftContributionClass_right_inv x y z w
+        ⟨t.1, t.2.2⟩)
+
+/--
+Under the explicit inner back-transport purity hypothesis, the pure inner left
+sector is equivalent to the swapped-right inner residual sector.
+-/
+noncomputable def pureInnerResidualAssociatorComparisonEquiv
+    (x y z w : PTree)
+    (hback : InnerResidualBackTransportPure x y z w) :
+    PureInnerResidualAssociatorLeftClasses x y z w ≃
+      InnerResidualSwappedRightContributionClasses x y z w where
+  toFun := fun s =>
+    let t := transportLeftInnerContributionClassToSwapped x y z w ⟨s.1, s.2.2.1⟩
+    ⟨t.1, ⟨⟨Or.inr t.2,
+      s.1,
+      transportLeftInnerContributionClassToSwapped_swapped x y z w ⟨s.1, s.2.2.1⟩,
+      s.2.1⟩, t.2⟩⟩
+  invFun := fun t =>
+    let s := transportSwappedInnerContributionClassToLeft x y z w ⟨t.1, t.2.2⟩
+    ⟨s.1, hback t⟩
+  left_inv := by
+    intro s
+    apply Subtype.ext
+    dsimp
+    exact congrArg Subtype.val
+      (transportSwappedInnerContributionClassToLeft_left_inv x y z w
+        ⟨s.1, s.2.2.1⟩)
+  right_inv := by
+    intro t
+    apply Subtype.ext
+    dsimp
+    exact congrArg Subtype.val
+      (transportLeftInnerContributionClassToSwapped_right_inv x y z w
+        ⟨t.1, t.2.2⟩)
+
+/--
+Under the two explicit converse-purity hypotheses, the tagged pure residual
+sectors have the same cardinality.
+
+This packages the part of the quotient comparison that is genuinely finished:
+once the backward transports stay inside the matching pure sectors, the pure
+part is completely balanced. What remains after this theorem is exactly the
+noise sector together with raw witness multiplicities.
+-/
+theorem pureResidualTaggedContributionCard_eq_of_backTransportPure
+    (x y z w : PTree)
+    (hOut : OuterResidualBackTransportPure x y z w)
+    (hIn : InnerResidualBackTransportPure x y z w) :
+    Cardinal.lift
+        (Cardinal.mk
+          (PureOuterResidualAssociatorLeftClasses x y z w ⊕
+            PureInnerResidualAssociatorLeftClasses x y z w)) =
+      Cardinal.lift
+        (Cardinal.mk
+          (OuterResidualSwappedRightContributionClasses x y z w ⊕
+            InnerResidualSwappedRightContributionClasses x y z w)) := by
+  refine congrArg Cardinal.lift ?_
+  exact Cardinal.mk_congr
+    { toFun := fun
+        | Sum.inl s => Sum.inl ((pureOuterResidualAssociatorComparisonEquiv
+            x y z w hOut) s)
+        | Sum.inr s => Sum.inr ((pureInnerResidualAssociatorComparisonEquiv
+            x y z w hIn) s)
+      invFun := fun
+        | Sum.inl t => Sum.inl
+            ((pureOuterResidualAssociatorComparisonEquiv x y z w hOut).symm t)
+        | Sum.inr t => Sum.inr
+            ((pureInnerResidualAssociatorComparisonEquiv x y z w hIn).symm t)
+      left_inv := by
+        intro s
+        cases s with
+        | inl s =>
+            simp
+        | inr s =>
+            simp
+      right_inv := by
+        intro t
+        cases t with
+        | inl t =>
+            simp
+        | inr t =>
+            simp }
+
+/--
+Cardinal of the residual left associator sector.
+-/
+noncomputable def residualAssociatorLeftCard
+    (x y z w : PTree) : Cardinal :=
+  Cardinal.lift (Cardinal.mk (ResidualAssociatorLeftClasses x y z w))
+
+/--
+Cardinal of the tagged pure residual swapped-right sector.
+
+The outer and inner tags are kept separate on purpose: this is exactly the
+level at which the quotient development has a clean comparison theorem.
+-/
+noncomputable def taggedPureResidualSwappedRightCard
+    (x y z w : PTree) : Cardinal :=
+  Cardinal.lift
+    (Cardinal.mk
+      (OuterResidualSwappedRightContributionClasses x y z w ⊕
+        InnerResidualSwappedRightContributionClasses x y z w))
+
+/--
+Under the two explicit converse-purity hypotheses, the entire residual left
+sector has the same cardinality as the tagged pure residual swapped-right
+sector.
+
+This is the cleanest currently proved cardinal statement for the non-noise part
+of the quotient associator comparison.
+-/
+theorem residualAssociatorLeftCard_eq_taggedPureResidualSwappedRightCard_of_backTransportPure
+    (x y z w : PTree)
+    (hOut : OuterResidualBackTransportPure x y z w)
+    (hIn : InnerResidualBackTransportPure x y z w) :
+    residualAssociatorLeftCard x y z w =
+      taggedPureResidualSwappedRightCard x y z w := by
+  unfold residualAssociatorLeftCard taggedPureResidualSwappedRightCard
+  calc
+    Cardinal.lift (Cardinal.mk (ResidualAssociatorLeftClasses x y z w))
+      = Cardinal.lift
+          (Cardinal.mk
+            (PureOuterResidualAssociatorLeftClasses x y z w ⊕
+              PureInnerResidualAssociatorLeftClasses x y z w)) := by
+            exact congrArg Cardinal.lift
+              (Cardinal.mk_congr
+                (residualAssociatorLeftClasses_pureSplit x y z w))
+    _ = Cardinal.lift
+          (Cardinal.mk
+            (OuterResidualSwappedRightContributionClasses x y z w ⊕
+              InnerResidualSwappedRightContributionClasses x y z w)) := by
+            exact pureResidualTaggedContributionCard_eq_of_backTransportPure
+              x y z w hOut hIn
+
+/-- Cardinal of the residual swapped-right sector. -/
+noncomputable def residualSwappedRightContributionCard
+    (x y z w : PTree) : Cardinal :=
+  Cardinal.lift (Cardinal.mk (ResidualSwappedRightContributionClasses x y z w))
+
+/--
+Under residual-local no-overlap, the residual swapped-right sector has the same
+cardinality as its tagged pure outer/inner split.
+-/
+theorem residualSwappedRightContributionCard_eq_taggedPure_of_no_residual_overlap
+    (x y z w : PTree)
+    (hNo : NoResidualRightOuterInnerOverlap x y z w) :
+    residualSwappedRightContributionCard x y z w =
+      taggedPureResidualSwappedRightCard x y z w := by
+  unfold residualSwappedRightContributionCard taggedPureResidualSwappedRightCard
+  exact congrArg Cardinal.lift
+    (Cardinal.mk_congr
+      (residualSwappedRightContributionClasses_pureSplit_of_no_residual_overlap
+        x y z w hNo))
+
+/--
+If swapped comparison is right-functional on residual classes, then a pure
+outer residual swapped-right class transports back to a pure outer residual
+left class.
+-/
+theorem pureOuterResidualSwappedRightContributionClass_backTransport_pure_of_rightFunctional
+    (x y z w : PTree)
+    (hfun : SwappedTwoStepClassRightFunctionalOnResidual x y z w)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : PureOuterResidualSwappedRightContributionClass x y z w q') :
+    PureOuterResidualLeftContributionClass x y z w
+      (transportSwappedRightOuterContributionClass x y z w ⟨q', hq'.2.1⟩).1 := by
+  rcases residualSwappedRightContributionClass_has_pureLeftPartner x y z w q' hq'.1 with
+    ⟨q, hs, hq⟩
+  have hqPureOut : PureOuterResidualLeftContributionClass x y z w q := by
+    rcases hq with hqOut | hqIn
+    · exact hqOut
+    · let sIn : LeftInnerContributionClasses x y z w := ⟨q, hqIn.2.1⟩
+      let tIn : SwappedRightInnerContributionClasses x y z w :=
+        transportLeftInnerContributionClassToSwapped x y z w sIn
+      have hsIn : SwappedTwoStepClass x y z w q tIn.1 := by
+        simpa [sIn, tIn] using
+          transportLeftInnerContributionClassToSwapped_swapped x y z w sIn
+      have htInRes : ResidualSwappedRightContributionClass x y z w tIn.1 := by
+        exact ⟨Or.inr tIn.2, q, hsIn, hqIn.1⟩
+      have hEq : tIn.1 = q' := by
+        symm
+        exact hfun hqIn.1 hs hq'.1 hsIn htInRes
+      have hq'In : HasSwappedRightInnerContributionClass x y z w q' := by
+        simpa [hEq] using tIn.2
+      exact False.elim (hq'.2.2 hq'In)
+  let sOut : OuterLeftContributionClasses x y z w := ⟨q, hqPureOut.2.1⟩
+  let tOut : SwappedRightOuterContributionClasses x y z w :=
+    transportOuterLeftContributionClass x y z w sOut
+  have hsOut : SwappedTwoStepClass x y z w q tOut.1 := by
+    simpa [sOut, tOut] using
+      transportOuterLeftContributionClass_swapped x y z w sOut
+  have htOutRes : ResidualSwappedRightContributionClass x y z w tOut.1 := by
+    exact ⟨Or.inl tOut.2, q, hsOut, hqPureOut.1⟩
+  have hEq : tOut.1 = q' := by
+    exact hfun hqPureOut.1 hsOut htOutRes hs hq'.1
+  have hEqT : tOut = ⟨q', hq'.2.1⟩ := by
+    apply Subtype.ext
+    exact hEq
+  have hRound :
+      transportSwappedRightOuterContributionClass x y z w
+        (transportOuterLeftContributionClass x y z w sOut) = sOut := by
+    exact (outerContributionCommute x y z w).left_inv sOut
+  have hBack :
+      transportSwappedRightOuterContributionClass x y z w ⟨q', hq'.2.1⟩ = sOut := by
+    calc
+      transportSwappedRightOuterContributionClass x y z w ⟨q', hq'.2.1⟩
+        = transportSwappedRightOuterContributionClass x y z w tOut := by
+            rw [hEqT]
+      _ = sOut := by
+            simpa [tOut] using hRound
+  have hVal :
+      (transportSwappedRightOuterContributionClass x y z w ⟨q', hq'.2.1⟩).1 = q := by
+    exact congrArg Subtype.val hBack
+  simpa [hVal] using hqPureOut
+
+/--
+If swapped comparison is right-functional on residual classes, then a pure
+inner residual swapped-right class transports back to a pure inner residual
+left class.
+-/
+theorem pureInnerResidualSwappedRightContributionClass_backTransport_pure_of_rightFunctional
+    (x y z w : PTree)
+    (hfun : SwappedTwoStepClassRightFunctionalOnResidual x y z w)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : PureInnerResidualSwappedRightContributionClass x y z w q') :
+    PureInnerResidualLeftContributionClass x y z w
+      (transportSwappedInnerContributionClassToLeft x y z w ⟨q', hq'.2.1⟩).1 := by
+  rcases residualSwappedRightContributionClass_has_pureLeftPartner x y z w q' hq'.1 with
+    ⟨q, hs, hq⟩
+  have hqPureIn : PureInnerResidualLeftContributionClass x y z w q := by
+    rcases hq with hqOut | hqIn
+    · let sOut : OuterLeftContributionClasses x y z w := ⟨q, hqOut.2.1⟩
+      let tOut : SwappedRightOuterContributionClasses x y z w :=
+        transportOuterLeftContributionClass x y z w sOut
+      have hsOut : SwappedTwoStepClass x y z w q tOut.1 := by
+        simpa [sOut, tOut] using
+          transportOuterLeftContributionClass_swapped x y z w sOut
+      have htOutRes : ResidualSwappedRightContributionClass x y z w tOut.1 := by
+        exact ⟨Or.inl tOut.2, q, hsOut, hqOut.1⟩
+      have hEq : tOut.1 = q' := by
+        symm
+        exact hfun hqOut.1 hs hq'.1 hsOut htOutRes
+      have hq'Out : HasSwappedRightOuterContributionClass x y z w q' := by
+        simpa [hEq] using tOut.2
+      exact False.elim (hq'.2.2 hq'Out)
+    · exact hqIn
+  let sIn : LeftInnerContributionClasses x y z w := ⟨q, hqPureIn.2.1⟩
+  let tIn : SwappedRightInnerContributionClasses x y z w :=
+    transportLeftInnerContributionClassToSwapped x y z w sIn
+  have hsIn : SwappedTwoStepClass x y z w q tIn.1 := by
+    simpa [sIn, tIn] using
+      transportLeftInnerContributionClassToSwapped_swapped x y z w sIn
+  have htInRes : ResidualSwappedRightContributionClass x y z w tIn.1 := by
+    exact ⟨Or.inr tIn.2, q, hsIn, hqPureIn.1⟩
+  have hEq : tIn.1 = q' := by
+    exact hfun hqPureIn.1 hsIn htInRes hs hq'.1
+  have hEqT : tIn = ⟨q', hq'.2.1⟩ := by
+    apply Subtype.ext
+    exact hEq
+  have hRound :
+      transportSwappedInnerContributionClassToLeft x y z w
+        (transportLeftInnerContributionClassToSwapped x y z w sIn) = sIn := by
+    exact (innerContributionCommute x y z w).left_inv sIn
+  have hBack :
+      transportSwappedInnerContributionClassToLeft x y z w ⟨q', hq'.2.1⟩ = sIn := by
+    calc
+      transportSwappedInnerContributionClassToLeft x y z w ⟨q', hq'.2.1⟩
+        = transportSwappedInnerContributionClassToLeft x y z w tIn := by
+            rw [hEqT]
+      _ = sIn := by
+            simpa [tIn] using hRound
+  have hVal :
+      (transportSwappedInnerContributionClassToLeft x y z w ⟨q', hq'.2.1⟩).1 = q := by
+    exact congrArg Subtype.val hBack
+  simpa [hVal] using hqPureIn
+
+/--
+Residual right-functionality together with right-side outer/inner no-overlap
+forces every outer residual swapped-right class to transport back to a pure
+outer residual left class.
+-/
+theorem OuterResidualBackTransportPure_of_rightFunctional_and_no_overlap
+    (x y z w : PTree)
+    (hfun : SwappedTwoStepClassRightFunctionalOnResidual x y z w)
+    (hNo : NoRightOuterInnerOverlap x y z w) :
+    OuterResidualBackTransportPure x y z w := by
+  intro t
+  have htPure : PureOuterResidualSwappedRightContributionClass x y z w t.1 := by
+    refine ⟨t.2.1, t.2.2, ?_⟩
+    intro hIn
+    exact hNo t.1 ⟨t.2.2, hIn⟩
+  exact
+    pureOuterResidualSwappedRightContributionClass_backTransport_pure_of_rightFunctional
+      x y z w hfun t.1 htPure
+
+/--
+Residual-local version of the previous wrapper.
+-/
+theorem OuterResidualBackTransportPure_of_rightFunctional_and_no_residual_overlap
+    (x y z w : PTree)
+    (hfun : SwappedTwoStepClassRightFunctionalOnResidual x y z w)
+    (hNo : NoResidualRightOuterInnerOverlap x y z w) :
+    OuterResidualBackTransportPure x y z w := by
+  intro t
+  have htPure : PureOuterResidualSwappedRightContributionClass x y z w t.1 := by
+    refine ⟨t.2.1, t.2.2, ?_⟩
+    intro hIn
+    exact hNo t.1 t.2.1 ⟨t.2.2, hIn⟩
+  exact
+    pureOuterResidualSwappedRightContributionClass_backTransport_pure_of_rightFunctional
+      x y z w hfun t.1 htPure
+
+/--
+Residual right-functionality together with right-side outer/inner no-overlap
+forces every inner residual swapped-right class to transport back to a pure
+inner residual left class.
+-/
+theorem InnerResidualBackTransportPure_of_rightFunctional_and_no_overlap
+    (x y z w : PTree)
+    (hfun : SwappedTwoStepClassRightFunctionalOnResidual x y z w)
+    (hNo : NoRightOuterInnerOverlap x y z w) :
+    InnerResidualBackTransportPure x y z w := by
+  intro t
+  have htPure : PureInnerResidualSwappedRightContributionClass x y z w t.1 := by
+    refine ⟨t.2.1, t.2.2, ?_⟩
+    intro hOut
+    exact hNo t.1 ⟨hOut, t.2.2⟩
+  exact
+    pureInnerResidualSwappedRightContributionClass_backTransport_pure_of_rightFunctional
+      x y z w hfun t.1 htPure
+
+/--
+Residual-local version of the previous wrapper.
+-/
+theorem InnerResidualBackTransportPure_of_rightFunctional_and_no_residual_overlap
+    (x y z w : PTree)
+    (hfun : SwappedTwoStepClassRightFunctionalOnResidual x y z w)
+    (hNo : NoResidualRightOuterInnerOverlap x y z w) :
+    InnerResidualBackTransportPure x y z w := by
+  intro t
+  have htPure : PureInnerResidualSwappedRightContributionClass x y z w t.1 := by
+    refine ⟨t.2.1, t.2.2, ?_⟩
+    intro hOut
+    exact hNo t.1 t.2.1 ⟨hOut, t.2.2⟩
+  exact
+    pureInnerResidualSwappedRightContributionClass_backTransport_pure_of_rightFunctional
+      x y z w hfun t.1 htPure
+
+/--
+Concrete residual-sector cardinal comparison.
+
+If the swapped comparison is right-functional on residual classes and the
+swapped-right residual sector has no outer/inner overlap, then the residual left
+sector has the same cardinality as the tagged pure residual swapped-right
+sector.
+-/
+theorem residualAssociatorLeftCard_eq_taggedPureResidualSwappedRightCard_of_rightFunctional_and_no_overlap
+    (x y z w : PTree)
+    (hfun : SwappedTwoStepClassRightFunctionalOnResidual x y z w)
+    (hNo : NoRightOuterInnerOverlap x y z w) :
+    residualAssociatorLeftCard x y z w =
+      taggedPureResidualSwappedRightCard x y z w := by
+  exact
+    residualAssociatorLeftCard_eq_taggedPureResidualSwappedRightCard_of_backTransportPure
+      x y z w
+      (OuterResidualBackTransportPure_of_rightFunctional_and_no_overlap
+        x y z w hfun hNo)
+      (InnerResidualBackTransportPure_of_rightFunctional_and_no_overlap
+        x y z w hfun hNo)
+
+/--
+Residual-local concrete residual-sector balance.
+
+Under residual right-functionality and residual-local no-overlap on the
+swapped-right side, the residual left and residual swapped-right sectors have
+the same cardinality.
+-/
+theorem residualAssociatorLeftCard_eq_residualSwappedRightContributionCard_of_rightFunctional_and_no_residual_overlap
+    (x y z w : PTree)
+    (hfun : SwappedTwoStepClassRightFunctionalOnResidual x y z w)
+    (hNo : NoResidualRightOuterInnerOverlap x y z w) :
+    residualAssociatorLeftCard x y z w =
+      residualSwappedRightContributionCard x y z w := by
+  calc
+    residualAssociatorLeftCard x y z w
+      = taggedPureResidualSwappedRightCard x y z w := by
+          exact
+            residualAssociatorLeftCard_eq_taggedPureResidualSwappedRightCard_of_backTransportPure
+              x y z w
+              (OuterResidualBackTransportPure_of_rightFunctional_and_no_residual_overlap
+                x y z w hfun hNo)
+              (InnerResidualBackTransportPure_of_rightFunctional_and_no_residual_overlap
+                x y z w hfun hNo)
+    _ = residualSwappedRightContributionCard x y z w := by
+          symm
+          exact residualSwappedRightContributionCard_eq_taggedPure_of_no_residual_overlap
+            x y z w hNo
+
+/-- Cardinal of the left noise sector. -/
+noncomputable def leftNoiseContributionCard
+    (x y z w : PTree) : Cardinal :=
+  Cardinal.lift (Cardinal.mk (LeftNoiseContributionClasses x y z w))
+
+/-- Cardinal of the swapped-right noise sector. -/
+noncomputable def swappedRightNoiseContributionCard
+    (x y z w : PTree) : Cardinal :=
+  Cardinal.lift (Cardinal.mk (SwappedRightNoiseContributionClasses x y z w))
+
+/-- Cardinal of the swapped-right non-noise sector. -/
+noncomputable def rightNonNoiseContributionCard
+    (x y z w : PTree) : Cardinal :=
+  Cardinal.lift (Cardinal.mk (RightNonNoiseContributionClasses x y z w))
+
+/--
+Total left contribution classes decompose into the noise sector plus the
+residual sector.
+-/
+theorem totalLeftContributionCard_eq_noise_plus_residual
+    (x y z w : PTree) :
+    totalLeftContributionCard x y z w =
+      leftNoiseContributionCard x y z w +
+      residualAssociatorLeftCard x y z w := by
+  unfold totalLeftContributionCard leftNoiseContributionCard residualAssociatorLeftCard
+  calc
+    Cardinal.lift (Cardinal.mk (LeftContributionClasses x y z w))
+      = Cardinal.lift
+          (Cardinal.mk
+            (LeftNoiseContributionClasses x y z w ⊕
+              ResidualAssociatorLeftClasses x y z w)) := by
+          exact congrArg Cardinal.lift
+            (Cardinal.mk_congr
+              (leftContributionClasses_noisePlusResidual x y z w))
+    _ = Cardinal.lift (Cardinal.mk (LeftNoiseContributionClasses x y z w)) +
+          Cardinal.lift (Cardinal.mk (ResidualAssociatorLeftClasses x y z w)) := by
+          rw [Cardinal.mk_sum, Cardinal.lift_add, Cardinal.lift_lift,
+            Cardinal.lift_lift]
+
+/--
+Total swapped-right contribution classes decompose into the noise sector plus
+the non-noise sector.
+-/
+theorem totalRightContributionCard_eq_noise_plus_nonNoise
+    (x y z w : PTree) :
+    totalRightContributionCard x y z w =
+      swappedRightNoiseContributionCard x y z w +
+      rightNonNoiseContributionCard x y z w := by
+  unfold totalRightContributionCard swappedRightNoiseContributionCard
+    rightNonNoiseContributionCard
+  calc
+    Cardinal.lift (Cardinal.mk (RightContributionClasses x y z w))
+      = Cardinal.lift
+          (Cardinal.mk
+            (SwappedRightNoiseContributionClasses x y z w ⊕
+              RightNonNoiseContributionClasses x y z w)) := by
+          exact congrArg Cardinal.lift
+            (Cardinal.mk_congr
+              (rightContributionClasses_noisePlusNonNoise x y z w))
+    _ = Cardinal.lift (Cardinal.mk (SwappedRightNoiseContributionClasses x y z w)) +
+          Cardinal.lift (Cardinal.mk (RightNonNoiseContributionClasses x y z w)) := by
+          rw [Cardinal.mk_sum, Cardinal.lift_add, Cardinal.lift_lift,
+            Cardinal.lift_lift]
+
+/--
+The left and swapped-right bundled noise sectors are simultaneously inhabited.
+
+This is the subtype-level version of the already proved transport of individual
+noise classes across the quotient comparison.
+-/
+theorem nonempty_leftNoiseContributionClasses_iff_nonempty_swappedRightNoiseContributionClasses
+    (x y z w : PTree) :
+    Nonempty (LeftNoiseContributionClasses x y z w) ↔
+      Nonempty (SwappedRightNoiseContributionClasses x y z w) := by
+  constructor
+  · intro h
+    rcases h with ⟨⟨q, hq⟩⟩
+    rcases noiseLeftContributionClass_has_swappedRightNoisePartner x y z w q hq with
+      ⟨q', _, hq'⟩
+    exact ⟨⟨q', hq'⟩⟩
+  · intro h
+    rcases h with ⟨⟨q', hq'⟩⟩
+    rcases SwappedRightNoiseContributionClass.exists_leftNoise x y z w q' hq' with
+      ⟨q, _, hq⟩
+    exact ⟨⟨q, hq⟩⟩
+
+/--
+Noise-cardinality balance reduces to degree-1 control on the two noise
+carriers, since their nonemptiness has already been proved equivalent.
+-/
+theorem leftNoiseContributionCard_eq_swappedRightNoiseContributionCard_of_subsingleton
+    (x y z w : PTree)
+    (hLeft : Subsingleton (LeftNoiseContributionClasses x y z w))
+    (hRight : Subsingleton (SwappedRightNoiseContributionClasses x y z w)) :
+    leftNoiseContributionCard x y z w =
+      swappedRightNoiseContributionCard x y z w := by
+  classical
+  letI : Subsingleton (LeftNoiseContributionClasses x y z w) := hLeft
+  letI : Subsingleton (SwappedRightNoiseContributionClasses x y z w) := hRight
+  unfold leftNoiseContributionCard swappedRightNoiseContributionCard
+  by_cases hLeftNonempty : Nonempty (LeftNoiseContributionClasses x y z w)
+  · have hRightNonempty : Nonempty (SwappedRightNoiseContributionClasses x y z w) :=
+      (nonempty_leftNoiseContributionClasses_iff_nonempty_swappedRightNoiseContributionClasses
+        x y z w).mp hLeftNonempty
+    let l : LeftNoiseContributionClasses x y z w := Classical.choice hLeftNonempty
+    let r : SwappedRightNoiseContributionClasses x y z w := Classical.choice hRightNonempty
+    let e : LeftNoiseContributionClasses x y z w ≃
+        SwappedRightNoiseContributionClasses x y z w :=
+      { toFun := fun _ => r
+        invFun := fun _ => l
+        left_inv := by
+          intro a
+          exact Subsingleton.elim _ _
+        right_inv := by
+          intro b
+          exact Subsingleton.elim _ _ }
+    exact congrArg Cardinal.lift (Cardinal.mk_congr e)
+  · have hRightNonempty : ¬ Nonempty (SwappedRightNoiseContributionClasses x y z w) := by
+      intro h
+      exact hLeftNonempty
+        ((nonempty_leftNoiseContributionClasses_iff_nonempty_swappedRightNoiseContributionClasses
+          x y z w).mpr h)
+    let e : LeftNoiseContributionClasses x y z w ≃
+        SwappedRightNoiseContributionClasses x y z w :=
+      { toFun := fun a => False.elim (hLeftNonempty ⟨a⟩)
+        invFun := fun b => False.elim (hRightNonempty ⟨b⟩)
+        left_inv := by
+          intro a
+          exact False.elim (hLeftNonempty ⟨a⟩)
+        right_inv := by
+          intro b
+          exact False.elim (hRightNonempty ⟨b⟩) }
+    exact congrArg Cardinal.lift (Cardinal.mk_congr e)
+
+/--
+To make the left noise carrier degree `≤ 1`, it is enough to know that the two
+oriented overlap-noise floors collapse across orientations as well.
+
+The same-orientation cases are already subsingletons; the only genuinely new
+input is the cross-orientation collapse hypothesis.
+-/
+theorem leftNoiseContributionClasses_subsingleton_of_crossCollapse
+    (x y z w : PTree)
+    (hCross :
+      ∀ q q' : TwoStepQuotient x y z w,
+        LeftToRightOverlapNoiseClass x y z w q →
+        RightToLeftOverlapNoiseClass x y z w q' →
+        q = q') :
+    Subsingleton (LeftNoiseContributionClasses x y z w) := by
+  refine ⟨?_⟩
+  intro u v
+  apply Subtype.ext
+  change u.1 = v.1
+  rcases u.2 with hu | hu
+  · rcases v.2 with hv | hv
+    · have hEq :
+          (⟨u.1, hu⟩ : { q : TwoStepQuotient x y z w //
+              LeftToRightOverlapNoiseClass x y z w q }) =
+            ⟨v.1, hv⟩ := by
+          exact
+            (LeftToRightOverlapNoiseClass_subsingleton x y z w).elim
+              ⟨u.1, hu⟩ ⟨v.1, hv⟩
+      simpa using congrArg Subtype.val hEq
+    · exact hCross u.1 v.1 hu hv
+  · rcases v.2 with hv | hv
+    · exact (hCross v.1 u.1 hv hu).symm
+    · have hEq :
+          (⟨u.1, hu⟩ : { q : TwoStepQuotient x y z w //
+              RightToLeftOverlapNoiseClass x y z w q }) =
+            ⟨v.1, hv⟩ := by
+          exact
+            (RightToLeftOverlapNoiseClass_subsingleton x y z w).elim
+              ⟨u.1, hu⟩ ⟨v.1, hv⟩
+      simpa using congrArg Subtype.val hEq
+
+/--
+Any swapped-right non-noise contribution class still has a pure residual left
+partner.
+
+This is just the `noise ∨ pure-left-residual` theorem with the noise branch
+ruled out explicitly.
+-/
+theorem rightNonNoiseContributionClass_has_pureLeftResidualPartner
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : IsRightContributionClass x y z w q')
+    (hNotNoise : ¬ SwappedRightNoiseContributionClass x y z w q') :
+    ∃ q : TwoStepQuotient x y z w,
+      SwappedTwoStepClass x y z w q q' ∧
+      PureResidualLeftContributionClass x y z w q := by
+  rcases rightContributionClass_noise_or_has_pureLeftResidualPartner x y z w q' hq' with
+    hNoise | hPure
+  · exact False.elim (hNotNoise hNoise)
+  · exact hPure
+
+/--
+So every swapped-right non-noise contribution class is residual on the
+swapped-right side as well.
+-/
+theorem rightNonNoiseContributionClass_is_residual
+    (x y z w : PTree)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : IsRightContributionClass x y z w q')
+    (hNotNoise : ¬ SwappedRightNoiseContributionClass x y z w q') :
+    ResidualSwappedRightContributionClass x y z w q' := by
+  rcases rightNonNoiseContributionClass_has_pureLeftResidualPartner
+      x y z w q' hq' hNotNoise with
+    ⟨q, hs, hPure⟩
+  refine ⟨hq', q, hs, ?_⟩
+  rcases hPure with hOut | hIn
+  · exact hOut.1
+  · exact hIn.1
+
+/--
+Bundled version: every right non-noise class has some pure residual left
+partner.
+-/
+theorem RightNonNoiseContributionClasses.has_pureLeftResidualPartner
+    (x y z w : PTree)
+    (t : RightNonNoiseContributionClasses x y z w) :
+    ∃ q : TwoStepQuotient x y z w,
+      SwappedTwoStepClass x y z w q t.1 ∧
+      PureResidualLeftContributionClass x y z w q := by
+  exact rightNonNoiseContributionClass_has_pureLeftResidualPartner
+    x y z w t.1 t.2.1 t.2.2
+
+/--
+Bundled version: every right non-noise class is automatically residual on the
+swapped-right side.
+-/
+theorem RightNonNoiseContributionClasses.is_residual
+    (x y z w : PTree)
+    (t : RightNonNoiseContributionClasses x y z w) :
+    ResidualSwappedRightContributionClass x y z w t.1 := by
+  exact rightNonNoiseContributionClass_is_residual
+    x y z w t.1 t.2.1 t.2.2
+
+/--
+For a fixed right non-noise class `t`, the fibre of pure residual left partners
+transporting to it.
+-/
+def RightNonNoisePureLeftResidualPartnerFiber
+    (x y z w : PTree)
+    (t : RightNonNoiseContributionClasses x y z w) :=
+  { q : TwoStepQuotient x y z w //
+      SwappedTwoStepClass x y z w q t.1 ∧
+      PureResidualLeftContributionClass x y z w q }
+
+/--
+This partner fibre is always inhabited.
+-/
+theorem rightNonNoisePureLeftResidualPartnerFiber_nonempty
+    (x y z w : PTree)
+    (t : RightNonNoiseContributionClasses x y z w) :
+    Nonempty (RightNonNoisePureLeftResidualPartnerFiber x y z w t) := by
+  rcases t.has_pureLeftResidualPartner x y z w with ⟨q, hs, hPure⟩
+  exact ⟨⟨q, hs, hPure⟩⟩
+
+/--
+Choose one pure residual left partner for a right non-noise class.
+
+At this stage no uniqueness is claimed; this is a deliberate choice operator.
+-/
+noncomputable def transportRightNonNoiseContributionClassToPureLeftResidual
+    (x y z w : PTree)
+    (t : RightNonNoiseContributionClasses x y z w) :
+    RightNonNoisePureLeftResidualPartnerFiber x y z w t :=
+  Classical.choice (rightNonNoisePureLeftResidualPartnerFiber_nonempty x y z w t)
+
+/--
+The chosen pure residual left partner does transport to the given right
+non-noise class.
+-/
+theorem transportRightNonNoiseContributionClassToPureLeftResidual_swapped
+    (x y z w : PTree)
+    (t : RightNonNoiseContributionClasses x y z w) :
+    SwappedTwoStepClass x y z w
+      (transportRightNonNoiseContributionClassToPureLeftResidual x y z w t).1
+      t.1 :=
+  (transportRightNonNoiseContributionClassToPureLeftResidual x y z w t).2.1
+
+/--
+The chosen partner is pure residual on the left.
+-/
+theorem transportRightNonNoiseContributionClassToPureLeftResidual_pure
+    (x y z w : PTree)
+    (t : RightNonNoiseContributionClasses x y z w) :
+    PureResidualLeftContributionClass x y z w
+      (transportRightNonNoiseContributionClassToPureLeftResidual x y z w t).1 :=
+  (transportRightNonNoiseContributionClassToPureLeftResidual x y z w t).2.2
+
+/--
+Right non-noise classes whose chosen explanation can be taken from the pure
+outer residual sector on the left.
+-/
+def OuterGuidedRightNonNoiseContributionClasses
+    (x y z w : PTree) :=
+  { t : RightNonNoiseContributionClasses x y z w //
+      ∃ q : TwoStepQuotient x y z w,
+        SwappedTwoStepClass x y z w q t.1 ∧
+        PureOuterResidualLeftContributionClass x y z w q }
+
+/--
+Right non-noise classes whose chosen explanation can be taken from the pure
+inner residual sector on the left.
+-/
+def InnerGuidedRightNonNoiseContributionClasses
+    (x y z w : PTree) :=
+  { t : RightNonNoiseContributionClasses x y z w //
+      ∃ q : TwoStepQuotient x y z w,
+        SwappedTwoStepClass x y z w q t.1 ∧
+        PureInnerResidualLeftContributionClass x y z w q }
+
+/--
+Every right non-noise class is guided either by a pure outer residual left
+partner or by a pure inner residual left partner.
+-/
+theorem rightNonNoiseContributionClass_outerGuided_or_innerGuided
+    (x y z w : PTree)
+    (t : RightNonNoiseContributionClasses x y z w) :
+    (∃ q : TwoStepQuotient x y z w,
+      SwappedTwoStepClass x y z w q t.1 ∧
+      PureOuterResidualLeftContributionClass x y z w q)
+    ∨
+    (∃ q : TwoStepQuotient x y z w,
+      SwappedTwoStepClass x y z w q t.1 ∧
+      PureInnerResidualLeftContributionClass x y z w q) := by
+  rcases t.has_pureLeftResidualPartner x y z w with ⟨q, hs, hPure⟩
+  rcases hPure with hOut | hIn
+  · exact Or.inl ⟨q, hs, hOut⟩
+  · exact Or.inr ⟨q, hs, hIn⟩
+
+/--
+Bundled outer-guided witness for a right non-noise class, if it exists.
+-/
+theorem OuterGuidedRightNonNoiseContributionClasses.has_pureOuterLeftResidualPartner
+    (x y z w : PTree)
+    (t : OuterGuidedRightNonNoiseContributionClasses x y z w) :
+    ∃ q : TwoStepQuotient x y z w,
+      SwappedTwoStepClass x y z w q t.1.1 ∧
+      PureOuterResidualLeftContributionClass x y z w q :=
+  t.2
+
+/--
+Bundled inner-guided witness for a right non-noise class, if it exists.
+-/
+theorem InnerGuidedRightNonNoiseContributionClasses.has_pureInnerLeftResidualPartner
+    (x y z w : PTree)
+    (t : InnerGuidedRightNonNoiseContributionClasses x y z w) :
+    ∃ q : TwoStepQuotient x y z w,
+      SwappedTwoStepClass x y z w q t.1.1 ∧
+      PureInnerResidualLeftContributionClass x y z w q :=
+  t.2
+
+/--
+For a fixed outer-guided right non-noise class `t`, the fibre of pure outer
+residual left partners transporting to it.
+-/
+def OuterGuidedRightNonNoisePartnerFiber
+    (x y z w : PTree)
+    (t : OuterGuidedRightNonNoiseContributionClasses x y z w) :=
+  { q : TwoStepQuotient x y z w //
+      SwappedTwoStepClass x y z w q t.1.1 ∧
+      PureOuterResidualLeftContributionClass x y z w q }
+
+/--
+For a fixed inner-guided right non-noise class `t`, the fibre of pure inner
+residual left partners transporting to it.
+-/
+def InnerGuidedRightNonNoisePartnerFiber
+    (x y z w : PTree)
+    (t : InnerGuidedRightNonNoiseContributionClasses x y z w) :=
+  { q : TwoStepQuotient x y z w //
+      SwappedTwoStepClass x y z w q t.1.1 ∧
+      PureInnerResidualLeftContributionClass x y z w q }
+
+/-- Outer-guided partner fibres are inhabited. -/
+theorem outerGuidedRightNonNoisePartnerFiber_nonempty
+    (x y z w : PTree)
+    (t : OuterGuidedRightNonNoiseContributionClasses x y z w) :
+    Nonempty (OuterGuidedRightNonNoisePartnerFiber x y z w t) := by
+  rcases t.has_pureOuterLeftResidualPartner x y z w with ⟨q, hs, hPure⟩
+  exact ⟨⟨q, hs, hPure⟩⟩
+
+/-- Inner-guided partner fibres are inhabited. -/
+theorem innerGuidedRightNonNoisePartnerFiber_nonempty
+    (x y z w : PTree)
+    (t : InnerGuidedRightNonNoiseContributionClasses x y z w) :
+    Nonempty (InnerGuidedRightNonNoisePartnerFiber x y z w t) := by
+  rcases t.has_pureInnerLeftResidualPartner x y z w with ⟨q, hs, hPure⟩
+  exact ⟨⟨q, hs, hPure⟩⟩
+
+/--
+Choose one pure outer residual left partner for an outer-guided right non-noise
+class.
+-/
+noncomputable def transportOuterGuidedRightNonNoiseContributionClassToPureOuterLeft
+    (x y z w : PTree)
+    (t : OuterGuidedRightNonNoiseContributionClasses x y z w) :
+    OuterGuidedRightNonNoisePartnerFiber x y z w t :=
+  Classical.choice (outerGuidedRightNonNoisePartnerFiber_nonempty x y z w t)
+
+/--
+Choose one pure inner residual left partner for an inner-guided right non-noise
+class.
+-/
+noncomputable def transportInnerGuidedRightNonNoiseContributionClassToPureInnerLeft
+    (x y z w : PTree)
+    (t : InnerGuidedRightNonNoiseContributionClasses x y z w) :
+    InnerGuidedRightNonNoisePartnerFiber x y z w t :=
+  Classical.choice (innerGuidedRightNonNoisePartnerFiber_nonempty x y z w t)
+
+/-- The chosen outer-guided partner really transports to the target class. -/
+theorem transportOuterGuidedRightNonNoiseContributionClassToPureOuterLeft_swapped
+    (x y z w : PTree)
+    (t : OuterGuidedRightNonNoiseContributionClasses x y z w) :
+    SwappedTwoStepClass x y z w
+      (transportOuterGuidedRightNonNoiseContributionClassToPureOuterLeft x y z w t).1
+      t.1.1 :=
+  (transportOuterGuidedRightNonNoiseContributionClassToPureOuterLeft x y z w t).2.1
+
+/-- The chosen outer-guided partner is pure outer residual on the left. -/
+theorem transportOuterGuidedRightNonNoiseContributionClassToPureOuterLeft_pure
+    (x y z w : PTree)
+    (t : OuterGuidedRightNonNoiseContributionClasses x y z w) :
+    PureOuterResidualLeftContributionClass x y z w
+      (transportOuterGuidedRightNonNoiseContributionClassToPureOuterLeft x y z w t).1 :=
+  (transportOuterGuidedRightNonNoiseContributionClassToPureOuterLeft x y z w t).2.2
+
+/-- The chosen inner-guided partner really transports to the target class. -/
+theorem transportInnerGuidedRightNonNoiseContributionClassToPureInnerLeft_swapped
+    (x y z w : PTree)
+    (t : InnerGuidedRightNonNoiseContributionClasses x y z w) :
+    SwappedTwoStepClass x y z w
+      (transportInnerGuidedRightNonNoiseContributionClassToPureInnerLeft x y z w t).1
+      t.1.1 :=
+  (transportInnerGuidedRightNonNoiseContributionClassToPureInnerLeft x y z w t).2.1
+
+/-- The chosen inner-guided partner is pure inner residual on the left. -/
+theorem transportInnerGuidedRightNonNoiseContributionClassToPureInnerLeft_pure
+    (x y z w : PTree)
+    (t : InnerGuidedRightNonNoiseContributionClasses x y z w) :
+    PureInnerResidualLeftContributionClass x y z w
+      (transportInnerGuidedRightNonNoiseContributionClassToPureInnerLeft x y z w t).1 :=
+  (transportInnerGuidedRightNonNoiseContributionClassToPureInnerLeft x y z w t).2.2
+
+/--
+Nonemptiness of the right non-noise sector is exactly nonemptiness of at least
+one of the two guided pure sectors.
+-/
+theorem nonempty_rightNonNoiseContributionClasses_iff
+    (x y z w : PTree) :
+    Nonempty (RightNonNoiseContributionClasses x y z w) ↔
+      Nonempty (OuterGuidedRightNonNoiseContributionClasses x y z w) ∨
+        Nonempty (InnerGuidedRightNonNoiseContributionClasses x y z w) := by
+  constructor
+  · intro h
+    rcases h with ⟨t⟩
+    rcases rightNonNoiseContributionClass_outerGuided_or_innerGuided x y z w t with
+      hOut | hIn
+    · exact Or.inl ⟨⟨t, hOut⟩⟩
+    · exact Or.inr ⟨⟨t, hIn⟩⟩
+  · intro h
+    rcases h with h | h
+    · rcases h with ⟨t⟩
+      exact ⟨t.1⟩
+    · rcases h with ⟨t⟩
+      exact ⟨t.1⟩
+
+/--
+Hypothesis saying that residual swapped-right classes are disjoint from the
+noise floor.
+
+This is strictly weaker than proving full right-side disjointness of all
+outer/inner support, and it is exactly the hypothesis needed to upgrade
+residual swapped-right classes into genuine right non-noise classes.
+-/
+def ResidualSwappedRightDisjointFromNoise
+    (x y z w : PTree) : Prop :=
+  ∀ q' : TwoStepQuotient y x z w,
+    ResidualSwappedRightContributionClass x y z w q' →
+    ¬ SwappedRightNoiseContributionClass x y z w q'
+
+/--
+Residual/noise disjointness reduces to ruling out noisy swapped-right targets
+of pure residual left sources.
+
+This packages the remaining interference problem in the smallest possible way:
+once every pure residual left partner is known to avoid the swapped-right noise
+floor, residual classes are automatically disjoint from noise.
+-/
+theorem residualSwappedRightDisjointFromNoise_of_purePartner_noise_exclusion
+    (x y z w : PTree)
+    (hNoise :
+      ∀ {q : TwoStepQuotient x y z w}
+        {q' : TwoStepQuotient y x z w},
+        PureResidualLeftContributionClass x y z w q →
+        SwappedTwoStepClass x y z w q q' →
+        ¬ SwappedRightNoiseContributionClass x y z w q') :
+    ResidualSwappedRightDisjointFromNoise x y z w := by
+  intro q' hq' hNoise'
+  rcases residualSwappedRightContributionClass_has_pureLeftPartner x y z w q' hq' with
+    ⟨q, hs, hPure⟩
+  exact hNoise hPure hs hNoise'
+
+/--
+Under residual/noise disjointness, any residual swapped-right class is already
+an honest right non-noise class.
+-/
+def residualSwappedRightContributionClass_to_rightNonNoise_of_disjoint
+    (x y z w : PTree)
+    (hDisj : ResidualSwappedRightDisjointFromNoise x y z w)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : ResidualSwappedRightContributionClass x y z w q') :
+    RightNonNoiseContributionClasses x y z w := by
+  exact ⟨q', hq'.1, hDisj q' hq'⟩
+
+/--
+Bundled transport from residual swapped-right classes to right non-noise
+classes under residual/noise disjointness.
+-/
+noncomputable def transportResidualSwappedRightContributionClassToRightNonNoise_of_disjoint
+    (x y z w : PTree)
+    (hDisj : ResidualSwappedRightDisjointFromNoise x y z w) :
+    ResidualSwappedRightContributionClasses x y z w →
+      RightNonNoiseContributionClasses x y z w
+  | ⟨q', hq'⟩ =>
+      ⟨q', hq'.1, hDisj q' hq'⟩
+
+/--
+Bundled transport in the opposite direction is unconditional: every right
+non-noise class is residual on the swapped-right side.
+-/
+noncomputable def transportRightNonNoiseContributionClassToResidualSwappedRight
+    (x y z w : PTree) :
+    RightNonNoiseContributionClasses x y z w →
+      ResidualSwappedRightContributionClasses x y z w
+  | ⟨q', hq', hNotNoise⟩ =>
+      ⟨q', rightNonNoiseContributionClass_is_residual x y z w q' hq' hNotNoise⟩
+
+/--
+Under residual/noise disjointness, the residual swapped-right carrier and the
+right non-noise carrier are equivalent.
+-/
+noncomputable def residualSwappedRightContributionClasses_equiv_rightNonNoise_of_disjoint
+    (x y z w : PTree)
+    (hDisj : ResidualSwappedRightDisjointFromNoise x y z w) :
+    ResidualSwappedRightContributionClasses x y z w ≃
+      RightNonNoiseContributionClasses x y z w where
+  toFun :=
+    transportResidualSwappedRightContributionClassToRightNonNoise_of_disjoint
+      x y z w hDisj
+  invFun :=
+    transportRightNonNoiseContributionClassToResidualSwappedRight
+      x y z w
+  left_inv := by
+    rintro ⟨q', hq'⟩
+    apply Subtype.ext
+    rcases hq' with ⟨hqRight, hqRes⟩
+    unfold transportResidualSwappedRightContributionClassToRightNonNoise_of_disjoint
+    change
+      (transportRightNonNoiseContributionClassToResidualSwappedRight x y z w
+        (⟨q', hqRight, hDisj q' ⟨hqRight, hqRes⟩⟩ :
+          RightNonNoiseContributionClasses x y z w)).1 = q'
+    unfold transportRightNonNoiseContributionClassToResidualSwappedRight
+    change
+      (match (⟨q', hqRight, hDisj q' ⟨hqRight, hqRes⟩⟩ :
+          RightNonNoiseContributionClasses x y z w) with
+      | ⟨q'', _, _⟩ => q'') = q'
+    rfl
+  right_inv := by
+    rintro ⟨q', hq', hNotNoise⟩
+    apply Subtype.ext
+    rfl
+
+/--
+Therefore the two carriers have the same cardinality.
+-/
+theorem residualSwappedRightContributionCard_eq_rightNonNoiseContributionCard_of_disjoint
+    (x y z w : PTree)
+    (hDisj : ResidualSwappedRightDisjointFromNoise x y z w) :
+    residualSwappedRightContributionCard x y z w =
+      rightNonNoiseContributionCard x y z w := by
+  unfold residualSwappedRightContributionCard rightNonNoiseContributionCard
+  exact congrArg Cardinal.lift
+    (Cardinal.mk_congr
+      (residualSwappedRightContributionClasses_equiv_rightNonNoise_of_disjoint
+        x y z w hDisj))
+
+/--
+Nonemptiness of the residual swapped-right carrier is equivalent to nonemptiness
+of the right non-noise carrier under residual/noise disjointness.
+-/
+theorem nonempty_residualSwappedRightContributionClasses_iff_nonempty_rightNonNoiseContributionClasses_of_disjoint
+    (x y z w : PTree)
+    (hDisj : ResidualSwappedRightDisjointFromNoise x y z w) :
+    Nonempty (ResidualSwappedRightContributionClasses x y z w) ↔
+      Nonempty (RightNonNoiseContributionClasses x y z w) := by
+  constructor
+  · intro h
+    rcases h with ⟨t⟩
+    exact ⟨(residualSwappedRightContributionClasses_equiv_rightNonNoise_of_disjoint
+      x y z w hDisj) t⟩
+  · intro h
+    rcases h with ⟨t⟩
+    exact ⟨(residualSwappedRightContributionClasses_equiv_rightNonNoise_of_disjoint
+      x y z w hDisj).symm t⟩
+
+/--
+Under residual/noise disjointness, every pure outer residual left class has an
+outer-guided right non-noise partner.
+-/
+theorem pureOuterResidualAssociatorLeftClass_has_outerGuidedRightNonNoisePartner_of_disjoint
+    (x y z w : PTree)
+    (hDisj : ResidualSwappedRightDisjointFromNoise x y z w)
+    (s : PureOuterResidualAssociatorLeftClasses x y z w) :
+    ∃ t : OuterGuidedRightNonNoiseContributionClasses x y z w,
+      SwappedTwoStepClass x y z w s.1 t.1.1 := by
+  rcases pureOuterResidualAssociatorComparison x y z w s with ⟨t, ht, _⟩
+  have hs_raw :
+      SwappedTwoStepClass x y z w s.1 t.1 := by
+    have hval :
+        (transportSwappedRightOuterContributionClass x y z w t).1 = s.1 := by
+      exact congrArg Subtype.val ht.1
+    simpa [hval] using
+      (transportSwappedRightOuterContributionClass_swapped x y z w t)
+  let qh : RightNonNoiseContributionClasses x y z w :=
+    ⟨t.1, Or.inl t.2, hDisj t.1 ht.2⟩
+  have hs :
+      SwappedTwoStepClass x y z w s.1 qh.1 := by
+    dsimp [qh]
+    exact hs_raw
+  exact ⟨⟨qh, ⟨s.1, hs, s.2⟩⟩, hs⟩
+
+/--
+Under residual/noise disjointness, every pure inner residual left class has an
+inner-guided right non-noise partner.
+-/
+theorem pureInnerResidualAssociatorLeftClass_has_innerGuidedRightNonNoisePartner_of_disjoint
+    (x y z w : PTree)
+    (hDisj : ResidualSwappedRightDisjointFromNoise x y z w)
+    (s : PureInnerResidualAssociatorLeftClasses x y z w) :
+    ∃ t : InnerGuidedRightNonNoiseContributionClasses x y z w,
+      SwappedTwoStepClass x y z w s.1 t.1.1 := by
+  rcases pureInnerResidualAssociatorComparison x y z w s with ⟨t, ht, _⟩
+  have hs_raw :
+      SwappedTwoStepClass x y z w s.1 t.1 := by
+    have hval :
+        (transportSwappedInnerContributionClassToLeft x y z w t).1 = s.1 := by
+      exact congrArg Subtype.val ht.1
+    simpa [hval] using
+      (transportSwappedInnerContributionClassToLeft_swapped x y z w t)
+  let qh : RightNonNoiseContributionClasses x y z w :=
+    ⟨t.1, Or.inr t.2, hDisj t.1 ht.2⟩
+  have hs :
+      SwappedTwoStepClass x y z w s.1 qh.1 := by
+    dsimp [qh]
+    exact hs_raw
+  exact ⟨⟨qh, ⟨s.1, hs, s.2⟩⟩, hs⟩
+
+/--
+If the pure outer residual left sector is inhabited, then so is the
+outer-guided right non-noise sector, provided residual swapped-right classes are
+disjoint from noise.
+-/
+theorem nonempty_outerGuidedRightNonNoiseContributionClasses_of_nonempty_pureOuterResidualAssociatorLeftClasses_and_disjoint
+    (x y z w : PTree)
+    (hDisj : ResidualSwappedRightDisjointFromNoise x y z w)
+    (h : Nonempty (PureOuterResidualAssociatorLeftClasses x y z w)) :
+    Nonempty (OuterGuidedRightNonNoiseContributionClasses x y z w) := by
+  rcases h with ⟨s⟩
+  rcases pureOuterResidualAssociatorLeftClass_has_outerGuidedRightNonNoisePartner_of_disjoint
+      x y z w hDisj s with
+    ⟨t, _⟩
+  exact ⟨t⟩
+
+/--
+If the pure inner residual left sector is inhabited, then so is the
+inner-guided right non-noise sector, provided residual swapped-right classes are
+disjoint from noise.
+-/
+theorem nonempty_innerGuidedRightNonNoiseContributionClasses_of_nonempty_pureInnerResidualAssociatorLeftClasses_and_disjoint
+    (x y z w : PTree)
+    (hDisj : ResidualSwappedRightDisjointFromNoise x y z w)
+    (h : Nonempty (PureInnerResidualAssociatorLeftClasses x y z w)) :
+    Nonempty (InnerGuidedRightNonNoiseContributionClasses x y z w) := by
+  rcases h with ⟨s⟩
+  rcases pureInnerResidualAssociatorLeftClass_has_innerGuidedRightNonNoisePartner_of_disjoint
+      x y z w hDisj s with
+    ⟨t, _⟩
+  exact ⟨t⟩
+
+/--
+Any inhabited outer-guided right non-noise sector yields an inhabited pure
+outer residual left sector.
+-/
+theorem nonempty_pureOuterResidualAssociatorLeftClasses_of_nonempty_outerGuidedRightNonNoiseContributionClasses
+    (x y z w : PTree)
+    (h : Nonempty (OuterGuidedRightNonNoiseContributionClasses x y z w)) :
+    Nonempty (PureOuterResidualAssociatorLeftClasses x y z w) := by
+  rcases h with ⟨t⟩
+  exact ⟨⟨
+    (transportOuterGuidedRightNonNoiseContributionClassToPureOuterLeft x y z w t).1,
+    transportOuterGuidedRightNonNoiseContributionClassToPureOuterLeft_pure x y z w t
+  ⟩⟩
+
+/--
+Any inhabited inner-guided right non-noise sector yields an inhabited pure
+inner residual left sector.
+-/
+theorem nonempty_pureInnerResidualAssociatorLeftClasses_of_nonempty_innerGuidedRightNonNoiseContributionClasses
+    (x y z w : PTree)
+    (h : Nonempty (InnerGuidedRightNonNoiseContributionClasses x y z w)) :
+    Nonempty (PureInnerResidualAssociatorLeftClasses x y z w) := by
+  rcases h with ⟨t⟩
+  exact ⟨⟨
+    (transportInnerGuidedRightNonNoiseContributionClassToPureInnerLeft x y z w t).1,
+    transportInnerGuidedRightNonNoiseContributionClassToPureInnerLeft_pure x y z w t
+  ⟩⟩
+
+/--
+Hence the pure outer residual left sector is inhabited exactly when the
+outer-guided right non-noise sector is inhabited, under residual/noise
+disjointness.
+-/
+theorem nonempty_pureOuterResidualAssociatorLeftClasses_iff_nonempty_outerGuidedRightNonNoiseContributionClasses_of_disjoint
+    (x y z w : PTree)
+    (hDisj : ResidualSwappedRightDisjointFromNoise x y z w) :
+    Nonempty (PureOuterResidualAssociatorLeftClasses x y z w) ↔
+      Nonempty (OuterGuidedRightNonNoiseContributionClasses x y z w) := by
+  constructor
+  · intro h
+    exact
+      nonempty_outerGuidedRightNonNoiseContributionClasses_of_nonempty_pureOuterResidualAssociatorLeftClasses_and_disjoint
+        x y z w hDisj h
+  · intro h
+    exact
+      nonempty_pureOuterResidualAssociatorLeftClasses_of_nonempty_outerGuidedRightNonNoiseContributionClasses
+        x y z w h
+
+/--
+And likewise for the pure inner residual sector.
+-/
+theorem nonempty_pureInnerResidualAssociatorLeftClasses_iff_nonempty_innerGuidedRightNonNoiseContributionClasses_of_disjoint
+    (x y z w : PTree)
+    (hDisj : ResidualSwappedRightDisjointFromNoise x y z w) :
+    Nonempty (PureInnerResidualAssociatorLeftClasses x y z w) ↔
+      Nonempty (InnerGuidedRightNonNoiseContributionClasses x y z w) := by
+  constructor
+  · intro h
+    exact
+      nonempty_innerGuidedRightNonNoiseContributionClasses_of_nonempty_pureInnerResidualAssociatorLeftClasses_and_disjoint
+        x y z w hDisj h
+  · intro h
+    exact
+      nonempty_pureInnerResidualAssociatorLeftClasses_of_nonempty_innerGuidedRightNonNoiseContributionClasses
+        x y z w h
+
+/--
+Under residual right-functionality, residual-local no-overlap, and
+residual/noise disjointness, the residual left sector and the right non-noise
+sector have the same cardinality.
+-/
+theorem residualAssociatorLeftCard_eq_rightNonNoiseContributionCard_of_rightFunctional_and_no_residual_overlap_and_disjoint
+    (x y z w : PTree)
+    (hfun : SwappedTwoStepClassRightFunctionalOnResidual x y z w)
+    (hNo : NoResidualRightOuterInnerOverlap x y z w)
+    (hDisj : ResidualSwappedRightDisjointFromNoise x y z w) :
+    residualAssociatorLeftCard x y z w =
+      rightNonNoiseContributionCard x y z w := by
+  calc
+    residualAssociatorLeftCard x y z w
+      = residualSwappedRightContributionCard x y z w := by
+          exact
+            residualAssociatorLeftCard_eq_residualSwappedRightContributionCard_of_rightFunctional_and_no_residual_overlap
+              x y z w hfun hNo
+    _ = rightNonNoiseContributionCard x y z w := by
+          exact
+            residualSwappedRightContributionCard_eq_rightNonNoiseContributionCard_of_disjoint
+              x y z w hDisj
+
+/-!
+## Canonical residual partner reduction
+
+The remaining obstruction to unconditional residual right-functionality is not
+cardinality bookkeeping any more; it is partner canonicity.
+
+For the pure residual left sectors we package the exact statement needed:
+whenever a pure residual left class `q` is related by `SwappedTwoStepClass` to a
+residual swapped-right class `q'`, that `q'` must already be the canonical
+transport target of `q` in the matching outer or inner solved sector.
+
+Once those two canonicality statements are available, residual
+right-functionality becomes a short formal consequence, and the existing
+residual/non-noise cardinal comparison theorem can be reused unchanged.
+-/
+
+/--
+Outer canonicality on the residual sector.
+
+If a pure outer residual left class `q` is related to a residual swapped-right
+class `q'`, then `q'` already carries swapped-right outer support and transports
+back to `q` under the solved outer class-level commutation map.
+-/
+def PureOuterResidualPartnerCanonical
+    (x y z w : PTree) : Prop :=
+  ∀ {q : TwoStepQuotient x y z w}
+    {q' : TwoStepQuotient y x z w},
+    (hq : PureOuterResidualLeftContributionClass x y z w q) →
+    SwappedTwoStepClass x y z w q q' →
+    ResidualSwappedRightContributionClass x y z w q' →
+    ∃ hq' : HasSwappedRightOuterContributionClass x y z w q',
+      transportSwappedRightOuterContributionClass x y z w ⟨q', hq'⟩ =
+        ⟨q, hq.2.1⟩
+
+/--
+Inner canonicality on the residual sector.
+
+If a pure inner residual left class `q` is related to a residual swapped-right
+class `q'`, then `q'` already carries swapped-right inner support and transports
+back to `q` under the solved inner class-level commutation map.
+-/
+def PureInnerResidualPartnerCanonical
+    (x y z w : PTree) : Prop :=
+  ∀ {q : TwoStepQuotient x y z w}
+    {q' : TwoStepQuotient y x z w},
+    (hq : PureInnerResidualLeftContributionClass x y z w q) →
+    SwappedTwoStepClass x y z w q q' →
+    ResidualSwappedRightContributionClass x y z w q' →
+    ∃ hq' : HasSwappedRightInnerContributionClass x y z w q',
+      transportSwappedInnerContributionClassToLeft x y z w ⟨q', hq'⟩ =
+        ⟨q, hq.2.1⟩
+
+/--
+Bundled canonicality of residual partners on both pure left sectors.
+-/
+def PureResidualPartnerCanonical
+    (x y z w : PTree) : Prop :=
+  PureOuterResidualPartnerCanonical x y z w ∧
+    PureInnerResidualPartnerCanonical x y z w
+
+/--
+The `leftInner` constructor cannot occur from a pure outer residual source.
+-/
+theorem pureOuterResidualLeft_source_not_leftInner
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : PureOuterResidualLeftContributionClass x y z w q)
+    (a b : Address) (y' : PTree)
+    (hay : (a, y') ∈ matchingLeafGraftWitnesses y x)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y' z) :
+    q ≠ classOfLeftInner a b y' hay hbw := by
+  intro hEq
+  have hIn : HasLeftInnerContributionClass x y z w q := by
+    refine ⟨⟨⟨TwoStepWitnessLeft.inner a b y' hay hbw, trivial⟩, ?_⟩⟩
+    simpa [hEq, leftInnerWitnessClass, classOfLeftWitness, codeOfLeftWitness,
+      classOfLeftInner]
+  exact hq.2.2 hIn
+
+/--
+The `rightInner` constructor cannot occur from a pure outer residual source:
+it would already force left-to-right overlap noise.
+-/
+theorem pureOuterResidualLeft_source_not_rightInner
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : PureOuterResidualLeftContributionClass x y z w q)
+    (a b : Address) (y' : PTree)
+    (hay : (a, y') ∈ matchingLeafGraftWitnesses x y)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y' z) :
+    q ≠ codeClass (TwoStepCode.rightInner a b y' hay hbw) := by
+  intro hEq
+  have hInR : HasRightInnerContributionClass x y z w q := by
+    refine ⟨⟨TwoStepWitnessRight.inner a b y' hay hbw, trivial⟩, ?_⟩
+    simpa [hEq, rightInnerWitnessClass, classOfRightWitness, codeOfRightWitness]
+  exact hq.1.2.1
+    (mixedRightSupport_of_rightInner_type_is_noise x y z w q hq.2.1 hInR)
+
+/--
+The `leftOuter` constructor cannot occur from a pure inner residual source.
+-/
+theorem pureInnerResidualLeft_source_not_leftOuter
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : PureInnerResidualLeftContributionClass x y z w q)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses y z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses x z') :
+    q ≠ classOfLeftWitness (TwoStepWitnessLeft.outer a b z' haz hbw) := by
+  intro hEq
+  have hOut : HasLeftOuterContributionClass x y z w q := by
+    exact ⟨OuterLeftWitness.mk a b z' haz hbw, hEq.symm⟩
+  exact hq.2.2 hOut
+
+/--
+The `rightOuter` constructor cannot occur from a pure inner residual source:
+it would already force right-to-left overlap noise.
+-/
+theorem pureInnerResidualLeft_source_not_rightOuter
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : PureInnerResidualLeftContributionClass x y z w q)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses x z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y z') :
+    q ≠ classOfRightWitness (TwoStepWitnessRight.outer a b z' haz hbw) := by
+  intro hEq
+  have hOutR : HasRightOuterContributionClass x y z w q := by
+    exact ⟨OuterRightWitness.mk a b z' haz hbw, hEq.symm⟩
+  exact hq.1.2.2
+    (mixedLeftSupport_of_rightOuter_type_is_noise x y z w q hOutR hq.2.1)
+
+/--
+Direct canonicality for the forward outer constructor.
+
+When a pure outer residual left class is related to a residual swapped-right
+class by the explicit `leftOuter` constructor, the target is already the solved
+canonical outer transport target.
+-/
+theorem pureOuterResidualPartnerCanonical_leftOuter
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : PureOuterResidualLeftContributionClass x y z w q)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses y z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses x z')
+    (hqEq : q = classOfLeftWitness (TwoStepWitnessLeft.outer a b z' haz hbw)) :
+    ∃ hq' :
+        HasSwappedRightOuterContributionClass x y z w
+          (classOfRightWitness (TwoStepWitnessRight.outer a b z' haz hbw)),
+      transportSwappedRightOuterContributionClass x y z w
+          ⟨classOfRightWitness (TwoStepWitnessRight.outer a b z' haz hbw), hq'⟩ =
+        ⟨q, hq.2.1⟩ := by
+  refine ⟨⟨OuterRightWitness.mk a b z' haz hbw, rfl⟩, ?_⟩
+  apply Subtype.ext
+  calc
+    (transportSwappedRightOuterContributionClass x y z w
+        ⟨classOfRightWitness (TwoStepWitnessRight.outer a b z' haz hbw),
+          ⟨OuterRightWitness.mk a b z' haz hbw, rfl⟩⟩).1
+      = outerLeftWitnessClass
+          (outerRightToOuterLeft x y z w
+            (OuterRightWitness.mk a b z' haz hbw)) := by
+            exact
+              transportSwappedRightOuterContributionClass_eq_of_witness
+                x y z w
+                ⟨classOfRightWitness (TwoStepWitnessRight.outer a b z' haz hbw),
+                  ⟨OuterRightWitness.mk a b z' haz hbw, rfl⟩⟩
+                (OuterRightWitness.mk a b z' haz hbw)
+                rfl
+    _ = classOfLeftWitness (TwoStepWitnessLeft.outer a b z' haz hbw) := by
+          simp [outerRightToOuterLeft, outerLeftWitnessClass, classOfLeftWitness,
+            codeOfLeftWitness]
+    _ = q := hqEq.symm
+
+/--
+Direct canonicality for the forward inner constructor.
+
+When a pure inner residual left class is related to a residual swapped-right
+class by the explicit `leftInner` constructor, the target is already the solved
+canonical inner transport target.
+-/
+theorem pureInnerResidualPartnerCanonical_leftInner
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : PureInnerResidualLeftContributionClass x y z w q)
+    (a b : Address) (y' : PTree)
+    (hay : (a, y') ∈ matchingLeafGraftWitnesses y x)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y' z)
+    (hqEq : q = classOfLeftInner a b y' hay hbw) :
+    ∃ hq' :
+        HasSwappedRightInnerContributionClass x y z w
+          (classOfRightInner a b y' hay hbw),
+      transportSwappedInnerContributionClassToLeft x y z w
+          ⟨classOfRightInner a b y' hay hbw, hq'⟩ =
+        ⟨q, hq.2.1⟩ := by
+  let hData : SwappedRightInnerFiberData x y z w
+      (classOfRightInner a b y' hay hbw) :=
+    ⟨⟨TwoStepWitnessRight.inner a b y' hay hbw, trivial⟩, by
+      simp [swappedRightInnerWitnessClass, classOfRightWitness, codeOfRightWitness,
+        classOfRightInner]⟩
+  have hq' :
+      HasSwappedRightInnerContributionClass x y z w
+        (classOfRightInner a b y' hay hbw) := by
+    exact ⟨hData⟩
+  refine ⟨hq', ?_⟩
+  · apply Subtype.ext
+    calc
+      (transportSwappedInnerContributionClassToLeft x y z w
+          ⟨classOfRightInner a b y' hay hbw, hq'⟩).1
+        = (leftInnerFiberData_backward x y z w
+            ⟨classOfRightInner a b y' hay hbw, hData⟩).1 := by
+              exact congrArg Subtype.val
+                (transportSwappedInnerContributionClassToLeft_eq_of_witness
+                  x y z w hData)
+      _ = leftInnerWitnessClass x y z w
+            ⟨TwoStepWitnessLeft.inner a b y' hay hbw, trivial⟩ := by
+            rfl
+      _ = classOfLeftInner a b y' hay hbw := by
+            rfl
+      _ = q := hqEq.symm
+
+/--
+To prove pure outer residual partner canonicity, it is enough to handle the
+backward `rightOuter` constructor. The `leftOuter` constructor is already
+canonical, and the inner constructors are incompatible with pure outer
+residuality.
+-/
+theorem pureOuterResidualPartnerCanonical_of_rightOuter
+    (x y z w : PTree)
+    (hRightOuter :
+      ∀ {q : TwoStepQuotient x y z w},
+        (hq : PureOuterResidualLeftContributionClass x y z w q) →
+        ∀ (a b : Address) (z' : PTree)
+          (haz : (a, z') ∈ matchingLeafGraftWitnesses x z)
+          (hbw : (b, w) ∈ matchingLeafGraftWitnesses y z'),
+          q = classOfRightWitness (TwoStepWitnessRight.outer a b z' haz hbw) →
+          ∃ hq' :
+              HasSwappedRightOuterContributionClass x y z w
+                (classOfLeftWitness (TwoStepWitnessLeft.outer a b z' haz hbw)),
+            transportSwappedRightOuterContributionClass x y z w
+                ⟨classOfLeftWitness (TwoStepWitnessLeft.outer a b z' haz hbw), hq'⟩ =
+              ⟨q, hq.2.1⟩) :
+    PureOuterResidualPartnerCanonical x y z w := by
+  intro q q' hq hs hq'
+  cases hs with
+  | leftOuter a b z' haz hbw =>
+      simpa using
+        pureOuterResidualPartnerCanonical_leftOuter
+          x y z w
+          (classOfLeftWitness (TwoStepWitnessLeft.outer a b z' haz hbw))
+          hq a b z' haz hbw rfl
+  | leftInner a b y' hay hbw =>
+      exfalso
+      exact pureOuterResidualLeft_source_not_leftInner
+        x y z w
+        (classOfLeftInner a b y' hay hbw)
+        hq a b y' hay hbw rfl
+  | rightInner a b y' hay hbw =>
+      exfalso
+      exact pureOuterResidualLeft_source_not_rightInner
+        x y z w
+        (codeClass (TwoStepCode.rightInner a b y' hay hbw))
+        hq a b y' hay hbw rfl
+  | rightOuter a b z' haz hbw =>
+      simpa using hRightOuter hq a b z' haz hbw rfl
+
+/--
+To prove pure inner residual partner canonicity, it is enough to handle the
+backward `rightInner` constructor. The `leftInner` constructor is already
+canonical, and the outer constructors are incompatible with pure inner
+residuality.
+-/
+theorem pureInnerResidualPartnerCanonical_of_rightInner
+    (x y z w : PTree)
+    (hRightInner :
+      ∀ {q : TwoStepQuotient x y z w},
+        (hq : PureInnerResidualLeftContributionClass x y z w q) →
+        ∀ (a b : Address) (y' : PTree)
+          (hay : (a, y') ∈ matchingLeafGraftWitnesses x y)
+          (hbw : (b, w) ∈ matchingLeafGraftWitnesses y' z),
+          q = codeClass (TwoStepCode.rightInner a b y' hay hbw) →
+          ∃ hq' :
+              HasSwappedRightInnerContributionClass x y z w
+                (codeClass (TwoStepCode.leftInner a b y' hay hbw)),
+            transportSwappedInnerContributionClassToLeft x y z w
+                ⟨codeClass (TwoStepCode.leftInner a b y' hay hbw), hq'⟩ =
+              ⟨q, hq.2.1⟩) :
+    PureInnerResidualPartnerCanonical x y z w := by
+  intro q q' hq hs hq'
+  cases hs with
+  | leftOuter a b z' haz hbw =>
+      exfalso
+      exact pureInnerResidualLeft_source_not_leftOuter
+        x y z w
+        (classOfLeftWitness (TwoStepWitnessLeft.outer a b z' haz hbw))
+        hq a b z' haz hbw rfl
+  | leftInner a b y' hay hbw =>
+      simpa using
+        pureInnerResidualPartnerCanonical_leftInner
+          x y z w
+          (classOfLeftInner a b y' hay hbw)
+          hq a b y' hay hbw rfl
+  | rightInner a b y' hay hbw =>
+      simpa using hRightInner hq a b y' hay hbw rfl
+  | rightOuter a b z' haz hbw =>
+      exfalso
+      exact pureInnerResidualLeft_source_not_rightOuter
+        x y z w
+        (classOfRightWitness (TwoStepWitnessRight.outer a b z' haz hbw))
+        hq a b z' haz hbw rfl
+
+/--
+The backward `rightInner` constructor is canonical on the pure inner residual
+sector.
+
+The proof uses the actual left-inner fibre witness carried by `hq`, pushes it
+forward to a swapped-right inner fibre, and then identifies that swapped class
+with the explicit `leftInner` target by `swapTwoStepCode_respects_class`.
+-/
+theorem pureInnerResidualPartnerCanonical_rightInner
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : PureInnerResidualLeftContributionClass x y z w q)
+    (a b : Address) (y' : PTree)
+    (hay : (a, y') ∈ matchingLeafGraftWitnesses x y)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y' z)
+    (hqEq : q = codeClass (TwoStepCode.rightInner a b y' hay hbw)) :
+    ∃ hq' :
+        HasSwappedRightInnerContributionClass x y z w
+          (codeClass (TwoStepCode.leftInner a b y' hay hbw)),
+      transportSwappedInnerContributionClassToLeft x y z w
+          ⟨codeClass (TwoStepCode.leftInner a b y' hay hbw), hq'⟩ =
+        ⟨q, hq.2.1⟩ := by
+  let h : LeftInnerFiberData x y z w q := Classical.choice hq.2.1
+  have hs : (⟨q, hq.2.1⟩ : LeftInnerContributionClasses x y z w) = ⟨q, ⟨h⟩⟩ := by
+    apply Subtype.ext
+    rfl
+  let k := leftInnerFiberData_forward x y z w q h
+  have hkClass :
+      k.1 = codeClass (TwoStepCode.leftInner a b y' hay hbw) := by
+    rcases h with ⟨hw, hh⟩
+    rcases hw with ⟨hraw, hinner⟩
+    cases hraw with
+    | inner a₀ b₀ y₀ hay₀ hbw₀ =>
+        have hcode :
+            codeClass (TwoStepCode.leftInner a₀ b₀ y₀ hay₀ hbw₀) =
+              codeClass (TwoStepCode.rightInner a b y' hay hbw) := by
+          calc
+            codeClass (TwoStepCode.leftInner a₀ b₀ y₀ hay₀ hbw₀) = q := by
+              simpa [leftInnerWitnessClass, classOfLeftWitness, codeOfLeftWitness] using hh
+            _ = codeClass (TwoStepCode.rightInner a b y' hay hbw) := hqEq
+        have hswap :
+            codeClass (TwoStepCode.rightInner a₀ b₀ y₀ hay₀ hbw₀) =
+              codeClass (TwoStepCode.leftInner a b y' hay hbw) := by
+          exact swapTwoStepCode_respects_class x y z w hcode
+        simpa [k, leftInnerFiberData_forward,
+          leftInnerFiberData_to_swappedRightInnerFiberData,
+          leftInnerWitnessEquiv_swappedRightInnerWitness,
+          leftInnerWitness_to_swappedRightInnerWitness,
+          swappedRightInnerWitnessClass, classOfRightWitness, codeOfRightWitness]
+          using hswap
+    | outer =>
+        cases hinner
+  have hq' :
+      HasSwappedRightInnerContributionClass x y z w
+        (codeClass (TwoStepCode.leftInner a b y' hay hbw)) := by
+    rcases k.2 with ⟨hkData, hkEq⟩
+    exact ⟨⟨hkData, hkEq.trans hkClass⟩⟩
+  have htEq :
+      (⟨codeClass (TwoStepCode.leftInner a b y' hay hbw), hq'⟩ :
+        SwappedRightInnerContributionClasses x y z w) =
+      ⟨k.1, ⟨k.2⟩⟩ := by
+    apply Subtype.ext
+    exact hkClass.symm
+  have hforw :
+      transportLeftInnerContributionClassToSwapped x y z w ⟨q, hq.2.1⟩ =
+        ⟨k.1, ⟨k.2⟩⟩ := by
+    calc
+      transportLeftInnerContributionClassToSwapped x y z w ⟨q, hq.2.1⟩
+        = transportLeftInnerContributionClassToSwapped x y z w ⟨q, ⟨h⟩⟩ := by
+            rw [hs]
+      _ = ⟨k.1, ⟨k.2⟩⟩ := by
+            simpa [k] using
+              transportLeftInnerContributionClassToSwapped_eq_of_witness x y z w h
+  have hback :
+      transportSwappedInnerContributionClassToLeft x y z w ⟨k.1, ⟨k.2⟩⟩ =
+        ⟨q, hq.2.1⟩ := by
+    calc
+      transportSwappedInnerContributionClassToLeft x y z w ⟨k.1, ⟨k.2⟩⟩
+        = transportSwappedInnerContributionClassToLeft x y z w
+            (transportLeftInnerContributionClassToSwapped x y z w ⟨q, hq.2.1⟩) := by
+              rw [hforw]
+      _ = ⟨q, hq.2.1⟩ := by
+            exact
+              transportSwappedInnerContributionClassToLeft_left_inv
+                x y z w ⟨q, hq.2.1⟩
+  refine ⟨hq', ?_⟩
+  calc
+    transportSwappedInnerContributionClassToLeft x y z w
+        ⟨codeClass (TwoStepCode.leftInner a b y' hay hbw), hq'⟩
+      = transportSwappedInnerContributionClassToLeft x y z w ⟨k.1, ⟨k.2⟩⟩ := by
+          rw [htEq]
+    _ = ⟨q, hq.2.1⟩ := hback
+
+/--
+Pure inner residual partner canonicity now holds unconditionally: the only
+nontrivial backward case is `rightInner`, and it is solved by the theorem
+above.
+-/
+theorem pureInnerResidualPartnerCanonical
+    (x y z w : PTree) :
+    PureInnerResidualPartnerCanonical x y z w := by
+  exact
+    pureInnerResidualPartnerCanonical_of_rightInner x y z w
+      (fun hq a b y' hay hbw hqEq =>
+        pureInnerResidualPartnerCanonical_rightInner
+          x y z w _ hq a b y' hay hbw hqEq)
+
+/--
+The backward `rightOuter` constructor is canonical on the pure outer residual
+sector.
+
+This is the outer analogue of the solved inner backward case: choose the outer
+left witness carried by `hq`, push it through the outer class transport, and
+identify the resulting swapped-right outer class with the explicit `leftOuter`
+target by `swapTwoStepCode_respects_class`.
+-/
+theorem pureOuterResidualPartnerCanonical_rightOuter
+    (x y z w : PTree)
+    (q : TwoStepQuotient x y z w)
+    (hq : PureOuterResidualLeftContributionClass x y z w q)
+    (a b : Address) (z' : PTree)
+    (haz : (a, z') ∈ matchingLeafGraftWitnesses x z)
+    (hbw : (b, w) ∈ matchingLeafGraftWitnesses y z')
+    (hqEq : q = classOfRightWitness (TwoStepWitnessRight.outer a b z' haz hbw)) :
+    ∃ hq' :
+        HasSwappedRightOuterContributionClass x y z w
+          (classOfLeftWitness (TwoStepWitnessLeft.outer a b z' haz hbw)),
+      transportSwappedRightOuterContributionClass x y z w
+          ⟨classOfLeftWitness (TwoStepWitnessLeft.outer a b z' haz hbw), hq'⟩ =
+        ⟨q, hq.2.1⟩ := by
+  let s : OuterLeftContributionClasses x y z w := ⟨q, hq.2.1⟩
+  rcases hq.2.1 with ⟨h, hh⟩
+  cases h with
+  | mk a₀ b₀ z₀ haz₀ hbw₀ =>
+      let t := transportOuterLeftContributionClass x y z w s
+      have hcode :
+          codeClass (TwoStepCode.leftOuter a₀ b₀ z₀ haz₀ hbw₀) =
+            codeClass (TwoStepCode.rightOuter a b z' haz hbw) := by
+        simpa [outerLeftWitnessClass, classOfRightWitness, codeOfRightWitness] using
+          hh.trans hqEq
+      have hswap :
+          codeClass (TwoStepCode.rightOuter a₀ b₀ z₀ haz₀ hbw₀) =
+            codeClass (TwoStepCode.leftOuter a b z' haz hbw) := by
+        exact swapTwoStepCode_respects_class x y z w hcode
+      have htClass :
+          t.1 = classOfLeftWitness (TwoStepWitnessLeft.outer a b z' haz hbw) := by
+        calc
+          t.1 = outerRightWitnessClass
+              (outerLeftToOuterRight x y z w
+                (OuterLeftWitness.mk a₀ b₀ z₀ haz₀ hbw₀)) := by
+                  exact transportOuterLeftContributionClass_eq_of_witness
+                    x y z w s (OuterLeftWitness.mk a₀ b₀ z₀ haz₀ hbw₀) hh
+          _ = codeClass (TwoStepCode.rightOuter a₀ b₀ z₀ haz₀ hbw₀) := by
+                rfl
+          _ = codeClass (TwoStepCode.leftOuter a b z' haz hbw) := hswap
+          _ = classOfLeftWitness (TwoStepWitnessLeft.outer a b z' haz hbw) := by
+                rfl
+      have hq' :
+          HasSwappedRightOuterContributionClass x y z w
+            (classOfLeftWitness (TwoStepWitnessLeft.outer a b z' haz hbw)) := by
+        rcases t.2 with ⟨r, hr⟩
+        exact ⟨r, hr.trans htClass⟩
+      have htEq :
+          (⟨classOfLeftWitness (TwoStepWitnessLeft.outer a b z' haz hbw), hq'⟩ :
+            SwappedRightOuterContributionClasses x y z w) = t := by
+        apply Subtype.ext
+        exact htClass.symm
+      refine ⟨hq', ?_⟩
+      calc
+        transportSwappedRightOuterContributionClass x y z w
+            ⟨classOfLeftWitness (TwoStepWitnessLeft.outer a b z' haz hbw), hq'⟩
+          = transportSwappedRightOuterContributionClass x y z w t := by
+              rw [htEq]
+        _ = s := by
+              exact transportSwappedRightOuterContributionClass_left_inv x y z w s
+        _ = ⟨q, hq.2.1⟩ := rfl
+
+/--
+Pure outer residual partner canonicity now holds unconditionally.
+-/
+theorem pureOuterResidualPartnerCanonical
+    (x y z w : PTree) :
+    PureOuterResidualPartnerCanonical x y z w := by
+  exact
+    pureOuterResidualPartnerCanonical_of_rightOuter x y z w
+      (fun hq a b z' haz hbw hqEq =>
+        pureOuterResidualPartnerCanonical_rightOuter
+          x y z w _ hq a b z' haz hbw hqEq)
+
+/--
+Since the pure inner residual branch is now solved unconditionally, the full
+pure residual partner canonicality problem has only one remaining live
+obligation: the backward `rightOuter` branch on the pure outer sector.
+-/
+theorem pureResidualPartnerCanonical_of_rightOuter_only
+    (x y z w : PTree)
+    (hRightOuter :
+      ∀ {q : TwoStepQuotient x y z w},
+        (hq : PureOuterResidualLeftContributionClass x y z w q) →
+        ∀ (a b : Address) (z' : PTree)
+          (haz : (a, z') ∈ matchingLeafGraftWitnesses x z)
+          (hbw : (b, w) ∈ matchingLeafGraftWitnesses y z'),
+          q = classOfRightWitness (TwoStepWitnessRight.outer a b z' haz hbw) →
+          ∃ hq' :
+              HasSwappedRightOuterContributionClass x y z w
+                (classOfLeftWitness (TwoStepWitnessLeft.outer a b z' haz hbw)),
+            transportSwappedRightOuterContributionClass x y z w
+                ⟨classOfLeftWitness (TwoStepWitnessLeft.outer a b z' haz hbw), hq'⟩ =
+              ⟨q, hq.2.1⟩) :
+    PureResidualPartnerCanonical x y z w := by
+  exact
+    ⟨pureOuterResidualPartnerCanonical_of_rightOuter x y z w hRightOuter,
+      pureInnerResidualPartnerCanonical x y z w⟩
+
+/--
+Pure residual partner canonicality now holds unconditionally on both pure
+sectors.
+-/
+theorem pureResidualPartnerCanonical
+    (x y z w : PTree) :
+    PureResidualPartnerCanonical x y z w := by
+  exact ⟨pureOuterResidualPartnerCanonical x y z w,
+    pureInnerResidualPartnerCanonical x y z w⟩
+
+/--
+The full pure residual partner canonicality theorem reduces to exactly the two
+backward constructor cases: `rightOuter` on the pure outer sector and
+`rightInner` on the pure inner sector.
+-/
+theorem pureResidualPartnerCanonical_of_backward_cases
+    (x y z w : PTree)
+    (hRightOuter :
+      ∀ {q : TwoStepQuotient x y z w},
+        (hq : PureOuterResidualLeftContributionClass x y z w q) →
+        ∀ (a b : Address) (z' : PTree)
+          (haz : (a, z') ∈ matchingLeafGraftWitnesses x z)
+          (hbw : (b, w) ∈ matchingLeafGraftWitnesses y z'),
+          q = classOfRightWitness (TwoStepWitnessRight.outer a b z' haz hbw) →
+          ∃ hq' :
+              HasSwappedRightOuterContributionClass x y z w
+                (classOfLeftWitness (TwoStepWitnessLeft.outer a b z' haz hbw)),
+            transportSwappedRightOuterContributionClass x y z w
+                ⟨classOfLeftWitness (TwoStepWitnessLeft.outer a b z' haz hbw), hq'⟩ =
+              ⟨q, hq.2.1⟩)
+    (hRightInner :
+      ∀ {q : TwoStepQuotient x y z w},
+        (hq : PureInnerResidualLeftContributionClass x y z w q) →
+        ∀ (a b : Address) (y' : PTree)
+          (hay : (a, y') ∈ matchingLeafGraftWitnesses x y)
+          (hbw : (b, w) ∈ matchingLeafGraftWitnesses y' z),
+          q = codeClass (TwoStepCode.rightInner a b y' hay hbw) →
+          ∃ hq' :
+              HasSwappedRightInnerContributionClass x y z w
+                (codeClass (TwoStepCode.leftInner a b y' hay hbw)),
+            transportSwappedInnerContributionClassToLeft x y z w
+                ⟨codeClass (TwoStepCode.leftInner a b y' hay hbw), hq'⟩ =
+              ⟨q, hq.2.1⟩) :
+    PureResidualPartnerCanonical x y z w := by
+  exact ⟨pureOuterResidualPartnerCanonical_of_rightOuter x y z w hRightOuter,
+    pureInnerResidualPartnerCanonical_of_rightInner x y z w hRightInner⟩
+
+/--
+Pure-sector residual partner canonicity is enough to force
+right-functionality of `SwappedTwoStepClass` on the entire residual left
+sector.
+
+This is the clean logical reduction of the remaining quotient problem: once
+every residual partner is known to be the solved canonical transport target of
+its pure left source, the residual swapped-right partner fibre is automatically
+degree 1.
+-/
+theorem swappedTwoStepClassRightFunctionalOnResidual_of_pureResidualPartnerCanonical
+    (x y z w : PTree)
+    (hcanon : PureResidualPartnerCanonical x y z w) :
+    SwappedTwoStepClassRightFunctionalOnResidual x y z w := by
+  intro q q₁ q₂ hq hs₁ hq₁ hs₂ hq₂
+  rcases hcanon with ⟨hOutCanon, hInCanon⟩
+  rcases residualLeftContributionClass_pure_dichotomy x y z w q hq with hOut | hIn
+  · rcases hOutCanon hOut hs₁ hq₁ with ⟨hq₁Out, hback₁⟩
+    rcases hOutCanon hOut hs₂ hq₂ with ⟨hq₂Out, hback₂⟩
+    have hq₁eq :
+        (⟨q₁, hq₁Out⟩ : SwappedRightOuterContributionClasses x y z w) =
+          transportOuterLeftContributionClass x y z w ⟨q, hOut.2.1⟩ := by
+      exact
+        transportOuterLeftContributionClass_unique x y z w
+          ⟨q, hOut.2.1⟩
+          ⟨q₁, hq₁Out⟩
+          hback₁
+    have hq₂eq :
+        (⟨q₂, hq₂Out⟩ : SwappedRightOuterContributionClasses x y z w) =
+          transportOuterLeftContributionClass x y z w ⟨q, hOut.2.1⟩ := by
+      exact
+        transportOuterLeftContributionClass_unique x y z w
+          ⟨q, hOut.2.1⟩
+          ⟨q₂, hq₂Out⟩
+          hback₂
+    have hvals :
+        (⟨q₁, hq₁Out⟩ : SwappedRightOuterContributionClasses x y z w).1 =
+          (⟨q₂, hq₂Out⟩ : SwappedRightOuterContributionClasses x y z w).1 := by
+      calc
+        (⟨q₁, hq₁Out⟩ : SwappedRightOuterContributionClasses x y z w).1
+          = (transportOuterLeftContributionClass x y z w ⟨q, hOut.2.1⟩).1 := by
+              exact congrArg Subtype.val hq₁eq
+        _ = (transportOuterLeftContributionClass x y z w ⟨q, hOut.2.1⟩).1 := rfl
+        _ = (⟨q₂, hq₂Out⟩ : SwappedRightOuterContributionClasses x y z w).1 := by
+              symm
+              exact congrArg Subtype.val hq₂eq
+    exact hvals
+  · rcases hInCanon hIn hs₁ hq₁ with ⟨hq₁In, hback₁⟩
+    rcases hInCanon hIn hs₂ hq₂ with ⟨hq₂In, hback₂⟩
+    have hq₁eq :
+        (⟨q₁, hq₁In⟩ : SwappedRightInnerContributionClasses x y z w) =
+          transportLeftInnerContributionClassToSwapped x y z w ⟨q, hIn.2.1⟩ := by
+      exact
+        transportLeftInnerContributionClassToSwapped_unique x y z w
+          ⟨q, hIn.2.1⟩
+          ⟨q₁, hq₁In⟩
+          hback₁
+    have hq₂eq :
+        (⟨q₂, hq₂In⟩ : SwappedRightInnerContributionClasses x y z w) =
+          transportLeftInnerContributionClassToSwapped x y z w ⟨q, hIn.2.1⟩ := by
+      exact
+        transportLeftInnerContributionClassToSwapped_unique x y z w
+          ⟨q, hIn.2.1⟩
+          ⟨q₂, hq₂In⟩
+          hback₂
+    have hvals :
+        (⟨q₁, hq₁In⟩ : SwappedRightInnerContributionClasses x y z w).1 =
+          (⟨q₂, hq₂In⟩ : SwappedRightInnerContributionClasses x y z w).1 := by
+      calc
+        (⟨q₁, hq₁In⟩ : SwappedRightInnerContributionClasses x y z w).1
+          = (transportLeftInnerContributionClassToSwapped x y z w ⟨q, hIn.2.1⟩).1 := by
+              exact congrArg Subtype.val hq₁eq
+        _ = (transportLeftInnerContributionClassToSwapped x y z w ⟨q, hIn.2.1⟩).1 := rfl
+        _ = (⟨q₂, hq₂In⟩ : SwappedRightInnerContributionClasses x y z w).1 := by
+              symm
+              exact congrArg Subtype.val hq₂eq
+    exact hvals
+
+/--
+Repackaged residual/non-noise cardinal balance:
+it is enough to prove explicit canonicality of residual pure partners.
+
+This theorem isolates the exact remaining task in a way that avoids treating
+`SwappedTwoStepClassRightFunctionalOnResidual` as an opaque standalone
+obligation.
+-/
+theorem residualAssociatorLeftCard_eq_rightNonNoiseContributionCard_of_pureResidualPartnerCanonical_and_no_residual_overlap_and_disjoint
+    (x y z w : PTree)
+    (hcanon : PureResidualPartnerCanonical x y z w)
+    (hNo : NoResidualRightOuterInnerOverlap x y z w)
+    (hDisj : ResidualSwappedRightDisjointFromNoise x y z w) :
+    residualAssociatorLeftCard x y z w =
+      rightNonNoiseContributionCard x y z w := by
+  have hfun :
+      SwappedTwoStepClassRightFunctionalOnResidual x y z w :=
+    swappedTwoStepClassRightFunctionalOnResidual_of_pureResidualPartnerCanonical
+      x y z w hcanon
+  exact
+    residualAssociatorLeftCard_eq_rightNonNoiseContributionCard_of_rightFunctional_and_no_residual_overlap_and_disjoint
+      x y z w hfun hNo hDisj
+
+/--
+Pure residual partner canonicity has now been proved unconditionally, so
+residual right-functionality is available without extra hypotheses.
+-/
+theorem swappedTwoStepClassRightFunctionalOnResidual_unconditional
+    (x y z w : PTree) :
+    SwappedTwoStepClassRightFunctionalOnResidual x y z w := by
+  exact
+    swappedTwoStepClassRightFunctionalOnResidual_of_pureResidualPartnerCanonical
+      x y z w (pureResidualPartnerCanonical x y z w)
+
+/--
+Residual/non-noise cardinal balance with the canonicality hypothesis discharged.
+
+At this point the residual sector is completely rigid; the only remaining local
+obstructions are residual right-side outer/inner overlap and
+residual-vs-noise interference on the swapped-right carrier.
+-/
+theorem residualAssociatorLeftCard_eq_rightNonNoiseContributionCard_of_no_residual_overlap_and_disjoint
+    (x y z w : PTree)
+    (hNo : NoResidualRightOuterInnerOverlap x y z w)
+    (hDisj : ResidualSwappedRightDisjointFromNoise x y z w) :
+    residualAssociatorLeftCard x y z w =
+      rightNonNoiseContributionCard x y z w := by
+  exact
+    residualAssociatorLeftCard_eq_rightNonNoiseContributionCard_of_pureResidualPartnerCanonical_and_no_residual_overlap_and_disjoint
+      x y z w (pureResidualPartnerCanonical x y z w) hNo hDisj
+
+/--
+Under degree-1 control on the two noise carriers together with the now-closed
+residual right-functionality, the quotient comparison yields balanced
+cardinalities on both sectors separately.
+-/
+theorem sectorCardinalityBalance_of_noiseSubsingleton_and_no_residual_overlap_and_disjoint
+    (x y z w : PTree)
+    (hLeft : Subsingleton (LeftNoiseContributionClasses x y z w))
+    (hRight : Subsingleton (SwappedRightNoiseContributionClasses x y z w))
+    (hNo : NoResidualRightOuterInnerOverlap x y z w)
+    (hDisj : ResidualSwappedRightDisjointFromNoise x y z w) :
+    leftNoiseContributionCard x y z w =
+      swappedRightNoiseContributionCard x y z w ∧
+    residualAssociatorLeftCard x y z w =
+      rightNonNoiseContributionCard x y z w := by
+  refine ⟨?_, ?_⟩
+  · exact
+      leftNoiseContributionCard_eq_swappedRightNoiseContributionCard_of_subsingleton
+        x y z w hLeft hRight
+  · exact
+      residualAssociatorLeftCard_eq_rightNonNoiseContributionCard_of_no_residual_overlap_and_disjoint
+        x y z w hNo hDisj
+
+/--
+Under degree-1 control on the two noise carriers, residual-local no-overlap,
+and residual/noise disjointness, the total left and total swapped-right class
+cardinalities agree.
+
+This is the honest quotient-level total counting theorem now available from the
+sector split: the left side decomposes as `noise ⊕ residual`, the right side as
+`noise ⊕ non-noise`, and both summands are balanced separately.
+-/
+theorem totalContributionCard_eq_of_noiseSubsingleton_and_no_residual_overlap_and_disjoint
+    (x y z w : PTree)
+    (hLeft : Subsingleton (LeftNoiseContributionClasses x y z w))
+    (hRight : Subsingleton (SwappedRightNoiseContributionClasses x y z w))
+    (hNo : NoResidualRightOuterInnerOverlap x y z w)
+    (hDisj : ResidualSwappedRightDisjointFromNoise x y z w) :
+    totalLeftContributionCard x y z w =
+      totalRightContributionCard x y z w := by
+  rcases
+      sectorCardinalityBalance_of_noiseSubsingleton_and_no_residual_overlap_and_disjoint
+        x y z w hLeft hRight hNo hDisj with
+    ⟨hNoise, hResidual⟩
+  calc
+    totalLeftContributionCard x y z w
+      = leftNoiseContributionCard x y z w +
+          residualAssociatorLeftCard x y z w := by
+          exact totalLeftContributionCard_eq_noise_plus_residual x y z w
+    _ = swappedRightNoiseContributionCard x y z w +
+          residualAssociatorLeftCard x y z w := by
+          rw [hNoise]
+    _ = swappedRightNoiseContributionCard x y z w +
+          rightNonNoiseContributionCard x y z w := by
+          rw [hResidual]
+    _ = totalRightContributionCard x y z w := by
+          symm
+          exact totalRightContributionCard_eq_noise_plus_nonNoise x y z w
+
+/--
+Quotient-class balance plus degree-1 fibre control upgrades to raw fixed-output
+witness balance.
+
+This is the clean witness-level consequence of the new sector decomposition:
+once the quotient comparison balances total contribution classes and every
+class contains at most one witness, the actual left and swapped-right witness
+fibres over `w` have equal cardinality.
+-/
+theorem witnessFiberCardinalityBalanced_of_noiseSubsingleton_and_no_residual_overlap_and_disjoint
+    (x y z w : PTree)
+    (hLeftNoise : Subsingleton (LeftNoiseContributionClasses x y z w))
+    (hRightNoise : Subsingleton (SwappedRightNoiseContributionClasses x y z w))
+    (hNo : NoResidualRightOuterInnerOverlap x y z w)
+    (hDisj : ResidualSwappedRightDisjointFromNoise x y z w)
+    (hLeftSub :
+      ∀ q : TwoStepQuotient x y z w, Subsingleton (LeftFiber x y z w q))
+    (hRightSub :
+      ∀ q' : TwoStepQuotient y x z w, Subsingleton (SwappedRightFiber x y z w q')) :
+    WitnessFiberCardinalityBalanced x y z w := by
+  apply (witnessFiberCardinalityBalanced_iff_sigmaFibers x y z w).2
+  apply (Cardinal.lift_inj.{0, 0}).mp
+  calc
+    Cardinal.lift (Cardinal.mk (AllLeftFibers x y z w))
+      = totalLeftContributionCard x y z w := by
+          exact
+            (totalLeftContributionCard_eq_allLeftFibers_of_subsingleton x y z w hLeftSub).symm
+    _ = totalRightContributionCard x y z w := by
+          exact
+            totalContributionCard_eq_of_noiseSubsingleton_and_no_residual_overlap_and_disjoint
+              x y z w hLeftNoise hRightNoise hNo hDisj
+    _ = Cardinal.lift (Cardinal.mk (AllSwappedRightFibers x y z w)) := by
+          exact
+            totalRightContributionCard_eq_allSwappedRightFibers_of_subsingleton x y z w hRightSub
+
+/--
+Under residual/noise disjointness, every residual swapped-right contribution
+class is automatically non-noise.
+-/
+theorem residualSwappedRightContributionClass_not_noise_of_disjoint
+    (x y z w : PTree)
+    (hDisj : ResidualSwappedRightDisjointFromNoise x y z w)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : ResidualSwappedRightContributionClass x y z w q') :
+    ¬ SwappedRightNoiseContributionClass x y z w q' := by
+  exact hDisj q' hq'
+
+/--
+Under residual/noise disjointness, being right non-noise is equivalent to
+being residual on the swapped-right side.
+
+This is the pointwise form of the later cardinal equivalence between the
+right non-noise sector and the residual swapped-right sector.
+-/
+theorem rightNonNoiseContributionClass_iff_residual_of_disjoint
+    (x y z w : PTree)
+    (hDisj : ResidualSwappedRightDisjointFromNoise x y z w)
+    (q' : TwoStepQuotient y x z w)
+    (hq' : IsRightContributionClass x y z w q') :
+    (¬ SwappedRightNoiseContributionClass x y z w q') ↔
+      ResidualSwappedRightContributionClass x y z w q' := by
+  constructor
+  · intro hNotNoise
+    exact rightNonNoiseContributionClass_is_residual x y z w q' hq' hNotNoise
+  · intro hRes
+    exact residualSwappedRightContributionClass_not_noise_of_disjoint
+      x y z w hDisj q' hRes
 
 /--
 Primitive class-level product support.

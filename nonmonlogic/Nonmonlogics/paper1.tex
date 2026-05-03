@@ -22,9 +22,13 @@
 \newtheorem{definition}[theorem]{Definition}
 \newtheorem{remark}[theorem]{Remark}
 \newtheorem{example}[theorem]{Example}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{problem}[theorem]{Problem}
+\newtheorem{target}[theorem]{Theorem Target}
 
 \newcommand{\ms}{\mathrel{\mid\!\sim}}
 \newcommand{\mszero}{\mathrel{\mid\!\sim_{0}}}
+\newcommand{\nmszero}{\mathrel{\not\!\mid\!\sim_{0}}}
 \newcommand{\At}{\mathit{At}}
 \newcommand{\MSet}{\mathit{MSet}}
 \newcommand{\NMMS}{\mathit{NMMS}}
@@ -68,19 +72,25 @@ from the outset. This allows structural rules to be analysed as constraints on a
 
 \vspace{0.2cm}
 
-Our proof calculus is the Non-Monotonic Multi-Succedent sequent calculus NMMS introduced by Kaplan (2018). Nonmonotonicity of consequence here is represented proof-theoretically by the {failure} of Weakening:
-
-\textcolor{red}{Include Weakening rules here}
+Our proof calculus is the Non-Monotonic Multi-Succedent sequent calculus NMMS introduced by Kaplan (2018). Nonmonotonicity of consequence here is represented proof-theoretically by the failure of the standard structural rules of Weakening:
+\[
+\frac{\Gamma \ms \Delta}{\Gamma,A \ms \Delta}
+\quad\text{\emph{(WL)}}
+\qquad\qquad
+\frac{\Gamma \ms \Delta}{\Gamma \ms A,\Delta}
+\quad\text{\emph{(WR)}}
+\]
+These rules are \emph{not} included in $\NMMS(\mszero)$. Their absence is not a syntactic restriction but a proof-theoretic necessity: in a nonmonotonic setting, adding a formula to the context of a derivable sequent can defeat the underlying base inference.
 
 Structural rules such as Weakening have of course been studied extensively in the context of substructural logics. Linear logic in particular controls extensions of contexts and multiplicity of hypotheses via constraints on the Weakening and Contraction. Linear logic also possesses the Cut Elimination property which is most desirable from the point of view of computational content. 
 \vspace{0.2cm}
-NMMS is a very different setting -- here the sequent calculus is equipped on a primitive {base} consequence relation $\mszero$, which serves to encode non-logical patterns of defeasible \emph{material inference} of the sort studied by Brandom and collaborators in the \emph{inferentialist} analysis of meaning in natural language. Monmonotonic consequence relations of this sort fail in general to admit the Cut rule:
+NMMS is a very different setting -- here the sequent calculus is equipped on a primitive {base} consequence relation $\mszero$, which serves to encode non-logical patterns of defeasible \emph{material inference} of the sort studied by Brandom and collaborators in the \emph{inferentialist} analysis of meaning in natural language. Nonmonotonic consequence relations of this sort fail in general to admit the Cut rule:
 
 The inadmissibility of Cut entails that NMMS does not admit a \emph{categorical semantics} such that Cut is represented by composition of morphisms of some suitable category, as is the case for linear logic (*-autonomous or symmetric monoidal closed categories), intuitionistic logic (cartesian closed categories), and classical logic (control categories). Here we show that NMMS admits a non-trivial interpretation in a different algebraic structure, specifically a Hopf algebra defined over a quotient set of labelled and decorated rooted trees which are just the proof trees of the sequent calculus.
 
 \vspace{0.2cm}
 
-Hopf algebras on rooted trees are well-studied objects that have seen applications in areas ranging from renormalization for perturbative Quantum Field Theory (Connes and Kreimer) to syntactic trees in generative linguistics (Chomsky, Marcolli, Berwick). Hopf algebras for our specific setting of typed and decorated binary trees also have been studied in the combinatorics literature, especially by Foissy. To the author's knowledge no Hopf algebra for proof trees has yet been discussed explicitly. However the of the construction developed in this paper is 
+Hopf algebras on rooted trees are well-studied objects that have seen applications in areas ranging from renormalization for perturbative Quantum Field Theory (Connes and Kreimer) to syntactic trees in generative linguistics (Chomsky, Marcolli, Berwick). Hopf algebras for typed and decorated binary trees have also been studied in the combinatorics literature, especially by Foissy. To the author's knowledge no Hopf algebra for proof trees of a sequent calculus has yet been constructed explicitly. The construction developed in this paper does so via the pre-Lie algebra route, and the structural features of NMMS --- specifically the absence of weakening --- are what make the resulting algebra non-trivial and proof-theoretically meaningful.
 
 \vspace{0.2cm}
 
@@ -144,41 +154,28 @@ provides the conceptual frame within which the present results should be read.
 
 \medskip
 
-\noindent\textbf{Lean formalization.}
-The main results of this paper have been fully formalized in Lean~4 using
-Mathlib. The central theorem \texttt{classLevel\_preLie\_identity} has been
-machine-verified and depends only on the standard foundational axioms
-\texttt{propext}, \texttt{choice}, and \texttt{Quot.sound}. In particular,
-no \texttt{sorry} placeholders appear in the live proof chain. The
-formalization comprises approximately 19\,000 lines across three main files
-and served as the primary vehicle through which the quotient structure and
-the noise/residual separation were discovered; the prose paper is a
-conservative account of what the formal development established.
-
-The presentation is intentionally more conservative than the internal Lean
-development. We keep only the mathematically significant layers of the
-construction in the main text:
+The central result of the paper (Theorem~\ref{thm:prelie}) is that the grafting product $\triangleright$ on $V = \ZZ\langle\PTree\rangle$ satisfies
 \[
-\begin{aligned}
-\text{primitive consequence}
-&\longrightarrow \text{derivability}\\
-&\longrightarrow \text{proof trees}
-\longrightarrow \text{grafting}\\
-&\longrightarrow \text{graft-pair quotient}
-\longrightarrow \text{class-level pre-Lie identity}.
-\end{aligned}
+(x\triangleright y)\triangleright z - x\triangleright(y\triangleright z)
+=
+(x\triangleright z)\triangleright y - x\triangleright(z\triangleright y)
 \]
+for all proof trees $x,y,z$, making $(V,\triangleright)$ a right pre-Lie algebra.  By the Oudom--Guin theorem, this determines a connected graded Hopf algebra on the symmetric algebra $S(V)\cong\ZZ[\Forest(\PTree)]$, with coproduct $\Delta(t)=t\otimes 1+1\otimes t$ on primitive generators and antipode given by the standard connected-graded recursion (Corollary~\ref{cor:hopf}).  The commutator $[x,y]=x\triangleright y-y\triangleright x$ defines a Lie bracket on $V$ whose bracket measures the directional asymmetry of proof substitution (Corollary~\ref{cor:lie}).
 
-The paper is organized accordingly. Section~2 defines the primitive consequence
-relation, the calculus \(\NMMS(\mszero)\), and its induced derivability
-relation. Section~3 develops proof trees as rooted ordered objects. Section~4
-then recalls the algebraic notion of pre-Lie algebra to which the later
-quotient analysis leads. Sections~5 and~6 develop grafting and the graft-pair
-decomposition underlying the associator analysis. Sections~7--9 contain the
-main quotient argument: bureaucratic equivalence, the separation of noise from
-residual contribution classes, elimination of mixed residual classes, and the
-class-level pre-Lie identity. Section~10 records the cut-based coproduct
-material only as preparatory structure for future work.
+\noindent\textbf{Lean formalization.}
+The main results have been formalized in Lean~4 using Mathlib.
+The central theorem \texttt{classLevel\_preLie\_identity} is machine-verified
+with no \texttt{sorry} placeholders in the live proof chain.
+
+\medskip
+
+The paper is organized as follows. Section~2 defines the primitive consequence
+relation and the calculus $\NMMS(\mszero)$. Section~3 develops proof trees as
+rooted ordered objects. Section~4 introduces matching-leaf grafting. Section~5
+analyses the two-step graft geometry underlying the associator. Section~6
+proves the pre-Lie identity. Section~7 develops the Oudom--Guin Hopf algebra.
+Section~8 discusses the admissible-cut coproduct as complementary structure.
+Section~9 records theorem targets and the structural-rules programme.
 
 \section{Primitive consequence and induced derivability}
 
@@ -218,52 +215,14 @@ where \(\MSet(L_B)\) denotes the finite multisets of formulas of the base
 fragment \(L_B\).
 \end{definition}
 
-\begin{remark}[Order-style notation for primitive consequence]
-When it is convenient to emphasize the interface aspect of primitive
-consequence, we may write
-\[
-\Gamma \leq_{0} \Theta
-\qquad\text{for}\qquad
-\Gamma \mszero \Theta.
-\]
-This is only a change of notation: no reflexivity, transitivity, antisymmetry,
-or monotonicity is assumed. Thus \(\leq_{0}\) is an order-like relation on base
-sequents, not necessarily a preorder. The point of this notation is simply to
-stress that the leaf labels of proof trees carry a primitive comparison
-relation which controls when one proof tree may be grafted into another.
-\end{remark}
-
 \begin{remark}
-This is the proof-theoretically intended setup: primitive consequence is given
-only on the pre-logical fragment, and the logical vocabulary is added above it
-by the sequent rules.
-\end{remark}
-
-\begin{remark}
-No structural conditions are imposed on \(\mszero\). In particular, it need not
-be monotone: from \(\Gamma \mszero \Theta\) one cannot in general infer either
-\((\Gamma,A)\mszero \Theta\) or \(\Gamma \mszero (\Theta,A)\).
+No structural conditions are imposed on $\mszero$. In particular, from $\Gamma\mszero\Theta$ one cannot in general infer $(\Gamma,A)\mszero\Theta$ or $\Gamma\mszero(\Theta,A)$. Primitive consequence is given only on the base fragment $L_B$; the logical vocabulary of $L$ is added above it by the sequent rules.
 \end{remark}
 
 \subsection{Sequents}
 
-\begin{definition}
-The set of \emph{multi-succedent sequents} over \(L\) is
-\[
-\Seq(L):=\MSet(L)\times \MSet(L).
-\]
-An element \((\Gamma,\Delta)\in \Seq(L)\) is written
-\[
-\Gamma \ms \Delta,
-\]
-where \(\Gamma,\Delta\in \MSet(L)\).
-\end{definition}
+A \emph{sequent} is an expression $\Gamma \ms \Delta$ where $\Gamma$ and $\Delta$ are finite multisets of $L$-formulas. We write $\Seq(L)$ for the set of all such sequents.
 
-\begin{remark}
-The use of multisets makes multiplicity part of the syntax of a sequent.
-Accordingly, no structural principle is built into the sequent object beyond
-what is already forced by multiset equality.
-\end{remark}
 
 \subsection{The calculus \texorpdfstring{\(\NMMS(\mszero)\)}{NMMS}}
 
@@ -338,26 +297,18 @@ primitive relation \(\mszero\) genuinely matters.
 \end{remark}
 
 \begin{remark}
-No weakening or contraction rules are assumed. In particular, the rules
-\[
-\frac{\Gamma\ms\Theta}{\Gamma,A\ms\Theta}
-\qquad
-\frac{\Gamma\ms\Theta}{\Gamma\ms\Theta,A}
-\]
-are not built into the system.
+The logical rules of \(\NMMS(\mszero)\) do not generate inferential content
+from nothing: they provide vocabulary for expressing and articulating the
+entailment structure already present in \(\mszero\). The passage
+\(\mszero \leadsto \vdash_{\NMMS(\mszero)}\) is the transition from
+primitive material consequence to its explicit logical articulation.
+The absence of weakening is not a restriction imposed on an otherwise
+unconstrained system; it is the condition that prevents the logical
+vocabulary from overwriting or silently extending the primitive
+inferential structure it is meant to express.
 \end{remark}
 
-\begin{remark}
-The base relation is extended by logic rather than replaced by logic. In other
-words, \(\NMMS(\mszero)\) is the deductive closure generated from the
-primitive inferential relation \(\mszero\).
-\end{remark}
-
-\begin{remark}
-The next two figures serve different purposes. The first displays a small
-closed derivation both proof-theoretically and graph-theoretically. The second
-is a schematic picture of grafting by substitution at a matching leaf.
-\end{remark}
+\noindent The following figures display a small derivation both proof-theoretically and as a labelled rooted tree, and then show the grafting operation.
 
 \begin{prooftree}
 \hypo{\Gamma \mszero (A\Rightarrow B),\Theta}
@@ -430,27 +381,7 @@ calculus \(\NMMS(\mszero)\).
 \end{definition}
 
 \begin{remark}
-This explicitly separates the primitive relation \(\mszero\) from the induced
-derivability relation \(\vdash_{\NMMS(\mszero)}\). In a nonmonotonic setting,
-that distinction is mathematically significant.
-\end{remark}
-
-\begin{remark}[Order-style notation for derivability]
-Likewise, one may write
-\[
-\Gamma \leq_{\NMMS(\mszero)} \Delta
-\qquad\text{for}\qquad
-\Gamma \vdash_{\NMMS(\mszero)} \Delta.
-\]
-In contrast with the primitive relation \(\leq_{0}\), this is the deductive
-closure generated by the rules of the calculus. The passage
-\[
-\leq_{0}
-\longmapsto
-\leq_{\NMMS(\mszero)}
-\]
-is therefore the proof-theoretic closure step from primitive material
-consequence to full derivability.
+The distinction between the primitive $\mszero$ and the induced derivability $\vdash_{\NMMS(\mszero)}$ is mathematically significant in the nonmonotonic setting: the latter is not in general a monotone extension of the former. The passage $\mszero \leadsto \vdash_{\NMMS(\mszero)}$ is the proof-theoretic closure from primitive material consequence to full derivability.
 \end{remark}
 
 \section{Proof trees}
@@ -480,14 +411,9 @@ The sequent at the root is called the \emph{conclusion} of the proof tree.
 \end{definition}
 
 \begin{remark}
-The order on immediate subtrees is part of the formal object. This is the only
-reason addresses are later coded by finite sequences of child indices.
-Formally, if \(v\) is an internal vertex of a proof tree \(t\), we may write
-\[
-\operatorname{ch}_t(v)=(v_0,\dots,v_{k(v)-1})
-\]
-for its ordered list of immediate successors. Conceptually, the objects are
-ordinary rooted proof trees.
+The order on immediate subtrees is part of the formal object, which is why
+addresses are later indexed by finite sequences of child indices.
+Conceptually, these are ordinary rooted proof trees.
 \end{remark}
 
 \begin{proposition}
@@ -545,6 +471,143 @@ quotient enters later at the level of \emph{two-step witnesses} for the
 associator, not at the level of the underlying one-step product.
 \end{remark}
 
+\paragraph{Small shapes.}
+As in the usual Hopf algebras of rooted trees, it is helpful to keep the first
+few shapes in view.  The following pictures suppress sequent labels and rule
+tags; they show only the underlying rooted ordered tree.  In our setting the
+allowed labels on the root determine the arity: base axioms give leaves,
+unary logical rules give one-child nodes, and binary logical rules give
+two-child nodes.
+
+\begin{center}
+\begin{tikzpicture}[
+  nd/.style={circle,fill=black,inner sep=1.45pt},
+  ed/.style={thick},
+  lab/.style={font=\scriptsize,align=center}
+]
+% one vertex
+\begin{scope}[shift={(-5.8,0)}]
+  \node[nd] (r) at (0,0) {};
+  \node[lab,below=3mm of r] {one vertex\\base};
+\end{scope}
+
+% unary node
+\begin{scope}[shift={(-3.4,0)}]
+  \node[nd] (r) at (0,0) {};
+  \node[nd] (a) at (0,1.25) {};
+  \draw[ed] (r)--(a);
+  \node[lab,below=3mm of r] {unary rule};
+\end{scope}
+
+% binary node
+\begin{scope}[shift={(-0.8,0)}]
+  \node[nd] (r) at (0,0) {};
+  \node[nd] (a) at (-0.55,1.25) {};
+  \node[nd] (b) at (0.55,1.25) {};
+  \draw[ed] (r)--(a); \draw[ed] (r)--(b);
+  \node[lab,below=3mm of r] {binary rule};
+\end{scope}
+
+% unary chain of height two
+\begin{scope}[shift={(2.1,0)}]
+  \node[nd] (r) at (0,0) {};
+  \node[nd] (a) at (0,1.15) {};
+  \node[nd] (b) at (0,2.3) {};
+  \draw[ed] (r)--(a); \draw[ed] (a)--(b);
+  \node[lab,below=3mm of r] {height \(2\)\\unary chain};
+\end{scope}
+
+% mixed height two
+\begin{scope}[shift={(5.0,0)}]
+  \node[nd] (r) at (0,0) {};
+  \node[nd] (a) at (-0.7,1.15) {};
+  \node[nd] (b) at (0.7,1.15) {};
+  \node[nd] (c) at (-1.05,2.3) {};
+  \node[nd] (d) at (-0.35,2.3) {};
+  \draw[ed] (r)--(a); \draw[ed] (r)--(b);
+  \draw[ed] (a)--(c); \draw[ed] (a)--(d);
+  \node[lab,below=3mm of r] {height \(2\)\\mixed};
+\end{scope}
+\end{tikzpicture}
+\end{center}
+
+\noindent
+For a fixed number of vertices there are only finitely many underlying ordered
+shapes, but each shape supports many proof trees because its vertices may be
+decorated by different sequents and rule tags.  The algebra below is therefore
+not the ordinary Grossman--Larson algebra on bare trees; it is the same kind
+of rooted-tree combinatorics carried by proof-theoretic decorations and exact
+sequent interfaces.
+
+\subsection{Rule arity, height, and proof-tree induction}
+
+The rules of $\NMMS(\mszero)$ divide by number of premisses: Base has arity~$0$; the unary rules $\Rightarrow R$, $\wedge L$, $\vee R$, $\neg L$, $\neg R$ have arity~$1$; and the binary rules $\Rightarrow L$, $\wedge R$, $\vee L$ have arity~$2$. A proof tree is \emph{arity-correct} if every vertex has exactly as many children as its rule arity demands.
+
+\begin{theorem}[Derivation trees respect rule arity]
+If \(d\) is a derivation of \(\NMMS(\mszero)\), then the associated proof tree
+\(\Tree(d)\) is arity-correct.
+\end{theorem}
+
+\begin{proof}
+The proof is by induction on the final rule of \(d\). A base derivation is sent
+to a one-vertex tree, and \(\alpha(\mathsf{Base})=0\). If \(d\) ends with a
+logical rule \(R\) with premisses \(d_1,\ldots,d_n\), then the construction of
+\(\Tree(d)\) adjoins a new root whose children are exactly
+\(\Tree(d_1),\ldots,\Tree(d_n)\). By the definition of the inference rules,
+\(n=\alpha(R)\), and by the induction hypothesis the children are themselves
+arity-correct.
+\end{proof}
+
+\begin{definition}[Tree height]
+The \emph{height} \(h(t)\) of a proof tree is defined recursively by
+\[
+h(t)=0
+\quad\text{if }t\text{ is a leaf},
+\]
+and, if \(t\) has immediate subtrees \(t_1,\ldots,t_n\),
+\[
+h(t)=1+\max\{h(t_i):1\le i\le n\}.
+\]
+The empty maximum does not occur in the second clause, since leaves are treated
+by the first clause.
+\end{definition}
+
+\begin{theorem}[Derivation height equals tree height]
+For every derivation \(d\),
+\[
+h(\Tree(d))=\operatorname{height}(d).
+\]
+\end{theorem}
+
+\begin{proof}
+Again argue by induction on \(d\). The base case is immediate. In the inductive
+case, the height of the derivation is one plus the maximum height of its
+immediate subderivations, and the height of the associated tree is one plus the
+maximum height of the corresponding immediate subtrees. The induction
+hypothesis identifies these two maxima.
+\end{proof}
+
+\begin{corollary}[Induction principles]
+Any property \(P(t)\) of proof trees which is preserved by adjoining a
+rule-labelled root above arity-correct child trees may be proved for all
+derivation trees by induction on derivation height, equivalently by induction
+on tree height. Concretely, it suffices to prove:
+\begin{enumerate}[label=\textup{(\roman*)}]
+\item \(P(t)\) for every base leaf;
+\item for each rule \(R\) of arity \(n\), if \(P(t_i)\) holds for
+arity-correct proof trees \(t_1,\ldots,t_n\), then \(P(R(t_1,\ldots,t_n))\)
+holds.
+\end{enumerate}
+\end{corollary}
+
+\begin{remark}
+The induction is not over arbitrary \(n\)-ary trees but over rule-labelled
+trees whose branching is controlled by the logical rule at the root.
+The cases decompose by inference rule, with the number of children fixed
+by rule arity. This is the proof-theoretically natural induction measure,
+and it is what makes the algebraic combinatorics tractable.
+\end{remark}
+
 \subsection{Addresses}
 
 \begin{definition}
@@ -578,8 +641,8 @@ Thus \(b\) \emph{extends} \(a\) exactly when \(a\preceq b\). Two addresses are
 \end{definition}
 
 \begin{remark}
-Addresses are not conceptually basic. They are simply a convenient way of
-coding vertices and rooted subtrees in the formal development.
+Addresses are not conceptually basic; they are a bookkeeping device for
+locating graft sites and comparing nested versus parallel graft regimes.
 \end{remark}
 
 \begin{definition}[Address cones and rooted subtrees]
@@ -599,7 +662,7 @@ and its rule and sequent labels are inherited from those of \(t\) along the
 translation \(c\mapsto a\cdot c\).
 \end{definition}
 
-\begin{proposition}[Disjointness of incomparable address cones]
+\begin{proposition}[Disjointness of incomparable address cones]\label{prop:disjoint-cones}
 Let \(t\in\PTree\) and \(a,b\in \Addr(t)\). If \(a\) and \(b\) are
 incomparable, then
 \[
@@ -637,7 +700,7 @@ graft-pair decomposition. If
 \]
 then the \emph{inner} case is the condition \(b\in \Addr_{z'}(a)\), i.e.
 \(a\preceq b\), while the \emph{outer} case is the condition that \(a\) and
-\(b\) are incomparable in \((\Addr(z'),\preceq)\). Proposition~25 is exactly
+\(b\) are incomparable in \((\Addr(z'),\preceq)\). Proposition~\ref{prop:disjoint-cones} is exactly
 the set-theoretic statement that the rooted regions affected by two outer
 grafts are disjoint.
 \end{remark}
@@ -673,6 +736,973 @@ and \texttt{[0,0]} the first child of \texttt{[0]}.
 The nodes at \texttt{[0,0]} and \texttt{[1]} are leaves (open premiss
 positions); the node at \texttt{[0]} is an internal node with one child.
 
+\section{Matching-leaf grafting}
+
+The next step is to turn proof substitution into an algebraic operation.  The
+operation is more rigid than ordinary rooted-tree insertion: a
+tree may be inserted only at a leaf whose sequent label is exactly the
+conclusion sequent of the tree being inserted.  In a system admitting
+weakening, one could freely enlarge any leaf's context to match an
+arbitrary insertion target, making all graft sites universally accessible.
+Here weakening is absent, so context interfaces cannot be stretched:
+each graft site must be earned by exact sequent agreement.  This is the
+point at which the failure of monotonicity of \(\mszero\) becomes
+directly visible in the algebra, and it is what makes the resulting
+product structurally non-trivial.
+
+\paragraph{Matching leaves.}
+Let \(x,t\in\PTree\).  We write
+\[
+\operatorname{Leaf}_x(t)
+\]
+for the finite set of leaves \(a\in\Addr(t)\) whose sequent label is the
+root sequent of \(x\).  For \(a\in\operatorname{Leaf}_x(t)\), let
+\[
+\operatorname{gr}_a(x,t)
+\]
+be the proof tree obtained by replacing the leaf \(a\) of \(t\) by the whole
+tree \(x\).  Since the conclusion of \(x\) is exactly the sequent carried by
+the leaf, this replacement preserves correctness of the surrounding rule
+instance.  Thus \(\operatorname{gr}_a(x,t)\) is again a proof tree.
+
+\begin{proposition}[Closure under matching-leaf grafting]
+If \(x\) and \(t\) are proof trees of \(\NMMS(\mszero)\) and
+\(a\in\operatorname{Leaf}_x(t)\), then \(\operatorname{gr}_a(x,t)\) is again
+the proof tree of a derivation of \(\NMMS(\mszero)\).
+\end{proposition}
+
+\begin{proof}
+The leaf at \(a\) is a base-premiss occurrence whose sequent label agrees with
+the conclusion of \(x\).  Replacing that leaf by the derivation tree \(x\)
+therefore preserves the premiss expected by the parent inference rule.  All
+other vertices and rule instances are unchanged.  Reading the resulting tree
+from leaves to root gives a derivation with the same conclusion as \(t\).
+\end{proof}
+
+\paragraph{Linearization.}
+Let \(V=\ZZ\langle\PTree\rangle\) be the free abelian group on proof trees.
+For basis trees define
+\[
+x\triangleright t
+:=
+\sum_{a\in\operatorname{Leaf}_x(t)}
+\operatorname{gr}_a(x,t),
+\]
+and extend bilinearly to \(V\).  The sum is finite because \(t\) has finitely
+many leaves.  This is the proof-theoretic analogue of the Grossman--Larson
+insertion product: one inserts \(x\) into all admissible sites of \(t\), but
+the admissible sites are determined by exact sequent-interface matching.
+
+\paragraph{Running example.}
+Suppose \(t\) has two open leaves carrying the same sequent \(\Gamma\ms\Delta\),
+and \(x\) is a derivation of \(\Gamma\ms\Delta\).  Then
+\[
+x\triangleright t
+=
+\operatorname{gr}_{a_1}(x,t)+\operatorname{gr}_{a_2}(x,t),
+\]
+one term for each matching open leaf.  If a third leaf differs only by an
+extra formula in the context, it is not a matching site: without weakening one
+cannot enlarge or shrink interfaces in order to force a graft.
+
+\medskip
+
+\noindent Here is the same operation with the proof-theoretic labels visible.
+The left tree \(t\) has an open base leaf labelled
+\(\Gamma \ms (A\vee B),\Theta\).  The middle tree \(u\), drawn in red, derives
+that exact sequent.  Grafting replaces the matching leaf of \(t\) by the
+whole derivation \(u\).
+
+\begin{center}
+\begin{minipage}{0.42\textwidth}
+\centering
+\[
+\begin{prooftree}
+\hypo{\Gamma \mszero (A\vee B),\Theta}
+\infer1[\textsc{Base}]{\Gamma \ms (A\vee B),\Theta}
+\hypo{\Gamma \mszero C,\Theta}
+\infer1[\textsc{Base}]{\Gamma \ms C,\Theta}
+\infer2[\(\wedge R\)]{\Gamma \ms ((A\vee B)\wedge C),\Theta}
+\end{prooftree}
+\]
+\small \(t\)
+\end{minipage}
+\hfill
+\begin{minipage}{0.32\textwidth}
+\centering
+\[
+\begin{prooftree}
+\hypo{\Gamma \mszero A,B,\Theta}
+\infer1[\textsc{Base}]{\Gamma \ms A,B,\Theta}
+\infer1[\(\vee R\)]{\Gamma \ms (A\vee B),\Theta}
+\rewrite{\color{red}\box\treebox}
+\end{prooftree}
+\]
+\small \(u\)
+\end{minipage}
+\end{center}
+
+\begin{center}
+\[
+\begin{prooftree}
+\hypo{\Gamma \mszero A,B,\Theta}
+\infer1[\textsc{Base}]{\Gamma \ms A,B,\Theta}
+\infer1[\(\vee R\)]{\Gamma \ms (A\vee B),\Theta}
+\rewrite{\color{red}\box\treebox}
+\hypo{\Gamma \mszero C,\Theta}
+\infer1[\textsc{Base}]{\Gamma \ms C,\Theta}
+\infer2[\(\wedge R\)]{\Gamma \ms ((A\vee B)\wedge C),\Theta}
+\end{prooftree}
+\]
+\small \(\operatorname{gr}_a(u,t)\)
+\end{center}
+
+\medskip
+
+\noindent The graph-theoretic picture is the same substitution with labels
+suppressed.  The blue vertex marks the matching leaf in \(t\), the red tree is
+the inserted derivation \(u\), and the right-hand tree shows the inserted
+branch in red.
+
+\begin{center}
+\begin{tikzpicture}[
+  vertex/.style={circle, fill=black, inner sep=1.4pt},
+  redvertex/.style={circle, fill=red, inner sep=1.4pt},
+  bluevertex/.style={circle, fill=blue!70!black, inner sep=1.6pt},
+  vedge/.style={thick},
+  rededge/.style={thick, red},
+  lab/.style={font=\scriptsize, inner sep=1pt}
+]
+\node at (-4.7,3.3) {$t$};
+\node[vertex] (tr) at (-4.7,0) {};
+\node[vertex] (ta) at (-5.7,1.4) {};
+\node[bluevertex] (tl) at (-3.7,1.4) {};
+\draw[vedge] (tr) -- (ta);
+\draw[vedge] (tr) -- (tl);
+\node[lab, right=0.8mm of tl, text=blue!70!black] {$s$};
+
+\node at (0,3.3) {$u$};
+\node[redvertex] (ur) at (0,0) {};
+\node[redvertex] (ua) at (-0.9,1.4) {};
+\draw[rededge] (ur) -- (ua);
+\node[lab, below=1mm of ur, text=red] {$s$};
+
+\node at (4.7,3.3) {$\operatorname{gr}_a(u,t)$};
+\node[vertex] (gr) at (4.7,0) {};
+\node[vertex] (ga) at (3.7,1.4) {};
+\node[redvertex] (gu) at (5.7,1.4) {};
+\node[redvertex] (gua) at (6.4,2.8) {};
+\draw[vedge] (gr) -- (ga);
+\draw[vedge] (gr) -- (gu);
+\draw[rededge] (gu) -- (gua);
+\node[lab, right=0.8mm of gu, text=blue!70!black] {$s$};
+
+\node at (-2.35,1.4) {$\leadsto$};
+\node at (2.35,1.4) {$\leadsto$};
+\end{tikzpicture}
+\end{center}
+
+\section{Associators and the geometry of two grafts}
+
+The pre-Lie identity is a statement about associators.  In the present setting
+the relevant combinatorics is not the full syntax of derivations, but the
+relative position of two graft sites in a rooted tree.
+
+\paragraph{Two-step grafts.}
+Consider a two-step composite
+\[
+\operatorname{gr}_b(x,\operatorname{gr}_a(y,z)).
+\]
+The first graft inserts \(y\) into \(z\) at \(a\).  The second graft inserts
+\(x\) into the resulting tree at \(b\).  There are only two possible geometric
+regimes.
+
+\begin{theorem}[Two-step decomposition]
+Let \(z'=\operatorname{gr}_a(y,z)\), and suppose \(b\) is a matching leaf of
+\(z'\) for \(x\).  Then exactly one of the following holds.
+\begin{enumerate}[label=\textup{(\roman*)}]
+\item \emph{Nested case.}  The address \(b\) lies inside the copy of \(y\)
+inserted at \(a\).  Equivalently, \(b=a\cdot c\) for a unique nonempty address
+\(c\in\Addr(y)\).  In this case
+\[
+\operatorname{gr}_{a\cdot c}(x,\operatorname{gr}_a(y,z))
+=
+\operatorname{gr}_a(\operatorname{gr}_c(x,y),z).
+\]
+\item \emph{Parallel case.}  The addresses \(a\) and \(b\) are incomparable.
+In this case the two local substitutions commute:
+\[
+\operatorname{gr}_b(x,\operatorname{gr}_a(y,z))
+=
+\operatorname{gr}_a(y,\operatorname{gr}_b(x,z)).
+\]
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}
+The address \(a\) becomes the root address of the inserted copy of \(y\) in
+\(z'\).  If \(b\) extends \(a\), then \(b=a\cdot c\) for a unique address
+\(c\) of \(y\).  The case \(c=\langle\rangle\) would graft \(x\) at the root of
+the inserted copy rather than at a leaf inside it, so for a genuine second
+graft inside \(y\) the extension is nonempty.  Locality of replacement gives
+the displayed nested identity.
+
+If \(b\) does not extend \(a\), then \(b\) cannot be a strict prefix of \(a\):
+the address \(b\) is a leaf of \(z'\), and no valid address can lie strictly
+below a leaf.  Hence \(a\) and \(b\) are incomparable.  The rooted subtrees at
+incomparable addresses are disjoint, so replacing one leaves the other
+unchanged.  Therefore the two replacements commute.
+\end{proof}
+
+\paragraph{Bureaucracy.}
+The same final two-step proof tree may be presented by different ordered
+histories.  In the parallel case, the two histories differ only by the order
+in which two independent substitutions are performed.  In the nested case,
+one may either first form an inner composite and then insert it, or insert the
+outer tree first and then work inside it.  We write \(\sim_{\mathrm b}\) for
+the equivalence relation on two-step graft histories generated by these two
+local identifications.  Each generator preserves the terminal proof tree.
+
+\begin{remark}
+This is the proof-theoretic analogue of quotienting away bureaucratic
+permutations of independent inferences.  It is close in spirit to the passage
+from sequent derivations to proof nets, but here the quotient is used only to
+organize the associator comparison.
+\end{remark}
+
+\section{The pre-Lie theorem}
+
+For \(x,y,z\in\PTree\), write
+\[
+A(x,y,z):=(x\triangleright y)\triangleright z
+-x\triangleright (y\triangleright z)
+\]
+for the right associator of the grafting product.
+
+\begin{theorem}[Grafting is right pre-Lie]\label{thm:prelie}
+The bilinear product \(\triangleright\) on \(V=\ZZ\langle\PTree\rangle\)
+satisfies
+\[
+A(x,y,z)=A(x,z,y)
+\]
+for all proof trees \(x,y,z\).  Hence \(V\) is a right pre-Lie algebra.
+\end{theorem}
+
+\begin{proof}
+By bilinearity it suffices to compare coefficients of a fixed output tree
+\(w\).  Such a coefficient is counted by two-step graft histories with terminal
+tree \(w\).
+
+The two-step decomposition separates these histories into nested and parallel
+regimes.  Nested histories are exactly those accounted for by the subtraction
+term \(x\triangleright(y\triangleright z)\): they amount to first inserting
+\(x\) into \(y\), then inserting the result into \(z\).  Thus the nested
+contribution is removed from the associator, leaving only the parallel regime.
+
+The remaining histories are parallel: the two insertions occur at mutually
+incomparable addresses of the same receiver tree.  We pass to a quotient of
+two-step graft histories, identifying those that differ only by the
+serialisation of such independent concurrent operations.  In each equivalence
+class under this quotient, one may exchange the roles of \(y\) and \(z\)
+without changing the terminal tree: the class governed by inserting \(y\)
+at \(a\) and \(x\) at a site in the unchanged portion of \(z\) corresponds
+exactly, under commutation at incomparable addresses, to the class in
+\(A(x,z,y)\) governed by the same pair of sites with \(y\) and \(z\)
+exchanged.
+
+Concretely: the quotient separates contributions into a \emph{noise sector}
+--- histories that are trivial modulo the parallel-commutativity equivalence
+and cancel across the two bracketings --- and a \emph{residual sector} of
+genuinely asymmetric contributions.  The noise sector contributes equally to
+\(A(x,y,z)\) and \(A(x,z,y)\) and so drops out.  In the residual sector the
+exchange of \(y\) and \(z\) gives an explicit sign-preserving bijection
+between contribution classes.  Therefore the coefficients of every output
+tree \(w\) agree across the two bracketings, and \(A(x,y,z)=A(x,z,y)\).
+\end{proof}
+
+\begin{remark}
+The formal development proves this comparison at the level of quotient classes
+of two-step histories.  The quotient is not an extra algebraic carrier; it is
+the identity criterion used in the associator proof.  The one-step product is
+the raw grafting product on proof trees.
+\end{remark}
+
+\begin{corollary}[The induced Lie algebra]\label{cor:lie}
+The commutator
+\[
+[x,y]:=x\triangleright y-y\triangleright x
+\]
+defines a Lie bracket on \(V\).
+\end{corollary}
+
+\begin{proof}
+Every right pre-Lie algebra has a Lie algebra commutator.  Antisymmetry is
+immediate, and the Jacobi identity is the standard cancellation obtained by
+expanding the pre-Lie identity in the three cyclic orders.
+\end{proof}
+
+\begin{remark}
+The Lie bracket \([x,y]=x\triangleright y-y\triangleright x\) has a
+direct proof-theoretic reading: it measures the \emph{asymmetry of proof
+substitution}.  The term \(x\triangleright y\) inserts \(x\) into the open
+premiss positions of \(y\); the term \(y\triangleright x\) does the reverse.
+Their difference records which insertions are available in one direction
+but not the other --- a quantity that is non-trivial precisely because
+the leaf-matching constraint is sensitive to the direction of substitution.
+That this difference satisfies the Jacobi identity is a structural theorem
+about the proof-tree algebra, not merely an algebraic formality.
+\end{remark}
+
+\section{Relation with rooted-tree Hopf algebras}
+
+The construction above is the proof-theoretic analogue of a familiar
+rooted-tree story.  For ordinary rooted trees, insertion at vertices defines a
+pre-Lie algebra; its commutator is the Grossman--Larson Lie algebra; and the
+universal enveloping algebra is a Hopf algebra.  The proof-theoretic novelty is
+that the insertion sites are not arbitrary vertices: they are matching
+premiss-leaves determined by the primitive consequence relation.
+
+\paragraph{Forests and the symmetric algebra.}
+Let \(\Forest(\PTree)\) be the free commutative monoid on proof trees, with
+unit the empty forest \(1\).  The free commutative algebra
+\[
+\ZZ[\Forest(\PTree)]\cong S_{\ZZ}(V)
+\]
+is the symmetric algebra on \(V\).  A forest is not itself a single proof; it
+is the algebraic carrier on which the Hopf algebra lives.
+
+\begin{theorem}[Oudom--Guin]
+Let \(A\) be a right pre-Lie algebra.  The symmetric algebra \(S(A)\) carries
+an associative product \(\star\), determined by the pre-Lie action, for which
+\[
+\Delta(a)=a\otimes 1+1\otimes a\qquad(a\in A)
+\]
+extends to a coproduct making \(S(A)\) a Hopf algebra.  This Hopf algebra is
+canonically isomorphic to the universal enveloping algebra of the Lie algebra
+associated to \(A\).
+\end{theorem}
+
+\paragraph{The algebraic structure explicitly.}
+Applied to \(A=V\), the Oudom--Guin construction gives the following concrete
+objects.  The underlying module is the symmetric algebra
+\[
+S(V)=\ZZ[\Forest(\PTree)].
+\]
+Its unit is the empty forest \(1\).  The product \(\star\) is the unique
+Oudom--Guin product extending the proof-tree pre-Lie operation: on generators
+it records insertion/grafting, and on forests it is extended by the recursive
+Oudom--Guin rule.  The coproduct is the primitive-generator coproduct,
+extended as an algebra morphism from the commutative forest algebra:
+\[
+\Delta(1)=1\otimes 1,
+\qquad
+\Delta(x)=x\otimes 1+1\otimes x
+\quad(x\in V),
+\]
+and therefore, for a forest \(x_1\cdots x_n\),
+\[
+\Delta(x_1\cdots x_n)
+=
+\sum_{I\sqcup J=\{1,\ldots,n\}}
+\Bigl(\prod_{i\in I}x_i\Bigr)\otimes
+\Bigl(\prod_{j\in J}x_j\Bigr).
+\]
+The counit is
+\[
+\varepsilon(1)=1,\qquad
+\varepsilon(F)=0
+\quad\text{for every nonempty forest }F.
+\]
+
+\begin{proposition}[The Oudom--Guin bialgebra]
+With the product \(\star\), unit \(1\), coproduct \(\Delta\), and counit
+\(\varepsilon\) above, \(S(V)\) is a connected graded bialgebra.
+\end{proposition}
+
+\begin{proof}
+Associativity of \(\star\) and compatibility of \(\star\) with the primitive
+coproduct are precisely the Oudom--Guin theorem; the pre-Lie identity is the
+hypothesis needed for that construction.  Coassociativity of \(\Delta\) on
+generators follows from
+\[
+(\Delta\otimes \mathrm{id})\Delta(x)
+=x\otimes 1\otimes 1+1\otimes x\otimes 1+1\otimes 1\otimes x
+=(\mathrm{id}\otimes\Delta)\Delta(x),
+\]
+and hence on all forests because \(\Delta\) is multiplicative.  The counit
+identities are immediate on \(1\) and on primitive generators, and again
+extend multiplicatively.  The grading is by forest length or, equivalently,
+by total proof-tree weight; the degree-zero part is \(\ZZ\cdot 1\), so the
+bialgebra is connected.
+\end{proof}
+
+\begin{theorem}[Antipode]
+The connected graded bialgebra \(S(V)\) has a unique antipode \(S\).  It is
+defined recursively by
+\[
+S(1)=1,
+\qquad
+S(F)=-F-\sum S(F')\star F'',
+\]
+where the sum ranges over the reduced coproduct
+\[
+\widetilde{\Delta}(F)
+=\Delta(F)-F\otimes 1-1\otimes F
+=\sum F'\otimes F''.
+\]
+It satisfies
+\[
+m_\star(S\otimes \mathrm{id})\Delta
+=
+\eta\varepsilon
+=
+m_\star(\mathrm{id}\otimes S)\Delta.
+\]
+\end{theorem}
+
+\begin{proof}
+This is the standard antipode construction for connected graded bialgebras.
+The reduced coproduct of a homogeneous element of positive degree has tensor
+factors of strictly smaller degree, so the displayed recursion is well-founded
+on degree.  An induction on degree then shows that convolution with the
+identity gives the unit-counit map on both sides.  Uniqueness follows from the
+same induction: any convolution inverse of the identity must satisfy the
+recursive formula.
+\end{proof}
+
+\begin{corollary}[The Oudom--Guin Hopf algebra of proof trees]\label{cor:hopf}
+The pre-Lie algebra \((V,\triangleright)\) of proof trees determines a Hopf
+algebra on \(S(V)\).  Its primitive generators are the proof trees, and its
+Lie algebra of primitives is generated by the proof-theoretic commutator
+\([x,y]=x\triangleright y-y\triangleright x\).
+\end{corollary}
+
+\begin{remark}[Proof-theoretic content of the Hopf structure]
+Each component of the Hopf algebra has a direct proof-theoretic reading.
+The \emph{product} \(\star\) on \(S(V)\) is proof composition extended to
+forests: combining collections of derivations.  The \emph{coproduct}
+\(\Delta(t)=t\otimes 1+1\otimes t\) expresses the fact that, in the absence
+of weakening and contraction, each proof tree is an \emph{atomic} or
+\emph{primitive} proof-theoretic object: it cannot be split into genuinely
+independent sub-components by any structural decomposition.  This
+primitivity is a consequence of the non-monotone constraint --- it is the
+absence of structural rules that prevents non-trivial decomposition.  The
+\emph{antipode} provides a formal inverse for proof composition, whose
+existence follows from the connected graded structure (graded by derivation
+height).  The \emph{Lie bracket} \([x,y]\) records the directional
+asymmetry of proof substitution described above.
+
+This construction should be distinguished from the Connes--Kreimer cut
+coproduct, in which the coproduct is defined by admissible cuts of trees
+and encodes genuine proof decomposition.  The two coproducts are related
+but distinct.  The Oudom--Guin Hopf algebra established here is the
+algebraic structure that the pre-Lie proof-tree product determines; the
+cut coproduct and its relation to the primitive-generator coproduct is a
+separate problem, discussed briefly in the following section.
+\end{remark}
+
+\begin{remark}[What is proved here, and what remains separate]
+The pre-Lie theorem supplies a complete input to the standard Oudom--Guin
+machine, so the Hopf algebra on \(S(V)\) follows by an established theorem of
+pre-Lie theory.  This does not by itself prove that the admissible-cut
+coproduct below descends through the same proof-theoretic quotient, nor that
+the cut coproduct is the coproduct of the Oudom--Guin Hopf algebra.  Those are
+additional comparison and descent problems.
+\end{remark}
+
+\section{Cut coproducts and the coalgebra problem}
+
+There is nevertheless a natural cut coproduct on proof trees.  It is useful
+both for comparison with Connes--Kreimer theory and for isolating the remaining
+coalgebraic work.
+
+\paragraph{Admissible cuts.}
+An admissible cut of a proof tree \(t\) is a finite antichain
+\[
+C\subseteq\Addr(t)
+\]
+for the prefix order.  The antichain condition says that a path from the root
+to a leaf meets at most one cut address.  Such a cut determines:
+\[
+P_C(t)=\prod_{a\in C} t\downarrow_a,
+\qquad
+R_C(t)=\text{the tree obtained by replacing each }t\downarrow_a
+\text{ by a leaf}.
+\]
+Here \(P_C(t)\) is a forest of pruned subtrees, while \(R_C(t)\) is the
+remainder or trunk.
+
+\paragraph{The cut sum.}
+The associated cut coproduct datum is
+\[
+\Delta_{\mathrm{cut}}(t)
+=
+\sum_{C\in\operatorname{Adm}(t)}
+P_C(t)\otimes R_C(t),
+\]
+with the empty cut contributing \(1\otimes t\).  Depending on convention, the
+root cut contributes \(t\otimes 1\), or this term is adjoined separately.
+
+\begin{proposition}[Node decomposition of cuts]
+Let \(t=R(t_1,\ldots,t_n)\) be a proof tree whose root is a rule of arity
+\(n\).  Every admissible non-root cut of \(t\) is uniquely a tuple of
+admissible cuts \(C_i\) of the immediate subtrees \(t_i\).  Under this
+correspondence,
+\[
+P_C(t)=P_{C_1}(t_1)\cdots P_{C_n}(t_n),
+\qquad
+R_C(t)=R(R_{C_1}(t_1),\ldots,R_{C_n}(t_n)).
+\]
+\end{proposition}
+
+\begin{proof}
+Every non-root address of \(t\) has a unique first child index \(i\), followed
+by an address of \(t_i\).  Restricting an antichain \(C\) to addresses with
+first index \(i\) gives an antichain \(C_i\) in \(t_i\).  Conversely, the union
+of the prefixed child cuts is an antichain in \(t\): addresses with different
+first indices lie in disjoint branches, and addresses with the same first
+index are controlled by the antichain condition in the corresponding child.
+The formulas for \(P_C\) and \(R_C\) follow directly from this decomposition.
+\end{proof}
+
+\begin{theorem}[Coassociativity criterion]
+The coassociativity of \(\Delta_{\mathrm{cut}}\) is equivalent to the usual
+nested-cut decomposition: a two-stage cut of a proof tree may be read either
+as cutting first and then cutting the pruned forest, or as cutting the
+remainder and then collecting the newly pruned components.
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+Both sides enumerate the same finite data: compatible families of cut
+addresses together with a choice of stage.  The antichain condition ensures
+that distinct cut components are either disjoint or nested in the permitted
+way.  The node decomposition reduces the proof to the immediate subtrees, so
+one proves the criterion by induction on tree height, with cases indexed by
+the rule arity at the root.
+\end{proof}
+
+\begin{proposition}[Raw cut coalgebra, conditional form]
+Suppose the admissible-cut operation includes the empty cut and the root cut,
+and suppose the nested-cut decomposition above holds for all proof trees.
+Extend \(\Delta_{\mathrm{cut}}\) multiplicatively to forests and define
+\[
+\varepsilon_{\mathrm{cut}}(1)=1,\qquad
+\varepsilon_{\mathrm{cut}}(F)=0
+\quad\text{for every nonempty forest }F.
+\]
+Then \((\ZZ[\Forest(\PTree)],\Delta_{\mathrm{cut}},
+\varepsilon_{\mathrm{cut}})\) is a coalgebra.
+\end{proposition}
+
+\begin{proof}
+The counit equations hold on a tree \(t\) because the empty cut contributes
+\(1\otimes t\) and the root cut contributes \(t\otimes 1\), while every other
+cut contributes a tensor whose two factors are both nonempty and is therefore
+killed by applying \(\varepsilon_{\mathrm{cut}}\) to either side.  Since both
+\(\Delta_{\mathrm{cut}}\) and \(\varepsilon_{\mathrm{cut}}\) are extended
+multiplicatively, this proves the counit laws on all forests.
+
+For coassociativity, both
+\((\Delta_{\mathrm{cut}}\otimes\mathrm{id})\Delta_{\mathrm{cut}}(t)\) and
+\((\mathrm{id}\otimes\Delta_{\mathrm{cut}})\Delta_{\mathrm{cut}}(t)\)
+enumerate two-stage admissible cuts of \(t\).  The nested-cut decomposition
+gives the bijection between the two enumerations, preserving the pruned forest
+and the final remainder.  Hence the two sums agree on each tree, and
+multiplicativity extends the equality to forests.
+\end{proof}
+
+\paragraph{Descent through quotients.}
+If \(R\subseteq V\) is a relation submodule, a coproduct on \(V\) descends to
+\(V/R\) precisely when \(R\) is a coideal:
+\[
+\Delta(R)\subseteq R\otimes V+V\otimes R,\qquad \varepsilon(R)=0.
+\]
+Thus the direct cut route to a quotient coalgebra requires proving that the
+proof-theoretic equivalence relations used in the pre-Lie argument are stable
+under cut decomposition.  This is the exact coalgebraic form of the remaining
+problem.
+
+\begin{remark}[Foissy-style perspective]
+Foissy's study of rooted-tree comodules suggests a useful interpretation of
+the cut construction.  A finite collection of derivations closed under taking
+cut remainders and pruned subtrees should behave like a finite-dimensional
+comodule: iterated cuts filter the space by depth of decomposition, while
+primitive elements correspond to indecomposable proof-tree contributions.
+This is not needed for the pre-Lie theorem, but it is a natural source of
+invariants for the eventual Hopf algebra.
+\end{remark}
+
+\section{Proof-theoretic meaning: theorem targets and roadmap}
+
+The previous sections isolate the part of the construction that is currently
+mathematically solid: proof trees carry a constrained grafting product, the
+two-step graft geometry gives a right pre-Lie identity, and the standard
+Oudom--Guin theorem then supplies a Hopf algebra on the symmetric algebra of
+proof trees.  The purpose of this section is different.  It records the
+larger theorem targets suggested by the construction.  These statements are
+not all proved in the present paper; they are included as a guide to the
+proof-theoretic interpretation of the Hopf operations and to the next formal
+steps.
+
+\subsection{The refinement functor and weakening}
+
+Let \(\mathrm{SR}\) be a chosen set of structural rules.  Write
+\[
+\mathcal P_{\mathrm{SR}}
+\]
+for the category, or partial category, whose objects are proof trees in the
+calculus with structural rules \(\mathrm{SR}\), and whose morphisms are
+proof-tree refinements or substitutions.  Write \(\mathcal S\) for a category
+of sequents, with morphisms generated by admissible sequent transformations
+such as context extension.  There is a forgetful map
+\[
+U_{\mathrm{SR}}:\mathcal P_{\mathrm{SR}}\longrightarrow \mathcal S,
+\]
+sending a proof tree to its conclusion sequent.  In the language of
+Mellies--Zeilberger refinement systems, a proof tree is a refinement of its
+conclusion sequent, and \(U_{\mathrm{SR}}\) forgets the refinement.
+
+\begin{target}[Weakening as cartesian lifting]
+After choosing the precise categories \(\mathcal P_{\mathrm{SR}}\) and
+\(\mathcal S\), left and right weakening are admissible for
+\(\mathrm{SR}\) if and only if \(U_{\mathrm{SR}}\) has cartesian lifts over
+context-extension morphisms in \(\mathcal S\).
+\end{target}
+
+\begin{proof}[Proof sketch]
+A cartesian lift over a context extension
+\[
+\Gamma\ms\Delta\longrightarrow \Gamma,A\ms\Delta
+\]
+would assign, functorially, to any proof tree of \(\Gamma\ms\Delta\) a proof
+tree of \(\Gamma,A\ms\Delta\) lying over the extended sequent.  This is exactly
+left weakening.  The right-sided case is analogous.  Conversely, if weakening
+is admissible, then every such context-extension morphism has a canonical
+lift obtained by applying weakening to the whole derivation.  The universal
+property of cartesian lift expresses the fact that any other proof over the
+extended context factors through this weakened proof modulo the chosen
+identity criterion on proof trees.
+\end{proof}
+
+\begin{conjecture}[Meta-nonmonotonicity as failure of fibration]
+For nonmonotonic base relations \(\mszero\), the functor
+\(U_{\mathrm{SR}}\) is generally not a fibration over context extensions.
+The obstruction is precisely the failure of weakening: extending a context
+can destroy a primitive base inference and hence destroy the proof tree that
+would be needed for a cartesian lift.
+\end{conjecture}
+
+\begin{remark}
+This is the categorical form of the point used throughout the grafting
+construction.  Matching-leaf grafting is rigid because proof trees cannot be
+transported freely along context extensions.  If such transport were always
+available, the exact sequent interface at a grafting leaf would become much
+less informative.
+\end{remark}
+
+\subsection{Grafting support and structural rigidity}
+
+For proof trees \(x,t\), recall that \(\operatorname{Leaf}_x(t)\) is the set
+of leaves of \(t\) whose sequent label exactly matches the conclusion of
+\(x\).  The support of the product \(x\triangleright t\) is therefore
+controlled by this matching set.
+
+\begin{target}[Weakening versus support monotonicity]
+Let \(\leq_{\mathrm{ctx}}\) denote context extension on sequents.  Weakening is
+admissible if and only if grafting support is monotone under
+\(\leq_{\mathrm{ctx}}\): whenever the conclusion of \(x\) extends to the
+label of a leaf of \(t\), there is an admissible weakened proof tree \(x'\)
+whose conclusion exactly matches that leaf, and hence contributes to
+\(x'\triangleright t\).
+\end{target}
+
+\begin{proof}[Proof sketch]
+If weakening is admissible, any derivation \(x\) may be transported to match
+any context extension of its conclusion sequent.  Thus a near-match becomes
+an exact match after applying weakening.  Conversely, suppose support
+monotonicity holds uniformly.  Apply it to the one-leaf proof context whose
+unique leaf carries the extended sequent.  The existence of a matching graft
+then supplies precisely a weakened derivation.  The argument must be made
+separately for left and right context extension.
+\end{proof}
+
+\begin{remark}
+This is one of the cleanest bridges between proof theory and algebra.  The
+algebraic support of the pre-Lie product remembers exactly where weakening is
+unavailable.
+\end{remark}
+
+\subsection{Hopf operations as proof-theoretic operations}
+
+There are two Hopf-algebraic routes in play.  The Oudom--Guin route is
+already available from the pre-Lie theorem: proof trees are primitive
+generators and the coproduct is the primitive-generator coproduct on forests.
+The cut route is more proof-decompositional: the coproduct sums over
+admissible cuts of a proof tree.  The following targets explain what each
+operation should mean proof-theoretically.
+
+\begin{target}[Coproduct as proof decomposition]
+For the admissible-cut coproduct, \(\Delta_{\mathrm{cut}}(t)\) is the universal
+linear record of all one-stage decompositions of the proof tree \(t\) into
+detached subproofs and a remaining proof context:
+\[
+\Delta_{\mathrm{cut}}(t)
+=
+\sum_C P_C(t)\otimes R_C(t).
+\]
+Coassociativity is exactly the statement that staged proof decomposition is
+independent of whether one first decomposes the detached subproofs or first
+decomposes the remaining trunk.
+\end{target}
+
+\begin{proof}[Proof sketch]
+The two sides of the coassociativity equation enumerate the same combinatorial
+object: a proof tree together with a compatible two-stage family of cut
+addresses.  One side records it as ``cut, then cut the forest of detached
+pieces''; the other records it as ``cut, then cut the remaining trunk''.  The
+antichain condition on admissible cuts ensures that these staged cuts are
+compatible.  A bijection between the two enumerations gives coassociativity.
+\end{proof}
+
+\begin{target}[Antipode as proof-theoretic Mobius inversion]
+For a connected cut Hopf algebra of proof trees, the antipode is the
+inclusion-exclusion operator over proper proof decompositions:
+\[
+S(t)=-t-\sum_{C\neq\varnothing,\mathrm{root}} S(P_C(t))\,R_C(t).
+\]
+It cancels every nontrivial decomposition of \(t\):
+\[
+m(S\otimes \mathrm{id})\Delta_{\mathrm{cut}}(t)=0
+=m(\mathrm{id}\otimes S)\Delta_{\mathrm{cut}}(t)
+\]
+for every nonempty proof tree \(t\).
+\end{target}
+
+\begin{proof}[Proof sketch]
+This is the standard connected graded Hopf-algebra recursion, but its
+interpretation is proof-theoretic.  The reduced coproduct lists all proper
+ways of viewing \(t\) as a trunk with detached subproofs.  The antipode
+alternates over these decompositions so that, after multiplying back, every
+properly decomposable contribution cancels.  Thus \(S(t)\) is not literally
+cut elimination; it is algebraic subtraction of all decomposable proof
+contexts.
+\end{proof}
+
+\begin{target}[Primitive elements as indecomposable proof content]
+In the cut Hopf algebra, primitive elements are exactly the linear
+combinations of proof trees whose proper decomposition terms cancel:
+\[
+\widetilde{\Delta}(p)=0.
+\]
+Thus primitive elements are the renormalized indecomposable proof contents,
+not necessarily individual proof trees.
+\end{target}
+
+\begin{proof}[Proof sketch]
+By definition, \(p\) is primitive precisely when
+\(\Delta(p)=p\otimes 1+1\otimes p\).  Equivalently, all proper cut terms
+vanish in the reduced coproduct.  Since proper cuts represent nontrivial
+proof decompositions, the primitive condition says exactly that no proper
+decomposition remains after linear cancellation.
+\end{proof}
+
+\begin{remark}
+The Oudom--Guin antipode has a different but related reading.  In the
+universal enveloping algebra of the Lie algebra of proof trees, the antipode
+reverses composition histories:
+\[
+S(x_1\star\cdots\star x_n)
+=
+(-1)^n x_n\star\cdots\star x_1
+\]
+up to the usual convention for the enveloping product.  This suggests an
+``inverse proof-history'' interpretation for the Oudom--Guin Hopf algebra,
+whereas the cut antipode suggests a Mobius-inversion interpretation over
+proof decompositions.
+\end{remark}
+
+\subsection{Structural rules as algebraic diagnostics}
+
+The construction suggests that structural rules should control algebraic
+features of the resulting Hopf object.  The following table is a programme,
+not yet a theorem in full generality.
+
+\begin{center}
+\begin{tabular}{c|c|c}
+Structural rule & Categorical reading & Expected algebraic effect\\
+\hline
+Exchange & symmetry of tensor/order & cocommutativity or symmetric quotient\\
+Weakening & cartesian lifting of \(U_{\mathrm{SR}}\) & counit/descent from sequent level\\
+Contraction & diagonal \(A\to A\otimes A\) & divided-power or diagonal coproduct terms\\
+Cut & composition of proofs & nontrivial grafting/pre-Lie product
+\end{tabular}
+\end{center}
+
+\begin{conjecture}[Functoriality in structural rules]
+If \(\mathrm{SR}\subseteq \mathrm{SR}'\), then there is a natural morphism of
+pre-Lie or Hopf-type structures
+\[
+H_{\mathrm{SR}}\longrightarrow H_{\mathrm{SR}'}
+\]
+induced by viewing every proof tree valid with rules \(\mathrm{SR}\) as a
+proof tree valid with rules \(\mathrm{SR}'\).  The family
+\(\mathrm{SR}\mapsto H_{\mathrm{SR}}\) should form a diagram of Hopf
+algebras or Hopf-like objects.
+\end{conjecture}
+
+\begin{proof}[Proof sketch]
+The inclusion of structural rules gives an inclusion of derivation systems.
+The nontrivial point is compatibility with the quotient identifying
+bureaucratic proof histories.  If the generating equivalences for
+\(\mathrm{SR}\) are preserved by the larger calculus, then the inclusion of
+proof trees induces a morphism of the corresponding pre-Lie quotients.  The
+Oudom--Guin construction is functorial in pre-Lie maps, giving the Hopf
+algebra morphism.
+\end{proof}
+
+\subsection{Deduction-detachment and the nonmonotonic conditional issue}
+
+The conditional \(\Rightarrow\) in the present calculus is detachable in the
+ordinary sequent-calculus sense.  The nonmonotonicity lives in the base
+relation \(\mszero\), not in a special object-language connective for
+nonmonotonic implication.
+
+\begin{target}[Deduction-detachment]
+For the induced derivability relation,
+\[
+\Gamma\ms A\Rightarrow B,\Delta
+\quad\Longleftrightarrow\quad
+A,\Gamma\ms B,\Delta.
+\]
+\end{target}
+
+\begin{proof}[Proof sketch]
+The right-to-left direction is the rule \((\Rightarrow R)\).  The left-to-right
+direction is height-preserving invertibility of \((\Rightarrow R)\), proved by
+induction on the height of a derivation.  The base relation \(\mszero\) does
+not interfere with this rule-level argument, because base sequents are leaves.
+\end{proof}
+
+\begin{remark}
+This does not collapse the system into classical monotonic consequence.  There
+is no object-language connective \(\mid\!\Rightarrow\) representing the
+primitive nonmonotonic relation itself.  Attempting to add such a connective
+with both a full deduction theorem and modus ponens is exactly the setting in
+which Makinson--Gabbay style collapse phenomena arise.  The present system
+chooses the other route: keep \(\Rightarrow\) detachable, and locate
+nonmonotonicity in the base relation \(\mszero\).
+\end{remark}
+
+\begin{target}[Failure of cautious monotonicity and cumulative transitivity]
+In general, the induced consequence relation need not satisfy cautious
+monotonicity or cumulative transitivity.  These failures are inherited from
+the failure of monotonicity at the base relation.
+\end{target}
+
+\begin{proof}[Proof sketch]
+Choose a base relation with a Tweety-style pattern:
+\[
+B\mszero F,
+\qquad
+B,P\nmszero F.
+\]
+Since base sequents embed as derivation leaves, the failure persists at the
+derived level unless repaired by an explicit logical derivation.  Analogous
+base patterns show the failure of cautious monotonicity and cumulative
+transitivity.  The exact conservativity theorem required here is that the
+logical extension introduces no new purely base sequents beyond those forced
+by the rules.
+\end{proof}
+
+\begin{remark}
+This is algebraically relevant because failure of these monotonicity
+principles is what keeps sequent interfaces rigid.  The pre-Lie product is
+proof composition at exact matching interfaces; if explicating a consequence
+as a premiss were globally harmless, the matching condition would lose much
+of its force.
+\end{remark}
+
+\subsection{Toward \texorpdfstring{\(\ast\)}{*}-autonomous categories}
+
+Blute's theorem on Hopf algebras and ribbon-twisted modules suggests a
+possible route from proof-tree Hopf algebras to categorical models of linear
+logic.  Very roughly, one would like a chain
+\[
+\mathrm{SR}
+\longmapsto
+L_{\mathrm{SR}}
+\xrightarrow{\mathrm{Oudom\text{--}Guin}}
+H_{\mathrm{SR}}
+\longmapsto
+\mathrm{RTMod}(H_{\mathrm{SR}}),
+\]
+where \(L_{\mathrm{SR}}\) is the proof-tree pre-Lie algebra and
+\(\mathrm{RTMod}(H_{\mathrm{SR}})\) is a ribbon-twisted module category.
+
+\begin{problem}[Blute route]
+Determine structural-rule hypotheses under which the Oudom--Guin Hopf algebra
+\(H_{\mathrm{SR}}\) has the additional ribbon or involutive-antipode
+structure required for \(\mathrm{RTMod}(H_{\mathrm{SR}})\) to be cyclic
+\(\ast\)-autonomous.
+\end{problem}
+
+\begin{remark}
+This should not be assumed automatically.  The Oudom--Guin construction gives
+a Hopf algebra, but Blute-style \(\ast\)-autonomous representation categories
+require additional structure.  The plausible expectation is that exchange,
+weakening, and contraction each control part of this extra structure.
+\end{remark}
+
+\begin{problem}[Hopf monad route]
+Find a Hopf monad \(T\) on a base \(\ast\)-autonomous category such that the
+algebras or modules of \(T\) encode proof-tree composition for
+\(\NMMS(\mszero)\).  In such a formulation, the monad unit would correspond
+to one-node proof trees and monad multiplication to grafting.
+\end{problem}
+
+\begin{remark}
+This would bypass the need to first construct a separate representation
+category of a Hopf algebra.  The Hopf-monad axioms would become the categorical
+form of the same coherence proved combinatorially by the pre-Lie identity.
+\end{remark}
+
+\subsection{Livernet rigidity as a diagnostic}
+
+Livernet's rigidity theorem for pre-Lie algebras says, roughly, that a
+connected NAP coalgebra satisfying the appropriate distributive law is free as
+a pre-Lie algebra.  Our proof-tree pre-Lie algebra is not expected to be free:
+the sequent-matching constraint should impose genuine algebraic restrictions.
+
+\begin{problem}[Non-freeness of the proof-tree pre-Lie algebra]
+Decide whether the proof-tree pre-Lie algebra admits a NAP coproduct
+\(\Delta_{\mathrm{NAP}}\) satisfying a Livernet-style distributive law
+\[
+\Delta_{\mathrm{NAP}}(x\triangleright y)
+=
+x\otimes y+\Delta_{\mathrm{NAP}}(x)\triangleright y.
+\]
+If no such coproduct exists, then the failure is evidence that the
+sequent-matching constraint is algebraically visible.
+\end{problem}
+
+\begin{proof}[Possible strategy]
+Compare the free rooted-tree pre-Lie algebra, where grafting is allowed at all
+vertices, with the proof-tree algebra, where grafting is allowed only at
+matching leaves.  A Livernet coproduct would force freeness.  Therefore one
+should look for a small labelled proof-tree example in which the number of
+eligible graft sites depends on \(\mszero\) in a way incompatible with the
+universal free pre-Lie count.  Such an example would witness non-freeness.
+\end{proof}
+
+\begin{remark}
+This is a particularly promising test because it relates the algebra directly
+back to the proof theory.  If the algebra were free, the base consequence
+relation would have disappeared from the pre-Lie structure.  Non-freeness is
+therefore not a defect; it is a sign that the proof-theoretic constraints are
+still present.
+\end{remark}
+
+\iffalse
 \section{Matching-leaf grafting}
 
 \subsection{Local grafting}
@@ -1257,6 +2287,125 @@ tree.
 We now recall the standard algebraic notion to which the proof-theoretic
 analysis will later lead.
 
+\subsection{Linear, forest, and enveloping carriers}
+
+There are three algebraic carriers in the background, and it is important not
+to conflate them.
+
+\begin{definition}[Linear span of proof trees]
+Let
+\[
+V:=\ZZ\langle\PTree\rangle
+\]
+be the free abelian group on proof trees. Its basis elements are denoted
+\(e_t\), for \(t\in\PTree\). The grafting product
+\(\triangleright\) is a bilinear operation on \(V\). It is not a forest
+product: it is proof composition by matching-leaf substitution.
+\end{definition}
+
+\begin{definition}[Forests]
+A \emph{proof forest} is a finite commutative product of proof trees. We write
+\[
+\Forest(\PTree)
+\]
+for the free commutative monoid on \(\PTree\). Its unit is the empty forest,
+denoted \(1\). The free commutative algebra on proof trees is
+\[
+\ZZ[\Forest(\PTree)]\cong S_{\ZZ}(V),
+\]
+the symmetric algebra on the free module \(V\). Multiplication in this algebra
+is disjoint union of forests.
+\end{definition}
+
+\begin{remark}
+The forest product is mathematically standard in Connes--Kreimer and
+Grossman--Larson style Hopf algebras on rooted trees. Proof-theoretically,
+however, a forest is not itself a single derivation. It is a formal commutative
+product of derivations. This is why the proof-composition operation in the
+present paper is grafting, while the Hopf-algebraic unit naturally appears
+only after passing to a forest or enveloping-algebra carrier.
+\end{remark}
+
+\begin{definition}[Weight grading]
+The \emph{weight} of a proof tree is its number of vertices:
+\[
+|t|:=|V_t|.
+\]
+The weight of a forest is additive:
+\[
+|t_1\cdots t_k|:=|t_1|+\cdots+|t_k|,
+\qquad |1|:=0.
+\]
+This gives gradings
+\[
+V=\bigoplus_{n\ge 1}V_n,
+\qquad
+\ZZ[\Forest(\PTree)]=\bigoplus_{n\ge 0}H_n,
+\]
+where \(V_n\) is generated by trees of weight \(n\), and \(H_n\) by forests of
+total weight \(n\).
+\end{definition}
+
+\begin{proposition}[Weight of grafting]
+If \(w\in\Graft(x,y)\), then
+\[
+|w|=|x|+|y|-1.
+\]
+Equivalently, if one uses the reduced weight
+\(\|t\|:=|t|-1\), then
+\[
+\|w\|=\|x\|+\|y\|.
+\]
+\end{proposition}
+
+\begin{proof}
+Grafting \(x\) into \(y\) at a leaf replaces one vertex of \(y\), namely the
+matched leaf, by the whole tree \(x\). Thus the resulting vertex set is the
+disjoint union of the vertices of \(y\) not equal to the grafted leaf together
+with the vertices of \(x\). Hence
+\[
+|w|=(|y|-1)+|x|.
+\]
+The reduced-weight formula follows by subtracting \(1\) from both sides.
+\end{proof}
+
+\begin{remark}
+The reduced weight is the grading naturally compatible with proof
+composition, while the unreduced weight is the grading naturally used in
+ordinary rooted-tree Hopf algebras. This small shift is harmless, but making it
+explicit prevents confusion when comparing with the Connes--Kreimer and
+Foissy conventions.
+\end{remark}
+
+\begin{definition}[Enveloping carrier]
+If \(V\) carries a right pre-Lie product \(\triangleright\), then its
+commutator
+\[
+[x,y]:=x\triangleright y-y\triangleright x
+\]
+is a Lie bracket. We write \(U(V_{\mathrm{Lie}})\) for the universal
+enveloping algebra of the resulting Lie algebra. By the
+Poincare--Birkhoff--Witt theorem, \(U(V_{\mathrm{Lie}})\) has an associated
+graded algebra isomorphic to the symmetric algebra \(S_{\ZZ}(V)\).
+\end{definition}
+
+\begin{remark}[Oudom--Guin perspective]
+The Oudom--Guin construction starts from a pre-Lie algebra and builds an
+associative product on the symmetric algebra \(S(V)\) whose induced Hopf
+algebra is canonically isomorphic to \(U(V_{\mathrm{Lie}})\). In this route,
+the coproduct is the standard primitive-generator coproduct:
+\[
+\Delta(x)=x\otimes 1+1\otimes x
+\qquad (x\in V),
+\]
+extended multiplicatively to \(S(V)\). This is different from the
+Connes--Kreimer cut coproduct, whose definition is by admissible cuts of
+rooted trees. One of the mathematical tasks of the present project is to
+understand how these two coproduct viewpoints interact for proof trees.
+\end{remark}
+
+\subsection{Pre-Lie algebras}
+
 \begin{definition}
 A \emph{right pre-Lie algebra} over \(\ZZ\) is an abelian group \(A\) equipped
 with a bilinear product \(\triangleright\) satisfying
@@ -1321,6 +2470,38 @@ general no canonical bijection at raw witness level, but there is a canonical
 comparison after passing to quotient classes of witnesses. On those quotient
 classes, the noise sector cancels and the residual sector is matched
 bijectionally.
+\end{remark}
+
+\begin{theorem}[Oudom--Guin extension theorem]
+Let \((A,\triangleright)\) be a right pre-Lie algebra over a commutative
+ground ring. Then the symmetric algebra \(S(A)\) carries an associative product
+\(\star\), extending the pre-Lie operation, for which \(S(A)\) becomes a Hopf
+algebra with coproduct determined by declaring every \(a\in A\) primitive:
+\[
+\Delta(a)=a\otimes 1+1\otimes a.
+\]
+Equivalently, this Hopf algebra is canonically isomorphic to the universal
+enveloping algebra of the Lie algebra \(A_{\mathrm{Lie}}\) induced by the
+commutator of \(\triangleright\).
+\end{theorem}
+
+\begin{proof}[Idea of construction]
+The pre-Lie product defines derivations of the symmetric algebra by insertion.
+One recursively extends the action of \(A\) on \(S(A)\), then defines
+\(\star\) by letting the left tensor factor act on the right one. The pre-Lie
+identity is exactly the compatibility condition needed for associativity. The
+primitive coproduct is the usual symmetric-algebra coproduct, and the
+associative product is compatible with it; this yields the Hopf algebra. The
+commutator Lie algebra comparison is the Oudom--Guin identification with the
+universal enveloping algebra.
+\end{proof}
+
+\begin{remark}
+Thus, once the proof-tree grafting product has descended to a genuine pre-Lie
+product on the intended quotient carrier, the Hopf algebra is not an additional
+ad hoc construction. It is supplied functorially by the Oudom--Guin theorem.
+The remaining proof-theoretic burden is to identify the correct carrier and
+prove descent of the grafting product to it.
 \end{remark}
 
 
@@ -2613,14 +3794,59 @@ bureaucracy of derivations enters the pre-Lie argument.
 \section{Preparatory coproduct data and Hopf outlook}
 
 The formal development also defines a cut-based coproduct datum on proof trees.
-We record only the part that is presently used with mathematical confidence in
-the current project.
+This section records the mathematical shape of that construction and its
+relationship to the Hopf-algebraic route.
 
-\begin{definition}
-An \emph{admissible cut} of a proof tree is a finite antichain of addresses
-whose associated cut decomposition respects the base-interface constraints
-tracked in the formal development. The cut determines a pair consisting of a
-forest of extracted subtrees and a remainder tree.
+\begin{definition}[Admissible cuts]
+Let \(t\in\PTree\). An \emph{admissible cut} of \(t\) is a finite set
+\[
+C\subseteq \Addr(t)
+\]
+such that:
+\begin{enumerate}[label=\textup{(\roman*)}]
+\item every \(a\in C\) is a valid address of \(t\);
+\item \(C\) is an antichain for the prefix order, i.e. if \(a,b\in C\) and
+\(a\neq b\), then neither \(a\preceq b\) nor \(b\preceq a\).
+\end{enumerate}
+Equivalently, along any path from the root to a leaf, at most one address is
+cut.
+\end{definition}
+
+\begin{definition}[Pruned forest and remainder]
+Let \(C\) be an admissible cut of \(t\). The \emph{pruned forest} is
+\[
+P_C(t):=\prod_{a\in C} t\downarrow_a
+\in \Forest(\PTree),
+\]
+with the convention that the empty product is the empty forest \(1\).
+
+The \emph{remainder} or \emph{trunk} \(R_C(t)\) is the proof tree obtained
+from \(t\) by replacing, for each \(a\in C\), the rooted subtree
+\(t\downarrow_a\) by its root sequent regarded as a leaf. Since the addresses
+in \(C\) are pairwise incomparable, these replacements occur in disjoint
+subtrees and hence are independent of order.
+\end{definition}
+
+\begin{definition}[Cut coproduct datum]
+The Grossman--Larson style cut datum on proof trees is the formal sum
+\[
+\Delta_{\mathrm{cut}}(t)
+:=
+\sum_{C\in \operatorname{Adm}(t)}
+P_C(t)\otimes R_C(t),
+\]
+where \(\operatorname{Adm}(t)\) denotes the finite set of admissible cuts of
+\(t\). The empty cut contributes
+\[
+1\otimes t.
+\]
+If the root cut is included among admissible cuts, it contributes
+\[
+t\otimes 1,
+\]
+where \(1\) is the empty proof tree/forest unit on the appropriate carrier.
+If root cuts are omitted, the \(t\otimes 1\) term may instead be adjoined
+separately, as in the usual Connes--Kreimer convention.
 \end{definition}
 
 \begin{proposition}
@@ -2631,6 +3857,121 @@ Every proof tree admits at least one cut decomposition.
 The empty cut is always admissible, and it yields the trivial decomposition
 into the empty forest together with the original tree.
 \end{proof}
+
+\begin{lemma}[Restriction of a cut to a child]
+Let
+\[
+t=R(t_1,\ldots,t_n)
+\]
+be an arity-correct proof tree with root rule \(R\) and immediate subtrees
+\(t_1,\ldots,t_n\). If \(C\in\operatorname{Adm}(t)\), then for each
+\(1\le i\le n\) the set
+\[
+C_i:=\{\,a\in\Addr(t_i): i\cdot a\in C\,\}
+\]
+is an admissible cut of \(t_i\).
+\end{lemma}
+
+\begin{proof}
+Validity of addresses is inherited by passing from an address \(i\cdot a\) in
+the whole tree to the corresponding address \(a\) in the \(i\)-th child
+subtree. For the antichain condition, suppose \(a,b\in C_i\) are comparable in
+\(\Addr(t_i)\). Then \(i\cdot a\) and \(i\cdot b\) are comparable in
+\(\Addr(t)\). Since both lie in \(C\), admissibility of \(C\) forces
+\(i\cdot a=i\cdot b\), hence \(a=b\). Thus \(C_i\) is an antichain.
+\end{proof}
+
+\begin{lemma}[Node cut decomposition]
+Let \(t=R(t_1,\ldots,t_n)\) be arity-correct and let \(C\) be an admissible cut
+which does not cut the root. Then \(C\) is uniquely determined by the tuple of
+child cuts
+\[
+(C_1,\ldots,C_n),
+\qquad C_i\in\operatorname{Adm}(t_i),
+\]
+and conversely every tuple of admissible child cuts determines an admissible
+cut of \(t\) not cutting the root.
+\end{lemma}
+
+\begin{proof}
+The forward direction is the restriction lemma. Conversely, given admissible
+cuts \(C_i\subseteq\Addr(t_i)\), form
+\[
+C:=\bigcup_{i=1}^n \{\,i\cdot a:a\in C_i\,\}.
+\]
+Each address in \(C\) is valid in \(t\). If two such addresses have different
+first child indices, they lie in disjoint branches and are incomparable. If
+they have the same first child index, comparability in \(t\) reduces to
+comparability in the corresponding child tree, and the antichain property of
+\(C_i\) applies. Thus \(C\) is admissible. The two constructions are inverse
+because every non-root address of a node tree has a unique first child index.
+\end{proof}
+
+\begin{remark}
+This node decomposition is the combinatorial heart of the cut construction.
+It is the rooted-tree analogue of decomposing an admissible cut of a tree into
+admissible cuts of the immediate branches. In the proof-theoretic setting the
+number of branches is not arbitrary: it is fixed by the arity of the inference
+rule at the root.
+\end{remark}
+
+\begin{proposition}[Recursive form of the cut coproduct]
+Let \(t=R(t_1,\ldots,t_n)\) be arity-correct. Up to the convention about
+whether the root cut is included in \(\operatorname{Adm}(t)\), the non-root
+part of \(\Delta_{\mathrm{cut}}(t)\) is obtained by summing over tuples of
+admissible child cuts:
+\[
+\sum_{C_1,\ldots,C_n}
+\bigl(P_{C_1}(t_1)\cdots P_{C_n}(t_n)\bigr)
+\otimes
+R\bigl(R_{C_1}(t_1),\ldots,R_{C_n}(t_n)\bigr).
+\]
+\end{proposition}
+
+\begin{proof}
+By the node cut decomposition, admissible non-root cuts of \(t\) are in
+bijection with tuples of admissible cuts of the immediate subtrees. Under this
+bijection, the pruned forest is the product of the pruned forests of the child
+cuts, and the remainder tree is obtained by applying the same root rule \(R\)
+to the child remainders.
+\end{proof}
+
+\begin{theorem}[Coassociativity reduces to nested cut decomposition]
+The coassociativity equation for the cut coproduct,
+\[
+(\Delta_{\mathrm{cut}}\otimes \mathrm{id})\Delta_{\mathrm{cut}}(t)
+=
+(\mathrm{id}\otimes \Delta_{\mathrm{cut}})\Delta_{\mathrm{cut}}(t),
+\]
+is equivalent to the statement that a two-stage cut of \(t\) can be uniquely
+read either as:
+\begin{enumerate}[label=\textup{(\roman*)}]
+\item first cutting a family of subtrees and then cutting inside the pruned
+forest; or
+\item first cutting the remainder tree and then collecting the resulting
+pruned pieces.
+\end{enumerate}
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+Both sides enumerate the same data: a finite family of pairwise compatible cut
+addresses together with a choice of which cut components are regarded as
+first-stage and which as second-stage. The antichain condition ensures that
+cut subtrees are either disjoint or nested in the controlled way required by
+admissibility. The node decomposition lemma reduces the comparison to the
+corresponding statement on the immediate child trees, so the proof proceeds by
+height induction on \(t\). The base case is a leaf, where only the empty and
+possibly root cuts occur. The inductive step is exactly the arity-indexed
+node case above.
+\end{proof}
+
+\begin{remark}
+The formal project is presently pursuing this theorem through the structural
+cut lemmas just stated. Earlier explicit computations of coproducts on small
+trees are useful regression tests, but they are not the proof strategy. The
+proof strategy is the height induction controlled by rule arity and node cut
+decomposition.
+\end{remark}
 
 \begin{remark}
 This coproduct material is preparatory rather than central in the present
@@ -2652,6 +3993,105 @@ primitive coproduct.
 The second route is the one most strongly suggested by the present formal
 results, and it is the route we have in mind when the abstract mentions Hopf
 algebraic consequences.
+\end{remark}
+
+\begin{definition}[Pre-Lie difference relations]
+Let \(V=\ZZ\langle\PTree\rangle\) with grafting product
+\(\triangleright\). For proof trees \(x,y,z\), define the \emph{pre-Lie
+difference}
+\[
+D(x,y,z):=
+(x\triangleright y)\triangleright z
+-x\triangleright (y\triangleright z)
+-(x\triangleright z)\triangleright y
++x\triangleright (z\triangleright y).
+\]
+Let \(R_{\mathrm{pl}}\subseteq V\) be the subgroup generated by all
+\(D(x,y,z)\). A \emph{stable pre-Lie relation submodule} is a subgroup
+\(R_{\mathrm{st}}\subseteq V\) containing \(R_{\mathrm{pl}}\) and closed under
+left and right grafting by tree generators:
+\[
+u\triangleright r,\ r\triangleright u\in R_{\mathrm{st}}
+\qquad
+(u\in\PTree,\ r\in R_{\mathrm{st}}).
+\]
+\end{definition}
+
+\begin{remark}
+The adjective ``stable'' is important. Quotienting merely by the formal
+pre-Lie differences ensures that the pre-Lie identity holds in the quotient,
+but it does not by itself ensure that grafting is well-defined on quotient
+classes. Stability is the algebraic condition that makes the product descend.
+\end{remark}
+
+\begin{proposition}[Product descent through a stable quotient]
+Let \(Q:=V/R_{\mathrm{st}}\). If \(R_{\mathrm{st}}\) is stable under left and
+right grafting, then \(\triangleright\) descends to a well-defined bilinear
+product
+\[
+\bar{\triangleright}:Q\otimes Q\to Q.
+\]
+Moreover, the descended product satisfies the right pre-Lie identity.
+\end{proposition}
+
+\begin{proof}
+If \(x-x'\in R_{\mathrm{st}}\) and \(y-y'\in R_{\mathrm{st}}\), then by
+bilinearity
+\[
+x\triangleright y-x'\triangleright y'
+=(x-x')\triangleright y+x'\triangleright (y-y')
+\in R_{\mathrm{st}},
+\]
+using stability. Hence the product is independent of representatives. Since
+all pre-Lie differences \(D(x,y,z)\) lie in \(R_{\mathrm{st}}\), their images
+in \(Q\) vanish, which is exactly the right pre-Lie identity for the descended
+product.
+\end{proof}
+
+\begin{definition}[Coideal condition]
+Let \((V,\Delta,\varepsilon)\) be a coalgebra-like structure on the raw
+linear tree module. A subgroup \(R\subseteq V\) is a \emph{coideal} if
+\[
+\Delta(R)\subseteq R\otimes V+V\otimes R
+\qquad\text{and}\qquad
+\varepsilon(R)=0.
+\]
+\end{definition}
+
+\begin{proposition}[Coalgebra descent criterion]
+If \(R\subseteq V\) is a coideal, then \(\Delta\) and \(\varepsilon\) descend
+to well-defined maps
+\[
+\bar{\Delta}:V/R\to (V/R)\otimes (V/R),
+\qquad
+\bar{\varepsilon}:V/R\to \ZZ.
+\]
+If \(\Delta\) is coassociative and counital on \(V\), then
+\(\bar{\Delta}\) is coassociative and counital on \(V/R\).
+\end{proposition}
+
+\begin{proof}
+Let \(\pi:V\to V/R\) be the quotient map. The condition
+\(\Delta(R)\subseteq R\otimes V+V\otimes R\) says precisely that
+\((\pi\otimes\pi)\Delta(r)=0\) for every \(r\in R\). Thus
+\((\pi\otimes\pi)\Delta\) is constant on cosets and factors uniquely through
+\(\pi\), giving \(\bar{\Delta}\). The condition \(\varepsilon(R)=0\) gives the
+same factorization for the counit. Coassociativity and counitality descend
+because they are equations of maps out of \(V/R\), and precomposing with the
+surjection \(\pi\) reduces them to the corresponding equations on \(V\).
+\end{proof}
+
+\begin{remark}
+For the direct cut route, the essential missing theorem is therefore not just
+that \(\Delta_{\mathrm{cut}}\) is coassociative on raw trees. One must also
+show that the proof-theoretic relation submodule is a coideal:
+\[
+\Delta_{\mathrm{cut}}(R_{\mathrm{st}})
+\subseteq
+R_{\mathrm{st}}\otimes V+V\otimes R_{\mathrm{st}}.
+\]
+This is the precise algebraic form of the statement that cut decomposition is
+compatible with the proof-theoretic quotient.
 \end{remark}
 
 \begin{definition}[Stable quotient and enveloping algebra]
@@ -2781,12 +4221,13 @@ extends from generators to all homogeneous elements.
 
 \begin{remark}[Current state of the Oudom--Guin development]
 The formal development already contains preparatory work toward route~(ii).
-The file \texttt{GrossmanLarssonOudomGuin.lean} establishes, without any
-\texttt{sorry}, the following:
+The files \texttt{GrossmanLarssonOudomGuinCoalgebra.lean} and
+\texttt{GrossmanLarssonOudomGuinHopfRigidity.lean} contain the current
+formal infrastructure for the following:
 \begin{itemize}
 \item a graft-compatible weight function on proof trees, grading every
-one-step product output by $\mathsf{weight}(w) = \mathsf{weight}(x) +
-\mathsf{weight}(y)$ whenever $w\in\Graft(x,y)$;
+one-step product output by the reduced-weight law
+\(\|w\|=\|x\|+\|y\|\) whenever \(w\in\Graft(x,y)\);
 \item a proof that any bilinear product on the linear proof-tree carrier whose
 generator-level behaviour matches the quotient pre-Lie law automatically
 satisfies the right pre-Lie axiom on the entire carrier \newline 
@@ -2831,6 +4272,26 @@ encodes something specifically about nonmonotonic proof theory or merely
 recovers a combinatorial object by a proof-theoretic route.
 \end{remark}
 
+\begin{remark}[Relation to Foissy's comodule viewpoint]
+Foissy's analysis of the Hopf algebra of rooted trees emphasizes that the
+coalgebra structure is not merely a bookkeeping device: finite-dimensional
+comodules encode how iterated cut decompositions are organized by primitive
+pieces, and the whole Hopf algebra admits filtrations and gradings reflecting
+this decomposition. This suggests a useful comparison problem for proof trees.
+If a finite family of derivations is closed under taking the remainders and
+pruned components appearing in \(\Delta_{\mathrm{cut}}\), then its span should
+behave like a finite-dimensional comodule over the relevant rooted-tree Hopf
+algebra or over its proof-theoretic quotient. In proof-theoretic terms, such a
+comodule would package the finite space of subderivations and residual proof
+obligations generated by repeatedly cutting a derivation.
+
+This is not used in the present proof of the pre-Lie identity, but it is a
+natural source of future invariants. The Loewy-style filtration of a comodule
+by trivial quotients has a proof-theoretic reading as a filtration by depth of
+nontrivial decomposition: primitive elements correspond to indecomposable
+proof-tree contributions, while higher layers record iterated cut structure.
+\end{remark}
+
 \begin{remark}[Structural rules as future parameters]
 As noted in the introduction, the present paper fixes multiset contexts and
 omits weakening and contraction. Each structural rule is a potential parameter.
@@ -2846,6 +4307,8 @@ grafting product sensitive to context ordering in ways that require separate
 analysis. A systematic study of which structural rules are obstructions to
 Hopf-algebraic compatibility is left for future work.
 \end{remark}
+
+\fi
 
 \section{Conclusion}
 
