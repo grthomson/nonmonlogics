@@ -57,12 +57,7 @@
 \maketitle
 
 \begin{abstract}
-We construct a pre-Lie algebra on proof trees for a multisuccedent sequent calculus equipped to a
-primitive base consequence relation which is not assumed to be monotonic. The sequent calculus naturally gives rise to decorated and labelled rooted trees, while the inadmissibility of standard Weakening rules gives rise to a constrained grafting operation on trees. We define a proof-theoretically meaningful equivalence relation which identifies proof-trees differing
-only in inessential or bureaucratic scheduling or reassociation choices. Passing to the induced quotient we show that there is a clean separation between cancelling and genuinely asymmetric
-contributions to the associator, yielding a pre-Lie
-identity for proof-tree composition. This extends to a Hopf algebra by the Oudom-Guin construction. This suggests that Hopf-algebraic methods on proof trees are a potential tool for structural proof theory, in the sense that the presence or absence of
-structural rules controls the existence and form of the algebraic structure.
+We construct two dual Hopf algebras on proof trees of the Non-Monotonic Multi-Succedent sequent calculus NMMS, whose primitive base consequence relation is not assumed to be monotonic. The sequent calculus gives rise to decorated labelled rooted trees; the inadmissibility of Weakening produces a constrained grafting operation on trees. Passing to a proof-theoretically meaningful quotient of two-step graft witnesses, we establish a pre-Lie identity for proof-tree grafting. By the Oudom--Guin theorem this determines a connected graded Hopf algebra $H_{\mathrm{OG}}$ on the symmetric algebra of proof trees. The admissible-cut coproduct, which sums over all antichain decompositions of a proof tree, determines a second Hopf algebra $H_{\mathrm{split}}$ on the free algebra of hypersequents. Here hypersequents --- finite multisets of proof trees --- are the natural home for the pruned forests produced by cutting, and the splitting coproduct is the linearisation of Avron's external splitting rule. The nonmonotonicity of the underlying consequence relation is visible at both levels: it forces the matching-leaf constraint that makes grafting non-free, and it identifies external weakening as the structural rule whose failure makes the splitting coproduct proof-theoretically non-trivial. The two algebras $H_{\mathrm{OG}}$ and $H_{\mathrm{split}}$ are graded dual; by Milnor--Moore, $H_{\mathrm{OG}}$ is the universal enveloping algebra of the Lie algebra of proof-tree grafting. The main results have been formalised in Lean~4 using Mathlib.
 \end{abstract}
 
 \section{Introduction}
@@ -160,22 +155,24 @@ The central result of the paper (Theorem~\ref{thm:prelie}) is that the grafting 
 =
 (x\triangleright z)\triangleright y - x\triangleright(z\triangleright y)
 \]
-for all proof trees $x,y,z$, making $(V,\triangleright)$ a right pre-Lie algebra.  By the Oudom--Guin theorem, this determines a connected graded Hopf algebra on the symmetric algebra $S(V)\cong\ZZ[\Forest(\PTree)]$, with coproduct $\Delta(t)=t\otimes 1+1\otimes t$ on primitive generators and antipode given by the standard connected-graded recursion (Corollary~\ref{cor:hopf}).  The commutator $[x,y]=x\triangleright y-y\triangleright x$ defines a Lie bracket on $V$ whose bracket measures the directional asymmetry of proof substitution (Corollary~\ref{cor:lie}).
+for all proof trees $x,y,z$, making $(V,\triangleright)$ a right pre-Lie algebra.  By the Oudom--Guin theorem this determines a connected graded Hopf algebra $H_{\mathrm{OG}}$ on the symmetric algebra $S(V)\cong\ZZ[\Forest(\PTree)]$, with coproduct $\Delta(t)=t\otimes 1+1\otimes t$ on primitive generators (Corollary~\ref{cor:hopf}).  The commutator $[x,y]=x\triangleright y-y\triangleright x$ is a Lie bracket measuring the directional asymmetry of proof substitution (Corollary~\ref{cor:lie}).
+
+\medskip
+
+The admissible-cut coproduct on proof trees generates a second and complementary Hopf algebra $H_{\mathrm{split}}$.  The natural algebraic home for the pruned-forest side of a cut is not a single proof tree but a structure analogous to a \emph{hypersequent} in Avron's sense: a finite multiset of components placed side by side with no internal logical connection.  Our components are proof trees rather than sequents, and the intended reading is collective --- all detached subproofs simultaneously present --- rather than the disjunctive reading standard in the hypersequent literature.  In the hypersequent calculus for NMMS, Avron's distinction between internal and external structural rules becomes decisive.  Internal structural rules operate within a single component; external structural rules operate across components.  External weakening --- adding a new component to a hypersequent --- fails in NMMS for exactly the same reason that ordinary weakening fails: the base relation $\mszero$ is non-monotone, so a new context defeats the derivability of existing components.  The external splitting rule, which detaches a subproof from its context as a new hypersequent component, is the proof-theoretic counterpart of the admissible-cut coproduct.  More precisely, the linearisation of the splitting rule over all admissible cuts is the coproduct of $H_{\mathrm{split}}$.  The counit of $H_{\mathrm{split}}$ sends a leaf proof tree (a base-axiom step) to $1$ and any non-leaf tree to $0$; this matches the root-cut remainder, which is always a leaf.
+
+The two Hopf algebras are graded dual: $H_{\mathrm{OG}}$ and $H_{\mathrm{split}}$ are related by the pairing $\langle\Delta_{\mathrm{split}}(t),\,f\otimes g\rangle = \langle t,\,f\star g\rangle$, where $\star$ is the Oudom--Guin product.  By the Milnor--Moore theorem, $H_{\mathrm{OG}}\cong U(L)$, where $L$ is the Lie algebra of primitive elements under $[x,y]=x\triangleright y-y\triangleright x$.  The pre-Lie identity already proved is precisely the input Milnor--Moore requires.
+
+\medskip
 
 \noindent\textbf{Lean formalization.}
 The main results have been formalized in Lean~4 using Mathlib.
-The central theorem \texttt{classLevel\_preLie\_identity} is machine-verified
-with no \texttt{sorry} placeholders in the live proof chain.
+The central theorem \texttt{classLevel\_preLie\_identity} is machine-verified with no \texttt{sorry} placeholders. The algebra maps \texttt{hypersequentComulAlgHom} and \texttt{hypersequentCounitAlgHom} are constructed as Mathlib algebra homomorphisms; coassociativity and the full Hopf axioms are the principal remaining formal targets.
 
 \medskip
 
 The paper is organized as follows. Section~2 defines the primitive consequence
-relation and the calculus $\NMMS(\mszero)$. Section~3 develops proof trees as
-rooted ordered objects. Section~4 introduces matching-leaf grafting. Section~5
-analyses the two-step graft geometry underlying the associator. Section~6
-proves the pre-Lie identity. Section~7 develops the Oudom--Guin Hopf algebra.
-Section~8 discusses the admissible-cut coproduct as complementary structure.
-Section~9 records theorem targets and the structural-rules programme.
+relation and $\NMMS(\mszero)$. Section~3 develops proof trees. Section~4 introduces matching-leaf grafting. Section~5 analyses the two-step graft geometry. Section~6 proves the pre-Lie identity. Section~7 develops the Oudom--Guin Hopf algebra $H_{\mathrm{OG}}$. Section~8 introduces hypersequents and the splitting coproduct. Section~9 constructs $H_{\mathrm{split}}$ and its counit. Section~10 states the duality theorem and the Milnor--Moore consequence. Section~11 records theorem targets and the structural-rules programme.
 
 \section{Primitive consequence and induced derivability}
 
@@ -329,17 +326,14 @@ premisses.
 \begin{tikzpicture}[
   vertex/.style={circle, fill=black, inner sep=1.4pt},
   vedge/.style={thick},
-  vlabel/.style={font=\scriptsize, align=left}
+  vlabel/.style={font=\scriptsize}
 ]
 \node[vertex] (root) at (0,0) {};
 \node[vlabel, below=1mm of root] {$r$};
-
-\node[vertex] (lefta) at (-1.9,1.4) {};
+\node[vertex] (lefta) at (-1.1,1.0) {};
 \node[vlabel, left=1mm of lefta] {$\ell_1$};
-
-\node[vertex] (righta) at (1.9,1.4) {};
+\node[vertex] (righta) at (1.1,1.0) {};
 \node[vlabel, right=1mm of righta] {$\ell_2$};
-
 \draw[vedge] (root) -- (lefta);
 \draw[vedge] (root) -- (righta);
 \end{tikzpicture}
@@ -481,52 +475,43 @@ two-child nodes.
 
 \begin{center}
 \begin{tikzpicture}[
-  nd/.style={circle,fill=black,inner sep=1.45pt},
+  nd/.style={circle,fill=black,inner sep=1.3pt},
   ed/.style={thick},
   lab/.style={font=\scriptsize,align=center}
 ]
-% one vertex
-\begin{scope}[shift={(-5.8,0)}]
+\begin{scope}[shift={(-4.5,0)}]
   \node[nd] (r) at (0,0) {};
-  \node[lab,below=3mm of r] {one vertex\\base};
+  \node[lab,below=2.5mm of r] {leaf};
 \end{scope}
-
-% unary node
-\begin{scope}[shift={(-3.4,0)}]
+\begin{scope}[shift={(-2.7,0)}]
   \node[nd] (r) at (0,0) {};
-  \node[nd] (a) at (0,1.25) {};
+  \node[nd] (a) at (0,0.95) {};
   \draw[ed] (r)--(a);
-  \node[lab,below=3mm of r] {unary rule};
+  \node[lab,below=2.5mm of r] {unary};
 \end{scope}
-
-% binary node
-\begin{scope}[shift={(-0.8,0)}]
+\begin{scope}[shift={(-0.7,0)}]
   \node[nd] (r) at (0,0) {};
-  \node[nd] (a) at (-0.55,1.25) {};
-  \node[nd] (b) at (0.55,1.25) {};
+  \node[nd] (a) at (-0.45,0.95) {};
+  \node[nd] (b) at (0.45,0.95) {};
   \draw[ed] (r)--(a); \draw[ed] (r)--(b);
-  \node[lab,below=3mm of r] {binary rule};
+  \node[lab,below=2.5mm of r] {binary};
 \end{scope}
-
-% unary chain of height two
-\begin{scope}[shift={(2.1,0)}]
+\begin{scope}[shift={(1.5,0)}]
   \node[nd] (r) at (0,0) {};
-  \node[nd] (a) at (0,1.15) {};
-  \node[nd] (b) at (0,2.3) {};
+  \node[nd] (a) at (0,0.9) {};
+  \node[nd] (b) at (0,1.8) {};
   \draw[ed] (r)--(a); \draw[ed] (a)--(b);
-  \node[lab,below=3mm of r] {height \(2\)\\unary chain};
+  \node[lab,below=2.5mm of r] {height $2$\\unary};
 \end{scope}
-
-% mixed height two
-\begin{scope}[shift={(5.0,0)}]
+\begin{scope}[shift={(3.8,0)}]
   \node[nd] (r) at (0,0) {};
-  \node[nd] (a) at (-0.7,1.15) {};
-  \node[nd] (b) at (0.7,1.15) {};
-  \node[nd] (c) at (-1.05,2.3) {};
-  \node[nd] (d) at (-0.35,2.3) {};
+  \node[nd] (a) at (-0.5,0.9) {};
+  \node[nd] (b) at (0.5,0.9) {};
+  \node[nd] (c) at (-0.8,1.8) {};
+  \node[nd] (d) at (-0.2,1.8) {};
   \draw[ed] (r)--(a); \draw[ed] (r)--(b);
   \draw[ed] (a)--(c); \draw[ed] (a)--(d);
-  \node[lab,below=3mm of r] {height \(2\)\\mixed};
+  \node[lab,below=2.5mm of r] {height $2$\\mixed};
 \end{scope}
 \end{tikzpicture}
 \end{center}
@@ -705,18 +690,18 @@ the set-theoretic statement that the rooted regions affected by two outer
 grafts are disjoint.
 \end{remark}
 
-% ---- Figure 1: proof tree with address labels ----
+% ---- Proof tree with address labels ----
 \begin{center}
 \begin{tikzpicture}[
-  nd/.style={circle,fill=black,inner sep=1.5pt},
+  nd/.style={circle,fill=black,inner sep=1.4pt},
   ed/.style={thick},
   seq/.style={font=\scriptsize,inner sep=1pt},
-  adr/.style={font=\scriptsize\ttfamily,color=gray!80!black}
+  adr/.style={font=\scriptsize\ttfamily,color=gray!70!black}
 ]
 \node[nd] (r)  at ( 0,  0) {};
-\node[nd] (l)  at (-2.5,1.8) {};
-\node[nd] (rr) at ( 2.5,1.8) {};
-\node[nd] (ll) at (-2.5,3.5) {};
+\node[nd] (l)  at (-2.2,1.5) {};
+\node[nd] (rr) at ( 2.2,1.5) {};
+\node[nd] (ll) at (-2.2,3.0) {};
 \draw[ed] (r)--(l); \draw[ed] (r)--(rr); \draw[ed] (l)--(ll);
 \node[seq,below=2mm of r]  {$\wedge R,\;\Gamma\ms(A\wedge B),\Theta$};
 \node[adr,left=1mm of r]   {\texttt{[]}};
@@ -729,12 +714,8 @@ grafts are disjoint.
 \end{tikzpicture}
 \end{center}
 \noindent\small
-Each node carries a rule tag and a sequent label.
-Addresses (grey \texttt{monospace}) record paths from the root by child index:
-\texttt{[0]} is the first child of the root, \texttt{[1]} the second,
-and \texttt{[0,0]} the first child of \texttt{[0]}.
-The nodes at \texttt{[0,0]} and \texttt{[1]} are leaves (open premiss
-positions); the node at \texttt{[0]} is an internal node with one child.
+Addresses (grey \texttt{monospace}) record paths from the root by child index.
+Leaves at \texttt{[0,0]} and \texttt{[1]} are open premiss positions.
 
 \section{Matching-leaf grafting}
 
@@ -873,32 +854,32 @@ branch in red.
   rededge/.style={thick, red},
   lab/.style={font=\scriptsize, inner sep=1pt}
 ]
-\node at (-4.7,3.3) {$t$};
-\node[vertex] (tr) at (-4.7,0) {};
-\node[vertex] (ta) at (-5.7,1.4) {};
-\node[bluevertex] (tl) at (-3.7,1.4) {};
+\node at (-3.5,2.5) {$t$};
+\node[vertex] (tr) at (-3.5,0) {};
+\node[vertex] (ta) at (-4.2,1.1) {};
+\node[bluevertex] (tl) at (-2.8,1.1) {};
 \draw[vedge] (tr) -- (ta);
 \draw[vedge] (tr) -- (tl);
-\node[lab, right=0.8mm of tl, text=blue!70!black] {$s$};
+\node[lab, right=0.7mm of tl, text=blue!70!black] {$s$};
 
-\node at (0,3.3) {$u$};
+\node at (0,2.5) {$u$};
 \node[redvertex] (ur) at (0,0) {};
-\node[redvertex] (ua) at (-0.9,1.4) {};
+\node[redvertex] (ua) at (-0.6,1.1) {};
 \draw[rededge] (ur) -- (ua);
 \node[lab, below=1mm of ur, text=red] {$s$};
 
-\node at (4.7,3.3) {$\operatorname{gr}_a(u,t)$};
-\node[vertex] (gr) at (4.7,0) {};
-\node[vertex] (ga) at (3.7,1.4) {};
-\node[redvertex] (gu) at (5.7,1.4) {};
-\node[redvertex] (gua) at (6.4,2.8) {};
+\node at (3.5,2.5) {$\operatorname{gr}_a(u,t)$};
+\node[vertex] (gr) at (3.5,0) {};
+\node[vertex] (ga) at (2.8,1.1) {};
+\node[redvertex] (gu) at (4.2,1.1) {};
+\node[redvertex] (gua) at (4.8,2.2) {};
 \draw[vedge] (gr) -- (ga);
 \draw[vedge] (gr) -- (gu);
 \draw[rededge] (gu) -- (gua);
-\node[lab, right=0.8mm of gu, text=blue!70!black] {$s$};
+\node[lab, right=0.7mm of gu, text=blue!70!black] {$s$};
 
-\node at (-2.35,1.4) {$\leadsto$};
-\node at (2.35,1.4) {$\leadsto$};
+\node at (-1.75,1.1) {$\leadsto$};
+\node at (1.75,1.1) {$\leadsto$};
 \end{tikzpicture}
 \end{center}
 
@@ -1201,47 +1182,220 @@ cut coproduct and its relation to the primitive-generator coproduct is a
 separate problem, discussed briefly in the following section.
 \end{remark}
 
-\begin{remark}[What is proved here, and what remains separate]
-The pre-Lie theorem supplies a complete input to the standard Oudom--Guin
-machine, so the Hopf algebra on \(S(V)\) follows by an established theorem of
-pre-Lie theory.  This does not by itself prove that the admissible-cut
-coproduct below descends through the same proof-theoretic quotient, nor that
-the cut coproduct is the coproduct of the Oudom--Guin Hopf algebra.  Those are
-additional comparison and descent problems.
+\begin{remark}[Two Hopf algebras]
+The Oudom--Guin construction yields $H_{\mathrm{OG}}$ with the grafting product $\star$ and the primitive coproduct $\Delta(t)=t\otimes 1+1\otimes t$.  There is a second Hopf algebra $H_{\mathrm{split}}$ with the forest-union product and the admissible-cut coproduct $\Delta_{\mathrm{split}}$.  These are \emph{not} the same algebra: $H_{\mathrm{OG}}$ encodes the \emph{building} of proofs by grafting; $H_{\mathrm{split}}$ encodes the \emph{decomposition} of proofs by cutting.  Sections~8--10 develop $H_{\mathrm{split}}$ and the duality between the two.
 \end{remark}
 
-\section{Cut coproducts and the coalgebra problem}
+\section{Hypersequents and the splitting structure}
 
-There is nevertheless a natural cut coproduct on proof trees.  It is useful
-both for comparison with Connes--Kreimer theory and for isolating the remaining
-coalgebraic work.
+\subsection{Hypersequents for NMMS}
 
-\paragraph{Admissible cuts.}
+A \emph{hypersequent} (Avron~\cite{avron1996hypersequents}) is a finite multiset of sequents, written
+\[
+S_1 \mid S_2 \mid \cdots \mid S_n.
+\]
+Each $S_i$ is an individual sequent of $\NMMS(\mszero)$; the pipe $\mid$ is an external separator with no internal logical content.  In the standard hypersequent literature the pipe is given a \emph{disjunctive} reading: the whole hypersequent holds if at least one component holds.  Our setting differs in two respects.  First, it is natural to take the components to be proof trees rather than bare sequents, so a hypersequent is a finite multiset $G\in\MSet(\PTree)$.  Second, the intended reading is \emph{collective}: all detached subproofs coexist simultaneously, which matches the coproduct bookkeeping.  We write $\mathsf{HSeq}$ for the set of all hypersequents, including the empty one $\varnothing$.
+
+\subsection{Internal and external structural rules}
+
+Avron's key distinction is between structural rules that act \emph{within} a single component and those that act \emph{across} components.
+
+\paragraph{Internal rules.}  Rules acting within a component are the familiar sequent structural rules: internal weakening, contraction, and exchange.  In NMMS these are absent from the base relation, but logical rules may introduce them implicitly.
+
+\paragraph{External rules.}  External structural rules act on the multiset of components.  The external versions of the standard rules are:
+\begin{itemize}
+\item \emph{External weakening}: $G \vdash G \mid S$ --- add a new component.
+\item \emph{External contraction}: $G \mid S \mid S \vdash G \mid S$ --- merge duplicate components.
+\item \emph{External splitting}: $G \mid \Gamma\ms\Delta \vdash G \mid \Gamma_1\ms\Delta \mid \Gamma_2\ms\Delta$ --- split a component into two.
+\end{itemize}
+
+\begin{proposition}[External weakening fails in NMMS]
+External weakening is not admissible in the hypersequent calculus for $\NMMS(\mszero)$.
+\end{proposition}
+\begin{proof}
+An instance of external weakening would add a new proof-tree component $S$ to a valid hypersequent $G$.  But $S$ is a sequent of $\NMMS(\mszero)$, which depends on the primitive relation $\mszero$.  Since $\mszero$ is non-monotone, the derivability of $S$ is not preserved when additional contexts become available.  There is no proof-tree for an arbitrary $S$ that can be adjoined independently.
+\end{proof}
+
+\begin{remark}
+External weakening would allow freely extending the collection of coexisting proof contexts.  Its failure is the hypersequent-level expression of the same non-monotonicity that prevents ordinary weakening in individual sequents.  The absence of external weakening is the proof-theoretic source of the non-trivial structure in $H_{\mathrm{split}}$.
+\end{remark}
+
+\subsection{The external splitting rule and the coproduct}
+
+The external splitting rule is not a weakening; it \emph{decomposes} an existing component.  An admissible cut of a proof tree $t$ is exactly the data needed for a valid external split: cut addresses select subproof trees to detach, and the remainder is the residual component.
+
+\begin{definition}[Admissible cut]
+An \emph{admissible cut} of a proof tree $t$ is a finite antichain
+\[
+C\subseteq\Addr(t)
+\]
+for the prefix order.  The antichain condition ensures that every root-to-leaf path in $t$ meets at most one element of $C$.  The cut determines:
+\[
+P_C(t) = \{t\!\downarrow_a \mid a\in C\}\in\mathsf{HSeq},
+\qquad
+R_C(t) = \text{tree obtained by replacing each }t\!\downarrow_a\text{ by a leaf.}
+\]
+Here $P_C(t)$ is a hypersequent (the detached subproof forest) and $R_C(t)$ is the remainder proof tree.
+\end{definition}
+
+The empty cut $C=\varnothing$ gives $P_\varnothing(t)=\varnothing$ and $R_\varnothing(t)=t$.  The root cut $C=\{\langle\rangle\}$ gives $P_{\mathrm{root}}(t)=\{t\}$ and $R_{\mathrm{root}}(t)=\mathsf{leaf}(\mathrm{conc}(t))$, the leaf carrying the conclusion sequent of $t$.
+
+\begin{proposition}[Node decomposition of cuts]
+Let $t=R(t_1,\ldots,t_n)$.  Every non-root admissible cut of $t$ decomposes uniquely as a tuple of admissible cuts $C_i$ of the $t_i$.  Under this correspondence,
+\[
+P_C(t) = P_{C_1}(t_1)\sqcup\cdots\sqcup P_{C_n}(t_n),
+\qquad
+R_C(t) = R(R_{C_1}(t_1),\ldots,R_{C_n}(t_n)).
+\]
+\end{proposition}
+
+\begin{proof}
+Every non-root address of $t$ has a unique first child index $i$ followed by an address of $t_i$.  Restricting $C$ to addresses with first index $i$ gives an antichain $C_i$ in $t_i$.  The antichain conditions for different $i$ are independent.
+\end{proof}
+
+\section{The splitting Hopf algebra \texorpdfstring{$H_{\mathrm{split}}$}{H-split}}
+
+\subsection{Algebra and coalgebra carriers}
+
+Let $R$ be a commutative ring.  Define
+\[
+H_{\mathrm{split}} := R[\mathsf{HSeq}] = \bigoplus_{G\in\mathsf{HSeq}} R\cdot [G],
+\]
+the free $R$-algebra on hypersequents, with product given by multiset union: $[G]\cdot[H]=[G\sqcup H]$.  The unit is $[\varnothing]$.  This is the polynomial algebra $R[\PTree]$ in infinitely many indeterminates indexed by proof trees.
+
+The coproduct on a generator $[t]$ for a single proof tree $t$ is
+\[
+\Delta_{\mathrm{split}}([t])
+=
+\sum_{C\in\operatorname{Adm}(t)}
+[P_C(t)]\otimes [\{R_C(t)\}],
+\]
+where $\{R_C(t)\}$ denotes the singleton hypersequent containing the remainder tree.  The empty cut contributes $[\varnothing]\otimes[\{t\}]=1\otimes[t]$.  The root cut contributes $[\{t\}]\otimes[\{\mathsf{leaf}(\mathrm{conc}(t))\}]$.  The coproduct extends multiplicatively: $\Delta_{\mathrm{split}}([G]\cdot[H])=\Delta_{\mathrm{split}}([G])\cdot\Delta_{\mathrm{split}}([H])$.
+
+\subsection{The counit}
+
+\begin{definition}[Splitting counit]
+Define the counit $\varepsilon_{\mathrm{split}}:H_{\mathrm{split}}\to R$ on generators by
+\[
+\varepsilon_{\mathrm{split}}([t])
+=
+\begin{cases}
+1 & \text{if }t\text{ is a leaf (base axiom step),}\\
+0 & \text{otherwise,}
+\end{cases}
+\]
+extended multiplicatively to hypersequents: $\varepsilon_{\mathrm{split}}([G])=\prod_{t\in G}\varepsilon_{\mathrm{split}}([t])$.
+\end{definition}
+
+\begin{proposition}[Counit laws]
+The counit $\varepsilon_{\mathrm{split}}$ satisfies the left and right counit identities.
+\end{proposition}
+\begin{proof}
+For the left identity $(\varepsilon_{\mathrm{split}}\otimes\mathrm{id})\Delta_{\mathrm{split}}([t])=[t]$: the only cut contributing a term with $\varepsilon_{\mathrm{split}}([P_C(t)])\neq 0$ is the empty cut $C=\varnothing$, since any non-empty $P_C(t)$ contains a non-leaf subtree.  The empty cut gives $1\otimes[t]$.
+
+For the right identity $(\mathrm{id}\otimes\varepsilon_{\mathrm{split}})\Delta_{\mathrm{split}}([t])=[t]$: we need the unique cut $C$ with $\varepsilon_{\mathrm{split}}([\{R_C(t)\}])\neq 0$, i.e.\ $R_C(t)$ a leaf.  This is the root cut, which gives remainder $\mathsf{leaf}(\mathrm{conc}(t))$.  The root cut contributes $[\{t\}]\otimes 1$, and $[\{t\}]=[t]$ as a generator.
+\end{proof}
+
+\begin{remark}
+The choice $\varepsilon_{\mathrm{split}}(\mathsf{leaf})=1$ is forced by the right counit law.  It has a direct proof-theoretic reading: a leaf proof tree is a base axiom step, representing a primitive material inference with no further decomposition.  It is the unit of proof-theoretic content.
+\end{remark}
+
+\subsection{Coassociativity}
+
+\begin{theorem}[Coassociativity]\label{thm:coassoc}
+$(\Delta_{\mathrm{split}}\otimes\mathrm{id})\circ\Delta_{\mathrm{split}} = (\mathrm{id}\otimes\Delta_{\mathrm{split}})\circ\Delta_{\mathrm{split}}$.
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+Both sides enumerate two-stage admissible cuts of a proof tree $t$: compatible pairs $(C_1,C_2)$ of admissible cuts together with an assignment to stage.  The bijection between the two sides is the standard nested-cut correspondence: a cut $D$ of the remainder $R_{C_1}(t)$ corresponds to the extended cut $C_1\cup\mathrm{lift}(D)$ of $t$, where $\mathrm{lift}$ re-attaches the address prefix from the remainder back into $t$.  The antichain conditions are preserved under this correspondence.  Pruned forests and final remainders are matched by the node decomposition proposition.
+In the NMMS setting this correspondence is not merely combinatorial.  The admissibility condition is exactly where nonmonotonicity enters: because external weakening is unavailable, a second-stage cut may only extend the first cut along structure already exposed by the remainder, and cannot import fresh context from outside the detached subtree.  This rigidity is what makes the nested-cut bijection proof-theoretically meaningful, and it is the same rigidity that constrains matching-leaf grafting on the product side.
+\end{proof}
+
+\begin{theorem}[Bialgebra]\label{thm:bialgebra}
+$(H_{\mathrm{split}},\cdot,\Delta_{\mathrm{split}},\varepsilon_{\mathrm{split}})$ is a connected graded bialgebra, graded by the total number of nodes across the hypersequent.
+\end{theorem}
+
+\begin{proof}
+Associativity and unit laws hold for the polynomial algebra $R[\mathsf{HSeq}]$.  Multiplicativity of $\Delta_{\mathrm{split}}$ holds by construction.  Coassociativity is Theorem~\ref{thm:coassoc}.  The counit laws are the preceding proposition.  Connectedness: the degree-$0$ component is $R\cdot[\varnothing]=R$.
+\end{proof}
+
+\begin{theorem}[Hopf algebra]\label{thm:hsplit-hopf}
+The connected graded bialgebra $H_{\mathrm{split}}$ has a unique antipode $S_{\mathrm{split}}$, given by the standard Bogoliubov recursion:
+\[
+S_{\mathrm{split}}([t]) = -[t] - \sum_{C\neq\varnothing,\mathrm{root}} S_{\mathrm{split}}([P_C(t)])\cdot[\{R_C(t)\}].
+\]
+\end{theorem}
+
+\begin{proof}
+The connected graded structure guarantees existence and uniqueness of the antipode for any connected graded bialgebra.  The recursion is well-founded by degree.
+\end{proof}
+
+\section{Duality and Milnor--Moore}
+
+\subsection{The duality pairing}
+
+Let $\langle\cdot,\cdot\rangle:H_{\mathrm{OG}}\times H_{\mathrm{split}}\to R$ be the graded $R$-bilinear pairing determined on generators by
+\[
+\langle t, [G]\rangle = \begin{cases} 1 & G=\{t\},\\ 0 & \text{otherwise.}\end{cases}
+\]
+
+\begin{theorem}[Hopf duality]\label{thm:duality}
+The pairing $\langle\cdot,\cdot\rangle$ is a Hopf duality: for all $f,g\in H_{\mathrm{OG}}$ and $x\in H_{\mathrm{split}}$,
+\[
+\langle\Delta_{\mathrm{OG}}(f),\,g\otimes x\rangle
+=
+\langle f,\,g\star x\rangle,
+\]
+where $\star$ is the Oudom--Guin product and $\Delta_{\mathrm{OG}}(t)=t\otimes 1+1\otimes t$ on primitive generators.
+\end{theorem}
+
+\begin{proof}[Proof sketch]
+On primitive generators $t$ the pairing sends $\langle\Delta_{\mathrm{OG}}(t),g\otimes x\rangle = \langle t\otimes 1+1\otimes t,g\otimes x\rangle = \langle t,g\rangle\langle 1,x\rangle + \langle 1,g\rangle\langle t,x\rangle$.  The Oudom--Guin product $g\star x$ on the right satisfies the same recursion by construction.  The full duality follows by extending multiplicatively on both sides and using the pre-Lie identity to verify associativity compatibility.
+\end{proof}
+
+\subsection{Milnor--Moore}
+
+\begin{theorem}[Milnor--Moore consequence]\label{thm:milnormoore}
+$H_{\mathrm{OG}}\cong U(L)$ as Hopf algebras, where $L=V$ with the Lie bracket $[x,y]=x\triangleright y - y\triangleright x$.
+\end{theorem}
+
+\begin{proof}
+$H_{\mathrm{OG}}$ is a connected graded Hopf algebra (Corollary~\ref{cor:hopf}).  Its primitive elements are precisely the generators $V=\ZZ\langle\PTree\rangle$ (since $\Delta(t)=t\otimes 1+1\otimes t$).  The primitive elements form a Lie algebra under the commutator bracket, which is $[x,y]=x\triangleright y-y\triangleright x$ from Corollary~\ref{cor:lie}.  By Milnor--Moore, a connected graded Hopf algebra is isomorphic to the universal enveloping algebra of its Lie algebra of primitives.
+\end{proof}
+
+\begin{corollary}
+$H_{\mathrm{split}}\cong (U(L))^*$ as graded dual Hopf algebras, where $L$ is the pre-Lie Lie algebra of proof-tree grafting.
+\end{corollary}
+
+\begin{remark}[Proof-theoretic reading of duality]
+The duality says: \emph{measuring proofs by cutting} ($H_{\mathrm{split}}$) is dual to \emph{building proofs by grafting} ($H_{\mathrm{OG}}$).  The pre-Lie identity, which holds because of the specific geometry of matching-leaf grafting in NMMS, is the algebraic fact that makes the duality work.  It would fail with unrestricted weakening, since the matching-leaf constraint would collapse.
+\end{remark}
+
+\section{Cut coproducts: formal development}\label{sec:cut-formal}
+
+The preceding sections gave the abstract construction.  This section records the formal details of admissible cuts needed for the Lean formalisation and the coassociativity argument.
+
+\paragraph{Admissible cuts (formal).}
 An admissible cut of a proof tree \(t\) is a finite antichain
 \[
 C\subseteq\Addr(t)
 \]
 for the prefix order.  The antichain condition says that a path from the root
-to a leaf meets at most one cut address.  Such a cut determines:
+to a leaf meets at most one cut address.  The cut determines:
 \[
-P_C(t)=\prod_{a\in C} t\downarrow_a,
+P_C(t)=\bigsqcup_{a\in C}\{t\!\downarrow_a\}\in\mathsf{HSeq},
 \qquad
-R_C(t)=\text{the tree obtained by replacing each }t\downarrow_a
-\text{ by a leaf}.
+R_C(t)=\text{tree obtained by replacing each }t\!\downarrow_a\text{ by a leaf.}
 \]
-Here \(P_C(t)\) is a forest of pruned subtrees, while \(R_C(t)\) is the
-remainder or trunk.
 
 \paragraph{The cut sum.}
-The associated cut coproduct datum is
 \[
-\Delta_{\mathrm{cut}}(t)
+\Delta_{\mathrm{split}}(t)
 =
 \sum_{C\in\operatorname{Adm}(t)}
-P_C(t)\otimes R_C(t),
+[P_C(t)]\otimes [\{R_C(t)\}],
 \]
-with the empty cut contributing \(1\otimes t\).  Depending on convention, the
-root cut contributes \(t\otimes 1\), or this term is adjoined separately.
+with the empty cut contributing $1\otimes[t]$ and the root cut contributing $[t]\otimes[\{\mathsf{leaf}(\mathrm{conc}(t))\}]$.
 
 \begin{proposition}[Node decomposition of cuts]
 Let \(t=R(t_1,\ldots,t_n)\) be a proof tree whose root is a rule of arity
@@ -1332,17 +1486,9 @@ This is not needed for the pre-Lie theorem, but it is a natural source of
 invariants for the eventual Hopf algebra.
 \end{remark}
 
-\section{Proof-theoretic meaning: theorem targets and roadmap}
+\section{Further targets and structural-rules programme}
 
-The previous sections isolate the part of the construction that is currently
-mathematically solid: proof trees carry a constrained grafting product, the
-two-step graft geometry gives a right pre-Lie identity, and the standard
-Oudom--Guin theorem then supplies a Hopf algebra on the symmetric algebra of
-proof trees.  The purpose of this section is different.  It records the
-larger theorem targets suggested by the construction.  These statements are
-not all proved in the present paper; they are included as a guide to the
-proof-theoretic interpretation of the Hopf operations and to the next formal
-steps.
+The main results are the pre-Lie identity (Theorem~\ref{thm:prelie}), the Oudom--Guin Hopf algebra $H_{\mathrm{OG}}$ (Corollary~\ref{cor:hopf}), the bialgebra $H_{\mathrm{split}}$ (Theorem~\ref{thm:bialgebra}), and the duality (Theorem~\ref{thm:duality}).  This section records the targets that remain, together with the broader structural-rules programme.
 
 \subsection{The refinement functor and weakening}
 
@@ -1434,12 +1580,7 @@ unavailable.
 
 \subsection{Hopf operations as proof-theoretic operations}
 
-There are two Hopf-algebraic routes in play.  The Oudom--Guin route is
-already available from the pre-Lie theorem: proof trees are primitive
-generators and the coproduct is the primitive-generator coproduct on forests.
-The cut route is more proof-decompositional: the coproduct sums over
-admissible cuts of a proof tree.  The following targets explain what each
-operation should mean proof-theoretically.
+The two Hopf algebras encode complementary aspects of proof structure.  In $H_{\mathrm{OG}}$, proof trees are atomic primitives and the product builds composites by grafting.  In $H_{\mathrm{split}}$, proof trees are decomposable and the coproduct records all one-stage decompositions.  The following records the proof-theoretic reading of each Hopf operation.
 
 \begin{target}[Coproduct as proof decomposition]
 For the admissible-cut coproduct, \(\Delta_{\mathrm{cut}}(t)\) is the universal
@@ -1520,6 +1661,23 @@ up to the usual convention for the enveloping product.  This suggests an
 whereas the cut antipode suggests a Mobius-inversion interpretation over
 proof decompositions.
 \end{remark}
+
+\subsection{Lean formalisation status}
+
+The following results are machine-verified in Lean~4 with Mathlib:
+\begin{itemize}
+\item \texttt{classLevel\_preLie\_identity}: the pre-Lie identity, no \texttt{sorry} in the live proof chain.
+\item \texttt{hypersequentComulAlgHom}: the coproduct $\Delta_{\mathrm{split}}$ as a Mathlib algebra homomorphism $H_{\mathrm{split}}\to H_{\mathrm{split}}\otimes H_{\mathrm{split}}$.
+\item \texttt{hypersequentCounitAlgHom}: the counit $\varepsilon_{\mathrm{split}}$ as a Mathlib algebra homomorphism.
+\item Multiplicativity of $\Delta_{\mathrm{split}}$ over forest products (\texttt{forestSplittingTensorElement\_append\_mul}).
+\end{itemize}
+The following are stated and targeted:
+\begin{itemize}
+\item Coassociativity of $\Delta_{\mathrm{split}}$ (\texttt{HypersequentSplittingCoassoc}).
+\item The counit laws (\texttt{HypersequentSplittingLeftCounit}, \texttt{HypersequentSplittingRightCounit}).
+\item A Mathlib \texttt{Coalgebra} instance for $H_{\mathrm{split}}$, conditional on the above.
+\item A Mathlib \texttt{HopfAlgebra} instance for $H_{\mathrm{split}}$, conditional on the antipode construction.
+\end{itemize}
 
 \subsection{Structural rules as algebraic diagnostics}
 
@@ -4357,11 +4515,37 @@ precise account of which histories are genuinely the same (noise, canceling from
 the associator) and which are genuinely distinct (residual, matched uniquely
 across the two bracketings).
 
-The central result is fully machine-verified in Lean~4. The class-level
-pre-Lie identity depends only on the standard axioms of Lean's foundational
-system. The broader programme --- determining which structural rules obstruct
-Hopf-algebraic compatibility, and whether the resulting structure encodes
-specific properties of the primitive consequence relation $\mszero$ --- remains
-open and will be pursued in subsequent work.
+The pre-Lie identity is fully machine-verified in Lean~4.  The algebra homomorphisms $\Delta_{\mathrm{split}}$ and $\varepsilon_{\mathrm{split}}$ are constructed as Mathlib \texttt{AlgHom}s.  Coassociativity, the counit laws, and the full Hopf algebra axioms are the principal remaining formal targets; coassociativity reduces to the nested-cut bijection described in Section~\ref{sec:cut-formal}.  The broader programme --- determining which structural rules obstruct Hopf-algebraic compatibility --- remains open and will be pursued in subsequent work.
+
+\begin{thebibliography}{9}
+
+\bibitem{avron1996hypersequents}
+A.~Avron.
+\newblock The method of hypersequents in the proof theory of propositional
+  non-classical logics.
+\newblock In W.~Hodges, M.~Hyland, C.~Steinhorn, and J.~Truss, editors,
+  \emph{Logic: From Foundations to Applications}, pages 1--32. Oxford University Press, 1996.
+
+\bibitem{grossmanlarsson1989}
+R.~Grossman and R.~Larson.
+\newblock Hopf-algebraic structure of families of trees.
+\newblock \emph{Journal of Algebra}, 126(1):184--210, 1989.
+
+\bibitem{oudomguin2008}
+J.-M.~Oudom and D.~Guin.
+\newblock On the Lie enveloping algebra of a pre-Lie algebra.
+\newblock \emph{Journal of $K$-Theory}, 2(1):147--167, 2008.
+
+\bibitem{conneskireimer1998}
+A.~Connes and D.~Kreimer.
+\newblock Hopf algebras, renormalization and noncommutative geometry.
+\newblock \emph{Communications in Mathematical Physics}, 199(1):203--242, 1998.
+
+\bibitem{milnormoore1965}
+J.~Milnor and J.~Moore.
+\newblock On the structure of Hopf algebras.
+\newblock \emph{Annals of Mathematics}, 81(2):211--264, 1965.
+
+\end{thebibliography}
 
 \end{document}

@@ -1,3 +1,4 @@
+import Mathlib.RingTheory.TensorProduct.Basic
 import Nonmonlogics.GrossmanLarssonOudomGuinCoalgebra
 
 namespace QuotientConnected.CoproductSupport
@@ -30,15 +31,6 @@ def stableUEA_OGPrimitiveComulRespectsStableQuotient : Prop :=
   ∀ a : linearProofTreeCarrier,
     a ∈ preLieDifferenceStableSubmodule →
       stableUEA_comul_linear stableUEA_OGPrimitiveGeneratorComulData a = 0
-
-/-- The OG primitive counit linear map is identically zero. -/
-theorem stableUEA_OGPrimitive_counit_linear_eq_zero :
-    stableUEA_counit_linear stableUEA_OGPrimitiveGeneratorComulData = 0 := by
-  apply LinearMap.ext
-  intro a
-  rw [stableUEA_counit_linear_apply, LinearMap.zero_apply]
-  classical
-  simp [stableUEA_OGPrimitiveGeneratorComulData]
 
 /--
 Hence the OG primitive counit kills the stable submodule without any further
@@ -600,6 +592,26 @@ local instance (priority := 1000) : LieAlgebra ℤ stableUEATensor :=
   LieAlgebra.ofAssociativeAlgebra
 
 /--
+The tensor-square multiplication has the expected elementary-tensor law.
+This is the algebraic hypothesis that turns the primitive formula
+`x ↦ x ⊗ 1 + 1 ⊗ x` into a Lie morphism.
+-/
+def StableUEATensorHasTensorMul : Prop :=
+  ∀ a b c d : preLieDifferenceStableQuotientUEA,
+    TensorProduct.tmul ℤ a b * TensorProduct.tmul ℤ c d =
+      TensorProduct.tmul ℤ (a * c) (b * d)
+
+/--
+The primitive OG comultiplication is compatible with the Lie bracket.
+This is the exact algebraic condition needed before the universal property of
+the UEA can turn the primitive formula into a multiplicative comultiplication.
+-/
+def StableUEATensorPrimitiveBracketCompatible : Prop :=
+  ∀ q r : PreLieDifferenceStableQuotient,
+    OGPrimitiveComul.comul ⁅q, r⁆ =
+      ⁅OGPrimitiveComul.comul q, OGPrimitiveComul.comul r⁆
+
+/--
 Two algebra homomorphisms out of the stable UEA are equal as soon as they agree
 on the canonical Lie insertion `ι`.
 -/
@@ -685,7 +697,383 @@ theorem stableUEA_counitAlgHom_treeGen_formula_of_ι_formula
   simpa [stableUEA_treeGen_eq_ι] using
     congrArg id (hε (mkPreLieDifferenceStableQuotient (treeGen x)))
 
+/--
+The canonical UEA counit is the unique algebra homomorphism out of the stable
+UEA that kills every inserted stable quotient class.
+-/
+theorem stableUEA_counitAlgHom_unique_of_ι_zero
+    (ε : preLieDifferenceStableQuotientUEA →ₐ[ℤ] ℤ)
+    (hε : ∀ q : PreLieDifferenceStableQuotient,
+      ε (preLieDifferenceStableQuotientUEA_ι q) = 0) :
+    ε = stableUEA_counitAlgHom := by
+  apply stableUEA_counitAlgHom_ext_ι
+  intro q
+  rw [hε q, stableUEA_counitAlgHom_ι q]
+
+/--
+The genuine algebraic condition needed for the OG comultiplication to extend
+multiplicatively to the UEA: the primitive quotient map must be a Lie
+morphism into the tensor-square algebra.
+-/
+def OGPrimitiveComulLieLiftable : Prop :=
+  ∃ Φ : PreLieDifferenceStableQuotient →ₗ⁅ℤ⁆ stableUEATensor,
+    ∀ q : PreLieDifferenceStableQuotient, Φ q = OGPrimitiveComul.comul q
+
+/--
+Any genuine Lie lift of the descended primitive comultiplication forces the
+primitive bracket-compatibility equation.
+-/
+theorem primitiveBracketCompatible_of_OGPrimitiveComulLieLiftable
+    (h : OGPrimitiveComulLieLiftable) :
+    StableUEATensorPrimitiveBracketCompatible := by
+  rcases h with ⟨Φ, hΦ⟩
+  intro q r
+  rw [← hΦ (⁅q, r⁆), ← hΦ q, ← hΦ r]
+  exact LieHom.map_lie Φ q r
+
+/--
+If the primitive OG comultiplication is a Lie morphism, then the universal
+property of the stable UEA gives the multiplicative OG comultiplication
+algebra homomorphism.
+-/
+noncomputable def stableUEA_OGPrimitiveComulAlgHom
+    (h : OGPrimitiveComulLieLiftable) :
+    preLieDifferenceStableQuotientUEA →ₐ[ℤ] stableUEATensor :=
+  preLieDifferenceStableQuotientUEA_lift h.choose
+
+/--
+The UEA algebra homomorphism obtained from a Lie-liftable primitive
+comultiplication has exactly the OG primitive formula on Lie generators.
+-/
+theorem stableUEA_OGPrimitiveComulAlgHom_ι_formula
+    (h : OGPrimitiveComulLieLiftable) :
+    ∀ q : PreLieDifferenceStableQuotient,
+      stableUEA_OGPrimitiveComulAlgHom h
+          (preLieDifferenceStableQuotientUEA_ι q) =
+        OGPrimitiveComul.comul q := by
+  intro q
+  have hlift :=
+    congrFun
+      (preLieDifferenceStableQuotientUEA_ι_comp_lift h.choose) q
+  exact (by
+    simpa [stableUEA_OGPrimitiveComulAlgHom] using
+      hlift.trans (h.choose_spec q))
+
+/--
+Consequently, the multiplicative OG comultiplication has the primitive formula
+on proof-tree generators.
+-/
+theorem stableUEA_OGPrimitiveComulAlgHom_treeGen_formula
+    (h : OGPrimitiveComulLieLiftable) :
+    ∀ x : PTree,
+      stableUEA_OGPrimitiveComulAlgHom h (stableUEA_treeGen x) =
+        TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+          TensorProduct.tmul ℤ 1 (stableUEA_treeGen x) :=
+  stableUEA_comulAlgHom_treeGen_formula_of_ι_formula
+    (stableUEA_OGPrimitiveComulAlgHom h)
+    (stableUEA_OGPrimitiveComulAlgHom_ι_formula h)
+
+/--
+The multiplicative OG comultiplication, if it exists via the Lie condition, is
+unique.
+-/
+theorem stableUEA_OGPrimitiveComulAlgHom_unique
+    (h : OGPrimitiveComulLieLiftable)
+    (Φ : preLieDifferenceStableQuotientUEA →ₐ[ℤ] stableUEATensor)
+    (hΦ : ∀ q : PreLieDifferenceStableQuotient,
+      Φ (preLieDifferenceStableQuotientUEA_ι q) = OGPrimitiveComul.comul q) :
+    Φ = stableUEA_OGPrimitiveComulAlgHom h := by
+  apply stableUEA_comulAlgHom_unique_of_ι_formula
+  · exact hΦ
+  · exact stableUEA_OGPrimitiveComulAlgHom_ι_formula h
+
+/--
+The universal property of the stable UEA gives an exact equivalence:
+to give a multiplicative OG comultiplication algebra homomorphism with the
+primitive formula on Lie generators is the same thing as giving a Lie lift of
+the descended primitive comultiplication.
+-/
+theorem OGPrimitiveComulLieLiftable_iff_exists_UEA_algHom :
+    OGPrimitiveComulLieLiftable ↔
+      ∃ Φ : preLieDifferenceStableQuotientUEA →ₐ[ℤ] stableUEATensor,
+        ∀ q : PreLieDifferenceStableQuotient,
+          Φ (preLieDifferenceStableQuotientUEA_ι q) =
+            OGPrimitiveComul.comul q := by
+  constructor
+  · intro h
+    exact ⟨stableUEA_OGPrimitiveComulAlgHom h,
+      stableUEA_OGPrimitiveComulAlgHom_ι_formula h⟩
+  · rintro ⟨Φ, hΦ⟩
+    refine
+      ⟨(AlgHom.toLieHom Φ).comp
+          preLieDifferenceStableQuotientUEA_ι, ?_⟩
+    intro q
+    exact hΦ q
+
+/--
+In fact the OG primitive Lie data determines a unique multiplicative
+comultiplication on the stable UEA.
+-/
+theorem OGPrimitiveComulLieLiftable_iff_existsUnique_UEA_algHom :
+    OGPrimitiveComulLieLiftable ↔
+      ∃! Φ : preLieDifferenceStableQuotientUEA →ₐ[ℤ] stableUEATensor,
+        ∀ q : PreLieDifferenceStableQuotient,
+          Φ (preLieDifferenceStableQuotientUEA_ι q) =
+            OGPrimitiveComul.comul q := by
+  constructor
+  · intro h
+    refine
+      ⟨stableUEA_OGPrimitiveComulAlgHom h,
+        stableUEA_OGPrimitiveComulAlgHom_ι_formula h, ?_⟩
+    intro Ψ hΨ
+    exact stableUEA_OGPrimitiveComulAlgHom_unique h Ψ hΨ
+  · intro h
+    rcases h with ⟨Φ, hΦ, _uniq⟩
+    exact
+      (OGPrimitiveComulLieLiftable_iff_exists_UEA_algHom).2
+        ⟨Φ, hΦ⟩
+
+/--
+The multiplicative OG comultiplication is equivalently a unique UEA algebra
+map with primitive generator formula; whenever it exists, the primitive
+formula also satisfies the grafting commutator bracket equation.
+-/
+theorem OGPrimitiveComulLieLiftable_iff_existsUnique_UEA_algHom_and_bracketCompatible :
+    OGPrimitiveComulLieLiftable ↔
+      (∃! Φ : preLieDifferenceStableQuotientUEA →ₐ[ℤ] stableUEATensor,
+        ∀ q : PreLieDifferenceStableQuotient,
+          Φ (preLieDifferenceStableQuotientUEA_ι q) =
+            OGPrimitiveComul.comul q) ∧
+        StableUEATensorPrimitiveBracketCompatible := by
+  constructor
+  · intro h
+    exact
+      ⟨(OGPrimitiveComulLieLiftable_iff_existsUnique_UEA_algHom).1 h,
+        primitiveBracketCompatible_of_OGPrimitiveComulLieLiftable h⟩
+  · intro h
+    exact (OGPrimitiveComulLieLiftable_iff_existsUnique_UEA_algHom).2 h.1
+
 end OGPrimitiveUEALifts
+
+/-!
+### Canonical tensor algebra structure for the OG primitive coproduct
+
+The preceding section deliberately stated the UEA lifting theorem for an
+abstract algebra structure on `stableUEATensor`.  Here we install the actual
+mathlib tensor-product algebra structure.  This is the algebraic point at which
+the primitive formula
+
+`q ↦ ι q ⊗ 1 + 1 ⊗ ι q`
+
+becomes a genuine Lie morphism, hence gives a multiplicative UEA
+comultiplication by the universal property of the enveloping algebra.
+-/
+
+section OGPrimitiveCanonicalTensorAlgebra
+
+instance stableUEATensor_smulCommClass :
+    SMulCommClass ℤ preLieDifferenceStableQuotientUEA
+      preLieDifferenceStableQuotientUEA :=
+  Algebra.to_smulCommClass
+    (R := ℤ) (A := preLieDifferenceStableQuotientUEA)
+
+instance stableUEATensor_isScalarTower :
+    IsScalarTower ℤ preLieDifferenceStableQuotientUEA
+      preLieDifferenceStableQuotientUEA :=
+  IsScalarTower.right
+    (R := ℤ) (A := preLieDifferenceStableQuotientUEA)
+
+noncomputable instance stableUEATensor_ring : Ring stableUEATensor :=
+  Algebra.TensorProduct.instRing
+    (R := ℤ)
+    (A := preLieDifferenceStableQuotientUEA)
+    (B := preLieDifferenceStableQuotientUEA)
+
+noncomputable instance stableUEATensor_algebra :
+    Algebra ℤ stableUEATensor :=
+  Algebra.TensorProduct.instAlgebra
+    (R := ℤ)
+    (A := preLieDifferenceStableQuotientUEA)
+    (B := preLieDifferenceStableQuotientUEA)
+
+noncomputable instance stableUEATensor_rightDistribClass :
+    RightDistribClass stableUEATensor where
+  right_distrib := by
+    intro a b c
+    exact Distrib.right_distrib a b c
+
+noncomputable instance stableUEATensor_leftDistribClass :
+    LeftDistribClass stableUEATensor where
+  left_distrib := by
+    intro a b c
+    exact Distrib.left_distrib a b c
+
+noncomputable local instance (priority := 1000) :
+    LieRing PreLieDifferenceStableQuotient :=
+  preLieDifferenceStableQuotientLieRing
+
+noncomputable local instance (priority := 1000) : LieRing stableUEATensor :=
+  LieRing.ofAssociativeRing
+
+noncomputable local instance (priority := 1000) :
+    LieAlgebra ℤ stableUEATensor :=
+  LieAlgebra.ofAssociativeAlgebra
+
+/--
+The canonical tensor-product algebra structure has the expected multiplication
+law on elementary tensors.  This discharges the earlier ad hoc
+`StableUEATensorHasTensorMul` hypothesis for the actual OG tensor square.
+-/
+theorem stableUEATensor_canonical_tmul_mul_tmul
+    (a b c d : preLieDifferenceStableQuotientUEA) :
+    TensorProduct.tmul ℤ a b * TensorProduct.tmul ℤ c d =
+      TensorProduct.tmul ℤ (a * c) (b * d) := by
+  exact @Algebra.TensorProduct.tmul_mul_tmul
+    ℤ preLieDifferenceStableQuotientUEA preLieDifferenceStableQuotientUEA
+    inferInstance inferInstance inferInstance
+    stableUEATensor_smulCommClass stableUEATensor_isScalarTower
+    inferInstance inferInstance
+    stableUEATensor_smulCommClass stableUEATensor_isScalarTower
+    a c b d
+
+/-- The actual tensor-product algebra satisfies the elementary tensor law. -/
+theorem stableUEATensor_canonical_hasTensorMul :
+    StableUEATensorHasTensorMul := by
+  intro a b c d
+  exact stableUEATensor_canonical_tmul_mul_tmul a b c d
+
+/--
+The descended OG primitive comultiplication has the primitive tensor formula
+on every stable quotient class.
+-/
+theorem OGPrimitiveComul_comul_eq_primitive_formula
+    (q : PreLieDifferenceStableQuotient) :
+    OGPrimitiveComul.comul q =
+      TensorProduct.tmul ℤ (preLieDifferenceStableQuotientUEA_ι q) 1 +
+        TensorProduct.tmul ℤ 1 (preLieDifferenceStableQuotientUEA_ι q) := by
+  induction q using Submodule.Quotient.induction_on with
+  | H a =>
+      simpa [preLieDifferenceStableQuotientToUEA] using
+        OGPrimitiveComul_comul_mk a
+
+/--
+Primitive elements are closed under the commutator bracket in the canonical
+tensor square.  Algebraically, this is the calculation that turns the formula
+`x ↦ x ⊗ 1 + 1 ⊗ x` into a Lie morphism.
+-/
+theorem stableUEATensor_canonical_primitive_bracket
+    (x y : preLieDifferenceStableQuotientUEA) :
+    Bracket.bracket
+      (TensorProduct.tmul ℤ x (1 : preLieDifferenceStableQuotientUEA) +
+        TensorProduct.tmul ℤ (1 : preLieDifferenceStableQuotientUEA) x)
+      (TensorProduct.tmul ℤ y (1 : preLieDifferenceStableQuotientUEA) +
+        TensorProduct.tmul ℤ (1 : preLieDifferenceStableQuotientUEA) y) =
+      TensorProduct.tmul ℤ (Bracket.bracket x y)
+        (1 : preLieDifferenceStableQuotientUEA) +
+        TensorProduct.tmul ℤ (1 : preLieDifferenceStableQuotientUEA)
+          (Bracket.bracket x y) := by
+  rw [LieRing.of_associative_ring_bracket,
+    LieRing.of_associative_ring_bracket]
+  rw [add_mul, mul_add, mul_add, add_mul, mul_add, mul_add]
+  rw [stableUEATensor_canonical_tmul_mul_tmul x 1 y 1,
+    stableUEATensor_canonical_tmul_mul_tmul x 1 1 y,
+    stableUEATensor_canonical_tmul_mul_tmul 1 x y 1,
+    stableUEATensor_canonical_tmul_mul_tmul 1 x 1 y,
+    stableUEATensor_canonical_tmul_mul_tmul y 1 x 1,
+    stableUEATensor_canonical_tmul_mul_tmul y 1 1 x,
+    stableUEATensor_canonical_tmul_mul_tmul 1 y x 1,
+    stableUEATensor_canonical_tmul_mul_tmul 1 y 1 x]
+  simp only [one_mul, mul_one, sub_eq_add_neg]
+  rw [TensorProduct.add_tmul, TensorProduct.tmul_add]
+  simp only [TensorProduct.neg_tmul, TensorProduct.tmul_neg]
+  abel
+
+/--
+The actual OG primitive comultiplication is compatible with the Lie bracket in
+the canonical tensor-product algebra.
+-/
+theorem OGPrimitiveComul_canonical_bracketCompatible :
+    StableUEATensorPrimitiveBracketCompatible := by
+  intro q r
+  rw [OGPrimitiveComul_comul_eq_primitive_formula (⁅q, r⁆),
+    OGPrimitiveComul_comul_eq_primitive_formula q,
+    OGPrimitiveComul_comul_eq_primitive_formula r]
+  rw [LieHom.map_lie preLieDifferenceStableQuotientUEA_ι q r]
+  exact (stableUEATensor_canonical_primitive_bracket
+    (preLieDifferenceStableQuotientUEA_ι q)
+    (preLieDifferenceStableQuotientUEA_ι r)).symm
+
+/--
+The primitive OG comultiplication, with the canonical tensor-product algebra
+on the target, is a Lie morphism.
+-/
+noncomputable def OGPrimitiveComulCanonicalLieHom :
+    PreLieDifferenceStableQuotient →ₗ⁅ℤ⁆ stableUEATensor :=
+  { OGPrimitiveComul.comul with
+    map_lie' := by
+      intro q r
+      exact OGPrimitiveComul_canonical_bracketCompatible q r }
+
+/-- The canonical tensor algebra makes the OG primitive map Lie-liftable. -/
+theorem OGPrimitiveComul_canonical_lieLiftable :
+    OGPrimitiveComulLieLiftable := by
+  exact ⟨OGPrimitiveComulCanonicalLieHom, by intro q; rfl⟩
+
+/--
+The multiplicative OG comultiplication on the stable UEA obtained from the
+canonical primitive Lie morphism.
+-/
+noncomputable def stableUEA_OGPrimitiveCanonicalComulAlgHom :
+    preLieDifferenceStableQuotientUEA →ₐ[ℤ] stableUEATensor :=
+  stableUEA_OGPrimitiveComulAlgHom
+    OGPrimitiveComul_canonical_lieLiftable
+
+/--
+The canonical UEA comultiplication restricts to the primitive OG formula on
+the canonical Lie insertion.
+-/
+theorem stableUEA_OGPrimitiveCanonicalComulAlgHom_ι_formula :
+    ∀ q : PreLieDifferenceStableQuotient,
+      stableUEA_OGPrimitiveCanonicalComulAlgHom
+          (preLieDifferenceStableQuotientUEA_ι q) =
+        OGPrimitiveComul.comul q :=
+  stableUEA_OGPrimitiveComulAlgHom_ι_formula
+    OGPrimitiveComul_canonical_lieLiftable
+
+/-- The canonical UEA comultiplication has the primitive formula on tree generators. -/
+theorem stableUEA_OGPrimitiveCanonicalComulAlgHom_treeGen_formula :
+    ∀ x : PTree,
+      stableUEA_OGPrimitiveCanonicalComulAlgHom (stableUEA_treeGen x) =
+        TensorProduct.tmul ℤ (stableUEA_treeGen x) 1 +
+          TensorProduct.tmul ℤ 1 (stableUEA_treeGen x) :=
+  stableUEA_OGPrimitiveComulAlgHom_treeGen_formula
+    OGPrimitiveComul_canonical_lieLiftable
+
+/--
+The canonical multiplicative OG comultiplication is the unique UEA algebra map
+with the primitive formula on Lie generators.
+-/
+theorem stableUEA_OGPrimitiveCanonicalComulAlgHom_unique
+    (Φ : preLieDifferenceStableQuotientUEA →ₐ[ℤ] stableUEATensor)
+    (hΦ : ∀ q : PreLieDifferenceStableQuotient,
+      Φ (preLieDifferenceStableQuotientUEA_ι q) = OGPrimitiveComul.comul q) :
+    Φ = stableUEA_OGPrimitiveCanonicalComulAlgHom := by
+  exact stableUEA_OGPrimitiveComulAlgHom_unique
+    OGPrimitiveComul_canonical_lieLiftable Φ hΦ
+
+/--
+Existence and uniqueness of the multiplicative OG comultiplication is now a
+theorem for the canonical tensor-product algebra, not an extra assumption.
+-/
+theorem OGPrimitiveComul_canonical_existsUnique_UEA_algHom :
+    ∃! Φ : preLieDifferenceStableQuotientUEA →ₐ[ℤ] stableUEATensor,
+      ∀ q : PreLieDifferenceStableQuotient,
+        Φ (preLieDifferenceStableQuotientUEA_ι q) =
+          OGPrimitiveComul.comul q :=
+  (OGPrimitiveComulLieLiftable_iff_existsUnique_UEA_algHom).1
+    OGPrimitiveComul_canonical_lieLiftable
+
+end OGPrimitiveCanonicalTensorAlgebra
 
 section OGPrimitiveUEABialgebraRigidity
 
@@ -2222,6 +2610,7 @@ theorem stableUEA_expectedPrimitiveComulLinear_apply
         c • (TensorProduct.tmul Int (stableUEA_treeGen x) 1 +
           TensorProduct.tmul Int 1 (stableUEA_treeGen x))) := by
   simp [stableUEA_expectedPrimitiveComulLinear, Finsupp.lsum_apply]
+  rfl
 
 @[simp] theorem stableUEA_expectedPrimitiveComulLinear_add
     (a b : linearProofTreeCarrier) :
@@ -3199,6 +3588,7 @@ theorem stableUEA_coproductSupportSummary_comul_linear_apply
         c • coproductSupportSummary_sum x stableUEA_coproductSupportSummary_tensorGen) := by
   simp [stableUEA_coproductSupportSummary_comul_linear,
     coproductSupportSummary_sum_linear_apply]
+  rfl
 
 @[simp] theorem stableUEA_coproductSupportSummary_comul_linear_add
     (a b : linearProofTreeCarrier) :

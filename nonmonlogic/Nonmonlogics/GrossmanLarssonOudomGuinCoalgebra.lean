@@ -5839,6 +5839,91 @@ def OudomGuinUEAHopfAlgebraTarget.toBialgebraData
   H.hopf.bialgebra
 
 /--
+Existence of the full OG UEA Hopf target is exactly existence of a
+carrier-correct proof-tree coalgebra together with Hopf data whose coproduct
+and counit agree with the carrier maps.
+
+This separates the remaining construction into its mathematical parts:
+first build the proof-tree coalgebra/GL-OG bridge, then provide compatible
+bialgebra and antipode data on the UEA.
+-/
+theorem oudomGuinUEAHopfAlgebraTarget_exists_iff_compatible_hopf_data :
+    (∃ _H : OudomGuinUEAHopfAlgebraTarget, True) ↔
+      ∃ (carrier : OudomGuinUEAHopfCarrierTarget)
+        (hopf : StableUEAHopfData),
+        hopf.comul = carrier.DeltaOG ∧
+          hopf.counit = carrier.epsilonOG := by
+  constructor
+  · intro h
+    rcases h with ⟨H, -⟩
+    exact ⟨H.carrier, H.hopf, H.comul_eq, H.counit_eq⟩
+  · intro h
+    rcases h with ⟨carrier, hopf, hcomul, hcounit⟩
+    exact
+      ⟨{ carrier := carrier
+         hopf := hopf
+         comul_eq := hcomul
+         counit_eq := hcounit },
+        trivial⟩
+
+/--
+The remaining full OG Hopf obligation for a fixed proof-tree carrier:
+construct Hopf data on the UEA whose coproduct and counit are exactly the
+carrier-correct OG maps.
+-/
+def CompatibleStableUEAHopfData
+    (carrier : OudomGuinUEAHopfCarrierTarget) : Prop :=
+  ∃ hopf : StableUEAHopfData,
+    hopf.comul = carrier.DeltaOG ∧
+      hopf.counit = carrier.epsilonOG
+
+/-- Assemble the full target from explicit compatible Hopf data. -/
+def OudomGuinUEAHopfAlgebraTarget.ofCompatibleHopfData
+    (carrier : OudomGuinUEAHopfCarrierTarget)
+    (hopf : StableUEAHopfData)
+    (hcomul : hopf.comul = carrier.DeltaOG)
+    (hcounit : hopf.counit = carrier.epsilonOG) :
+    OudomGuinUEAHopfAlgebraTarget where
+  carrier := carrier
+  hopf := hopf
+  comul_eq := hcomul
+  counit_eq := hcounit
+
+/--
+The fixed-carrier obligation is enough to produce the full target once the
+carrier itself is chosen.
+-/
+theorem oudomGuinUEAHopfAlgebraTarget_exists_of_compatibleStableUEAHopfData
+    (carrier : OudomGuinUEAHopfCarrierTarget)
+    (h : CompatibleStableUEAHopfData carrier) :
+    ∃ _H : OudomGuinUEAHopfAlgebraTarget, True := by
+  rcases h with ⟨hopf, hcomul, hcounit⟩
+  exact
+    ⟨OudomGuinUEAHopfAlgebraTarget.ofCompatibleHopfData
+      carrier hopf hcomul hcounit,
+      trivial⟩
+
+/--
+Equivalently, the full OG Hopf target exists exactly when some proof-tree
+carrier satisfies the fixed-carrier compatibility obligation.
+-/
+theorem oudomGuinUEAHopfAlgebraTarget_exists_iff_exists_compatibleStableUEAHopfData :
+    (∃ _H : OudomGuinUEAHopfAlgebraTarget, True) ↔
+      ∃ carrier : OudomGuinUEAHopfCarrierTarget,
+        CompatibleStableUEAHopfData carrier := by
+  constructor
+  · intro h
+    rcases
+      (oudomGuinUEAHopfAlgebraTarget_exists_iff_compatible_hopf_data).1 h with
+      ⟨carrier, hopf, hcomul, hcounit⟩
+    exact ⟨carrier, hopf, hcomul, hcounit⟩
+  · intro h
+    rcases h with ⟨carrier, hopf, hcomul, hcounit⟩
+    exact
+      oudomGuinUEAHopfAlgebraTarget_exists_of_compatibleStableUEAHopfData
+        carrier ⟨hopf, hcomul, hcounit⟩
+
+/--
 The carrier-correct OG coproduct is represented by the algebra hom in the
 bialgebra package.
 -/

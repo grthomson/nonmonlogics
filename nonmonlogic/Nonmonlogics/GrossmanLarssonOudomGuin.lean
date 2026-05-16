@@ -2963,6 +2963,138 @@ theorem preLieDifferenceStableQuotientMul_associator_swap_left
     using stableProjectedAssociator_swap_left_everywhere a0 b0 c0
 
 /--
+The stable quotient grafting product satisfies the pre-Lie identity.
+
+This is the algebraic law that belongs at the proof-tree/grafting level:
+grafting is not associative, but its associator is symmetric in the two
+inputs that are composed into the same target.
+-/
+theorem preLieDifferenceStableQuotientMul_preLie_identity
+    (a b c : PreLieDifferenceStableQuotient) :
+    preLieDifferenceStableQuotientAssociator a b c =
+      preLieDifferenceStableQuotientAssociator b a c :=
+  preLieDifferenceStableQuotientMul_associator_swap_left a b c
+
+/-! ### Proof-tree algebra spine
+
+The next theorems collect the mathematical chain that was previously spread
+across the technical development.  They say, in order:
+
+* raw matching-leaf grafting is the linear product on tree generators;
+* the pre-Lie defect is exactly the skew of the two associators;
+* the stable quotient kills that defect and is closed under grafting;
+* therefore the descended product is a genuine pre-Lie product.
+
+This is the core proof-tree algebra carrier: the free `Int`-module on decorated
+proof trees, modulo the stable proof-theoretic associator defects.
+-/
+
+section ProofTreeAlgebraSpine
+
+/-- The raw generator product has exactly the matching-leaf output support. -/
+theorem proofTreeSpine_raw_graft_generator_support
+    (x y : PTree) :
+    { w | w ∈ (graftPreLie (treeGen x) (treeGen y)).support } =
+      proofTreePointwisePreLieSupport.productSupport x y := by
+  exact raw_linear_product_support_matches_pointwise_support x y
+
+/--
+The coefficient of an output tree in the raw product is its multiplicity in the
+matching-leaf grafting enumerator.
+-/
+theorem proofTreeSpine_raw_graft_generator_coeff
+    (x y w : PTree) :
+    graftPreLie (treeGen x) (treeGen y) w =
+      ((PTree.matchingLeafGraftings x y).count w : Int) := by
+  exact graftPreLie_generators_apply_eq_count x y w
+
+/--
+The generator-level pre-Lie defect is exactly the difference of the two
+associators whose equality is the pre-Lie identity.
+-/
+theorem proofTreeSpine_defect_is_associator_skew
+    (x y z : PTree) :
+    preLieDifferenceGenerators x y z =
+      assoc[graftPreLie] (treeGen y) (treeGen x) (treeGen z) -
+        assoc[graftPreLie] (treeGen x) (treeGen y) (treeGen z) := by
+  exact preLieDifferenceGenerators_eq_associator_difference x y z
+
+/-- Every generator-level pre-Lie defect vanishes in the stable quotient. -/
+theorem proofTreeSpine_defect_killed_in_stable_quotient
+    (x y z : PTree) :
+    mkPreLieDifferenceStableQuotient (preLieDifferenceGenerators x y z) = 0 := by
+  exact mkPreLieDifferenceStableQuotient_preLieDifferenceGenerators_eq_zero x y z
+
+/--
+Raw grafting descends to the stable quotient: multiplying quotient classes is
+the class of the raw grafting product.
+-/
+theorem proofTreeSpine_descended_product_on_classes
+    (a b : linearProofTreeCarrier) :
+    preLieDifferenceStableQuotientMul
+      (mkPreLieDifferenceStableQuotient a)
+      (mkPreLieDifferenceStableQuotient b) =
+      mkPreLieDifferenceStableQuotient (graftPreLie a b) := by
+  exact preLieDifferenceStableQuotientMul_mk a b
+
+/--
+On tree generators, the stable quotient identifies the two associators
+appearing in the proof-theoretic pre-Lie comparison.
+-/
+theorem proofTreeSpine_generator_associator_identity
+    (x y z : PTree) :
+    preLieDifferenceStableQuotientMul
+      (preLieDifferenceStableQuotientMul
+        (mkPreLieDifferenceStableQuotient (treeGen y))
+        (mkPreLieDifferenceStableQuotient (treeGen x)))
+      (mkPreLieDifferenceStableQuotient (treeGen z))
+      -
+      preLieDifferenceStableQuotientMul
+        (mkPreLieDifferenceStableQuotient (treeGen y))
+        (preLieDifferenceStableQuotientMul
+          (mkPreLieDifferenceStableQuotient (treeGen x))
+          (mkPreLieDifferenceStableQuotient (treeGen z)))
+    =
+    preLieDifferenceStableQuotientMul
+      (preLieDifferenceStableQuotientMul
+        (mkPreLieDifferenceStableQuotient (treeGen x))
+        (mkPreLieDifferenceStableQuotient (treeGen y)))
+      (mkPreLieDifferenceStableQuotient (treeGen z))
+      -
+      preLieDifferenceStableQuotientMul
+        (mkPreLieDifferenceStableQuotient (treeGen x))
+        (preLieDifferenceStableQuotientMul
+          (mkPreLieDifferenceStableQuotient (treeGen y))
+          (mkPreLieDifferenceStableQuotient (treeGen z))) := by
+  exact preLieDifferenceStableQuotientMul_associator_generators_eq x y z
+
+/--
+The stable quotient product satisfies the full pre-Lie identity on arbitrary
+finite linear combinations of decorated proof trees.
+-/
+theorem proofTreeSpine_stable_quotient_preLie_identity
+    (a b c : PreLieDifferenceStableQuotient) :
+    preLieDifferenceStableQuotientAssociator a b c =
+      preLieDifferenceStableQuotientAssociator b a c := by
+  exact preLieDifferenceStableQuotientMul_preLie_identity a b c
+
+/-- The stable quotient is closed under raw left grafting before quotienting. -/
+theorem proofTreeSpine_stable_submodule_closed_left
+    {a b : linearProofTreeCarrier}
+    (hb : b ∈ preLieDifferenceStableSubmodule) :
+    graftPreLie a b ∈ preLieDifferenceStableSubmodule := by
+  exact graftPreLie_left_preserves_preLieDifferenceStableSubmodule hb
+
+/-- The stable quotient is closed under raw right grafting before quotienting. -/
+theorem proofTreeSpine_stable_submodule_closed_right
+    {a b : linearProofTreeCarrier}
+    (ha : a ∈ preLieDifferenceStableSubmodule) :
+    graftPreLie a b ∈ preLieDifferenceStableSubmodule := by
+  exact graftPreLie_right_preserves_preLieDifferenceStableSubmodule ha
+
+end ProofTreeAlgebraSpine
+
+/--
 If the original concrete defect quotient already admits descent, then its
 defect submodule is exactly the smallest stable closure.
 -/
@@ -3237,6 +3369,25 @@ theorem preLieDifferenceStableQuotientOppMul_assoc_symm
   have hneg := congrArg Neg.neg h
   simpa [preLieDifferenceStableQuotientOppMul, sub_eq_add_neg,
     add_assoc, add_left_comm, add_comm] using hneg
+
+/--
+The opposite convention converts our swap-left pre-Lie identity into Mathlib's
+right-pre-Lie convention.
+-/
+theorem preLieDifferenceStableQuotientOppMul_rightPreLie_identity
+    (a b c : PreLieDifferenceStableQuotient) :
+    preLieDifferenceStableQuotientOppMul
+        (preLieDifferenceStableQuotientOppMul a b) c
+      -
+      preLieDifferenceStableQuotientOppMul a
+        (preLieDifferenceStableQuotientOppMul b c)
+    =
+    preLieDifferenceStableQuotientOppMul
+        (preLieDifferenceStableQuotientOppMul a c) b
+      -
+      preLieDifferenceStableQuotientOppMul a
+        (preLieDifferenceStableQuotientOppMul c b) :=
+  preLieDifferenceStableQuotientOppMul_assoc_symm a b c
 
 /--
 Hence the unconditional stable quotient already carries an official Mathlib
@@ -3942,8 +4093,65 @@ noncomputable def stableUEA_treeGen (x : PTree) :
 
 end StableUEATreeGenerators
 
--- Note: the UEA-lift-on-generators lemma is postponed to avoid instance
--- resolution noise in goals; it is a convenience rather than a blocker.
+/-!
+### The canonical UEA counit on proof-tree generators
+
+The counit part of the OG bialgebra is not merely an interface: it is the
+algebra morphism obtained from the zero Lie morphism on the stable pre-Lie
+quotient.  Thus every proof-tree generator is sent to zero, while the UEA unit
+is sent to one.
+-/
+
+section StableUEACanonicalCounit
+
+noncomputable local instance :
+    LieRing PreLieDifferenceStableQuotient :=
+  preLieDifferenceStableQuotientLieRing
+
+/-- The canonical UEA counit induced by the zero Lie morphism. -/
+noncomputable def stableUEA_counitAlgHom :
+    preLieDifferenceStableQuotientUEA →ₐ[ℤ] ℤ :=
+  preLieDifferenceStableQuotientUEA_lift
+    (0 : PreLieDifferenceStableQuotient →ₗ⁅ℤ⁆ ℤ)
+
+/-- The canonical UEA counit kills inserted stable quotient classes. -/
+@[simp] theorem stableUEA_counitAlgHom_ι
+    (q : PreLieDifferenceStableQuotient) :
+    stableUEA_counitAlgHom (preLieDifferenceStableQuotientUEA_ι q) = 0 := by
+  have h :=
+    congrFun
+      (preLieDifferenceStableQuotientUEA_ι_comp_lift
+        (0 : PreLieDifferenceStableQuotient →ₗ⁅ℤ⁆ ℤ)) q
+  simpa [stableUEA_counitAlgHom] using h
+
+/-- In particular, the canonical UEA counit kills every proof-tree generator. -/
+@[simp] theorem stableUEA_counitAlgHom_treeGen (x : PTree) :
+    stableUEA_counitAlgHom (stableUEA_treeGen x) = 0 := by
+  simpa [stableUEA_treeGen_eq_ι] using
+    stableUEA_counitAlgHom_ι
+      (mkPreLieDifferenceStableQuotient (treeGen x))
+
+/-- The canonical UEA counit sends the empty product/unit to `1`. -/
+@[simp] theorem stableUEA_counitAlgHom_one :
+    stableUEA_counitAlgHom (1 : preLieDifferenceStableQuotientUEA) = 1 := by
+  exact stableUEA_counitAlgHom.map_one
+
+/-- The canonical UEA counit is multiplicative. -/
+@[simp] theorem stableUEA_counitAlgHom_mul
+    (a b : preLieDifferenceStableQuotientUEA) :
+    stableUEA_counitAlgHom (a * b) =
+      stableUEA_counitAlgHom a * stableUEA_counitAlgHom b := by
+  exact stableUEA_counitAlgHom.map_mul a b
+
+/--
+The canonical UEA counit kills products of proof-tree generators.
+This is the concrete counit half of the primitive-generator bialgebra formula.
+-/
+@[simp] theorem stableUEA_counitAlgHom_mul_treeGen (x y : PTree) :
+    stableUEA_counitAlgHom (stableUEA_treeGen x * stableUEA_treeGen y) = 0 := by
+  simp
+
+end StableUEACanonicalCounit
 
 /-!
 ### The stable UEA span of tree generators
@@ -6540,6 +6748,23 @@ theorem forestGen_append (xs ys : Forest) :
   | cons t ts ih =>
       simp [forestGen, ih, add_assoc, add_left_comm, add_comm]
 
+/--
+`forestGen` depends only on the multiset of trees in a forest, not on the
+chosen list order.  This is the algebraic reason forest-permutation cut
+decompositions can be used inside linear coproduct sums.
+-/
+theorem forestGen_of_perm {xs ys : Forest} (h : List.Perm xs ys) :
+    forestGen xs = forestGen ys := by
+  induction h with
+  | nil =>
+      simp
+  | cons _t _h ih =>
+      simp [ih]
+  | swap _t _u _ts =>
+      simp [forestGen_cons, add_left_comm]
+  | trans _h₁ _h₂ ih₁ ih₂ =>
+      exact ih₁.trans ih₂
+
 noncomputable def coproductSupportSummary_tensorGen
     (p : Prod Forest PTree) :
     TensorProduct Int linearProofTreeCarrier linearProofTreeCarrier :=
@@ -6610,6 +6835,129 @@ theorem coproductSupportSummary_counit_linear_apply (a : linearProofTreeCarrier)
     coproductSupportSummary_counit_linear (z • a) =
       z • coproductSupportSummary_counit_linear a := by
   simpa using (coproductSupportSummary_counit_linear).map_smul z a
+
+/-!
+### Multiplicity-aware cut sums
+
+The `coproductSupportSummary_sum` interface deliberately sums over a `Finset`
+of support pairs.  That is useful for support/finiteness arguments, but a
+Grossman-Larson or Connes-Kreimer style coproduct is a sum over cuts: if two
+distinct cuts produce the same `(forest, remainder)` pair, both occurrences
+contribute.  The following list-level interface keeps those multiplicities.
+-/
+
+noncomputable def coproductData_sum
+    {alpha : Type*} [AddCommMonoid alpha]
+    (t : PTree) (f : Prod Forest PTree -> alpha) : alpha :=
+  ((PTree.coproductData t).map f).sum
+
+theorem coproductData_sum_eq
+    {alpha : Type*} [AddCommMonoid alpha]
+    (t : PTree) (f : Prod Forest PTree -> alpha) :
+    coproductData_sum t f = ((PTree.coproductData t).map f).sum := by
+  rfl
+
+theorem coproductData_sum_eq_allAdmissibleCuts
+    {alpha : Type*} [AddCommMonoid alpha]
+    (t : PTree) (f : Prod Forest PTree -> alpha) :
+    coproductData_sum t f =
+      ((PTree.allAdmissibleCuts t).map
+        (fun cut => f (PTree.coproductTerm t cut))).sum := by
+  simp [coproductData_sum, PTree.coproductData, List.map_map, Function.comp_def]
+
+theorem coproductData_sum_congr
+    {alpha : Type*} [AddCommMonoid alpha]
+    (t : PTree) (f g : Prod Forest PTree -> alpha)
+    (h : forall p, p ∈ PTree.coproductData t -> f p = g p) :
+    coproductData_sum t f = coproductData_sum t g := by
+  exact congrArg List.sum (List.map_congr_left h)
+
+theorem coproductData_sum_zero
+    {alpha : Type*} [AddCommMonoid alpha]
+    (t : PTree) :
+    coproductData_sum t (fun _ => (0 : alpha)) = 0 := by
+  simp [coproductData_sum]
+
+theorem coproductData_sum_add
+    {alpha : Type*} [AddCommMonoid alpha]
+    (t : PTree) (f g : Prod Forest PTree -> alpha) :
+    coproductData_sum t (fun p => f p + g p) =
+      coproductData_sum t f + coproductData_sum t g := by
+  simpa [coproductData_sum] using
+    (List.sum_map_add (l := PTree.coproductData t) (f := f) (g := g))
+
+noncomputable def coproductData_sum_linear
+    {alpha : Type*} [AddCommMonoid alpha] [Module Int alpha]
+    (f : Prod Forest PTree -> alpha) :
+    LinearMap (RingHom.id Int) linearProofTreeCarrier alpha :=
+  Finsupp.lsum Int (fun x : PTree =>
+    (LinearMap.id : LinearMap (RingHom.id Int) Int Int).smulRight
+      (coproductData_sum x f))
+
+@[simp] theorem coproductData_sum_linear_treeGen
+    {alpha : Type*} [AddCommMonoid alpha] [Module Int alpha]
+    (f : Prod Forest PTree -> alpha) (x : PTree) :
+    coproductData_sum_linear f (treeGen x) =
+      coproductData_sum x f := by
+  classical
+  simp only [coproductData_sum_linear, treeGen, Finsupp.lsum_single,
+    LinearMap.smulRight_apply, LinearMap.id_apply]
+  exact one_smul ℤ _
+
+theorem coproductData_sum_linear_apply
+    {alpha : Type*} [AddCommMonoid alpha] [Module Int alpha]
+    (f : Prod Forest PTree -> alpha) (a : linearProofTreeCarrier) :
+    coproductData_sum_linear f a =
+      a.sum (fun x c => c • coproductData_sum x f) := by
+  simp [coproductData_sum_linear, Finsupp.lsum_apply]
+
+@[simp] theorem coproductData_sum_linear_add
+    {alpha : Type*} [AddCommMonoid alpha] [Module Int alpha]
+    (f : Prod Forest PTree -> alpha) (a b : linearProofTreeCarrier) :
+    coproductData_sum_linear f (a + b) =
+      coproductData_sum_linear f a + coproductData_sum_linear f b := by
+  simpa using (coproductData_sum_linear f).map_add a b
+
+@[simp] theorem coproductData_sum_linear_smul
+    {alpha : Type*} [AddCommMonoid alpha] [Module Int alpha]
+    (f : Prod Forest PTree -> alpha) (z : Int) (a : linearProofTreeCarrier) :
+    coproductData_sum_linear f (z • a) =
+      z • coproductData_sum_linear f a := by
+  simpa using (coproductData_sum_linear f).map_smul z a
+
+/--
+The multiplicity-aware raw coproduct: this is the list-sum analogue of
+`coproductSupportSummary_comul_linear`, summing over the actual cut enumerator
+instead of the finite support set.
+-/
+noncomputable def coproductData_comul_linear :
+    LinearMap (RingHom.id Int) linearProofTreeCarrier
+      (TensorProduct Int linearProofTreeCarrier linearProofTreeCarrier) :=
+  coproductData_sum_linear
+    (alpha := TensorProduct Int linearProofTreeCarrier linearProofTreeCarrier)
+    coproductSupportSummary_tensorGen
+
+@[simp] theorem coproductData_comul_linear_treeGen (x : PTree) :
+    coproductData_comul_linear (treeGen x) =
+      coproductData_sum x coproductSupportSummary_tensorGen := by
+  simp [coproductData_comul_linear, coproductData_sum_linear_treeGen]
+
+theorem coproductData_comul_linear_treeGen_eq_allAdmissibleCuts
+    (x : PTree) :
+    coproductData_comul_linear (treeGen x) =
+      ((PTree.allAdmissibleCuts x).map
+        (fun cut =>
+          coproductSupportSummary_tensorGen
+            (PTree.coproductTerm x cut))).sum := by
+  rw [coproductData_comul_linear_treeGen]
+  exact coproductData_sum_eq_allAdmissibleCuts
+    x coproductSupportSummary_tensorGen
+
+theorem coproductData_comul_linear_apply (a : linearProofTreeCarrier) :
+    coproductData_comul_linear a =
+      a.sum (fun x c => c •
+        coproductData_sum x coproductSupportSummary_tensorGen) := by
+  simp [coproductData_comul_linear, coproductData_sum_linear_apply]
 
 /-!
 ### Raw support-level coalgebra data

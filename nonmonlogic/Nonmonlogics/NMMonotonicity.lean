@@ -39,6 +39,291 @@ def MonotoneDerivable (base : BaseRel) (Γ Θ : Multiset MyProp) : Prop :=
   ∀ Δ Λ : Multiset MyProp,
     Nonempty (NMMS base ((Δ + Γ) ∣∼ (Θ + Λ)))
 
+/-! ## Fixed-base vs background-indexed consequence relations -/
+
+/--
+The sequent-level consequence relation induced by `NMMS` over a fixed base
+relation.
+
+This is the fixed-background notion used by the current tree/algebra
+development: the primitive material consequence relation is held fixed, and the
+logical rules generate a consequence relation over the same ambient language.
+-/
+def NMMSDerivable (base : BaseRel) : Multiset MyProp → Multiset MyProp → Prop :=
+  fun Γ Θ => Nonempty (NMMS base (Γ ∣∼ Θ))
+
+@[simp] theorem nmmsDerivable_iff_nonempty (base : BaseRel)
+    (Γ Θ : Multiset MyProp) :
+    NMMSDerivable base Γ Θ ↔ Nonempty (NMMS base (Γ ∣∼ Θ)) := by
+  rfl
+
+/--
+Any base entailment is derivable in `NMMS` by the base axiom.
+
+This is the easy half of conservativity for the logical extension over a fixed
+background.
+-/
+theorem nmmsDerivable_of_base (base : BaseRel)
+    {Γ Θ : Multiset MyProp} (h : base Γ Θ) :
+    NMMSDerivable base Γ Θ := by
+  exact ⟨NMMS.baseAx h⟩
+
+/--
+The strongest two-sided monotonicity property for a multisuccedent consequence
+relation: derivability persists under arbitrary left and right context
+extension.
+-/
+def TwoSidedMonotone
+    (R : Multiset MyProp → Multiset MyProp → Prop) : Prop :=
+  ∀ {Γ Θ : Multiset MyProp},
+    R Γ Θ → ∀ Δ Λ : Multiset MyProp, R (Δ + Γ) (Θ + Λ)
+
+/--
+If the derived `NMMS` consequence relation is two-sided monotone, then every
+derivable sequent is monotone in the meta-level sense used by `M`.
+-/
+theorem monotoneDerivable_of_twoSidedMonotone
+    (base : BaseRel)
+    (hmono : TwoSidedMonotone (NMMSDerivable base))
+    {Γ Θ : Multiset MyProp}
+    (h : NMMSDerivable base Γ Θ) :
+    MonotoneDerivable base Γ Θ := by
+  intro Δ Λ
+  exact hmono h Δ Λ
+
+/--
+Internal nonmonotonicity at a fixed background: some derivable sequent fails to
+persist under a further context extension.
+
+This is the sense in which Hlobil/Kaplan style systems are already genuinely
+nonmonotonic even when the primitive background relation is fixed once and for
+all.
+-/
+def InternallyNonmonotone
+    (R : Multiset MyProp → Multiset MyProp → Prop) : Prop :=
+  ∃ (Γ Θ Δ Λ : Multiset MyProp), R Γ Θ ∧ ¬ R (Δ + Γ) (Θ + Λ)
+
+/--
+Internal nonmonotonicity of the `NMMS` consequence relation over a fixed base
+relation.
+-/
+def FixedBaseInternallyNonmonotone (base : BaseRel) : Prop :=
+  InternallyNonmonotone (NMMSDerivable base)
+
+/--
+Equivalent formulation of fixed-base internal nonmonotonicity: there is a
+derivable sequent that is not `MonotoneDerivable`.
+-/
+theorem fixedBaseInternallyNonmonotone_iff_exists_not_monotoneDerivable
+    (base : BaseRel) :
+    FixedBaseInternallyNonmonotone base ↔
+      ∃ Γ Θ : Multiset MyProp,
+        NMMSDerivable base Γ Θ ∧ ¬ MonotoneDerivable base Γ Θ := by
+  classical
+  constructor
+  · intro h
+    rcases h with ⟨Γ, Θ, Δ, Λ, hderiv, hfail⟩
+    refine ⟨Γ, Θ, hderiv, ?_⟩
+    intro hmono
+    exact hfail (hmono Δ Λ)
+  · intro h
+    rcases h with ⟨Γ, Θ, hderiv, hnot⟩
+    push_neg at hnot
+    rcases hnot with ⟨Δ, Λ, hfail⟩
+    exact ⟨Γ, Θ, Δ, Λ, hderiv, hfail⟩
+
+/--
+Two-sided monotonicity rules out fixed-base internal nonmonotonicity.
+
+So if we later prove a concrete `NMMS` instance is internally nonmonotone, that
+immediately certifies failure of unrestricted weakening for the derived
+consequence relation.
+-/
+theorem not_fixedBaseInternallyNonmonotone_of_twoSidedMonotone
+    (base : BaseRel)
+    (hmono : TwoSidedMonotone (NMMSDerivable base)) :
+    ¬ FixedBaseInternallyNonmonotone base := by
+  intro hnon
+  rcases hnon with ⟨Γ, Θ, Δ, Λ, hderiv, hfail⟩
+  exact hfail (hmono hderiv Δ Λ)
+
+/--
+A family of primitive/base consequence relations indexed by some background
+parameter.
+
+Typical intended readings of the background index:
+- a knowledge base
+- a stock of base sentences
+- a chosen atomic/material consequence relation
+- a language expansion parameter
+
+The current project mainly works with a single fixed member of such a family.
+-/
+abbrev BackgroundIndexedBaseRel (β : Type u) := β → BaseRel
+
+/--
+Specialize a background-indexed primitive consequence family at one chosen
+background.
+
+This turns a background-sensitive setup into the fixed-base setup used by the
+current quotient/pre-Lie/Hopf development.
+-/
+def fixedBaseAt {β : Type u} (B : BackgroundIndexedBaseRel β) (b : β) : BaseRel :=
+  B b
+
+@[simp] theorem fixedBaseAt_apply {β : Type u}
+    (B : BackgroundIndexedBaseRel β) (b : β)
+    (Γ Θ : Multiset MyProp) :
+    fixedBaseAt B b Γ Θ = B b Γ Θ := by
+  rfl
+
+/--
+The `NMMS`-derivable consequence relation obtained from a background-indexed
+base family by fixing one background.
+-/
+def NMMSDerivableAt {β : Type u}
+    (B : BackgroundIndexedBaseRel β) (b : β) :
+    Multiset MyProp → Multiset MyProp → Prop :=
+  NMMSDerivable (fixedBaseAt B b)
+
+@[simp] theorem nmmsDerivableAt_iff {β : Type u}
+    (B : BackgroundIndexedBaseRel β) (b : β)
+    (Γ Θ : Multiset MyProp) :
+    NMMSDerivableAt B b Γ Θ ↔ Nonempty (NMMS (B b) (Γ ∣∼ Θ)) := by
+  rfl
+
+/--
+Background-monotonicity: extending the background parameter never destroys a
+derivable sequent.
+
+This is distinct from fixed-base monotonicity. A relation may be internally
+nonmonotone at each fixed background while still being monotone as the
+background grows, or vice versa.
+-/
+def BackgroundMonotone
+    {β : Type u}
+    (Ext : β → β → Prop)
+    (B : BackgroundIndexedBaseRel β) : Prop :=
+  ∀ {b b' : β}, Ext b b' →
+    ∀ {Γ Θ : Multiset MyProp},
+      NMMSDerivableAt B b Γ Θ →
+      NMMSDerivableAt B b' Γ Θ
+
+/--
+Background sensitivity: some derivable sequent at one background fails after a
+background extension.
+
+This captures the stronger "changing the base changes the consequence relation"
+phenomenon. It should not be conflated with fixed-base internal
+nonmonotonicity.
+-/
+def BackgroundSensitive
+    {β : Type u}
+    (Ext : β → β → Prop)
+    (B : BackgroundIndexedBaseRel β) : Prop :=
+  ∃ (b b' : β) (Γ Θ : Multiset MyProp),
+    Ext b b' ∧
+      NMMSDerivableAt B b Γ Θ ∧
+      ¬ NMMSDerivableAt B b' Γ Θ
+
+/--
+Background monotonicity rules out background sensitivity.
+
+This is the direct analogue of
+`not_fixedBaseInternallyNonmonotone_of_twoSidedMonotone`, but now for failure
+caused by changing the background parameter rather than extending a fixed
+premise context.
+-/
+theorem not_backgroundSensitive_of_backgroundMonotone
+    {β : Type u}
+    (Ext : β → β → Prop)
+    (B : BackgroundIndexedBaseRel β)
+    (hmono : BackgroundMonotone Ext B) :
+    ¬ BackgroundSensitive Ext B := by
+  intro hsens
+  rcases hsens with ⟨b, b', Γ, Θ, hExt, hderiv, hfail⟩
+  exact hfail (hmono hExt hderiv)
+
+/--
+Exact conservativity of the logical extension over a fixed base background:
+derivability agrees with the primitive consequence relation on purely base
+sequents.
+
+The forward implication is a substantive metatheorem; the reverse implication is
+always given by `nmmsDerivable_of_base`.
+-/
+def NMMSExactlyConservativeOverBase (base : BaseRel) : Prop :=
+  ∀ {Γ Θ : Multiset MyProp},
+    IsBaseMultiset Γ →
+    IsBaseMultiset Θ →
+    (NMMSDerivable base Γ Θ ↔ base Γ Θ)
+
+/--
+Per-background version of exact conservativity: after fixing one background
+parameter, the logically extended relation agrees with the primitive relation on
+base sequents.
+-/
+def NMMSExactlyConservativeOverBaseAt
+    {β : Type u}
+    (B : BackgroundIndexedBaseRel β)
+    (b : β) : Prop :=
+  NMMSExactlyConservativeOverBase (B b)
+
+@[simp] theorem nmmsExactlyConservativeOverBaseAt_iff
+    {β : Type u}
+    (B : BackgroundIndexedBaseRel β)
+    (b : β) :
+    NMMSExactlyConservativeOverBaseAt B b ↔
+      NMMSExactlyConservativeOverBase (B b) := by
+  rfl
+
+theorem nmmsExactlyConservativeOverBase_of_forward
+    (base : BaseRel)
+    (hforward :
+      ∀ {Γ Θ : Multiset MyProp},
+        IsBaseMultiset Γ →
+        IsBaseMultiset Θ →
+        NMMSDerivable base Γ Θ →
+        base Γ Θ) :
+    NMMSExactlyConservativeOverBase base := by
+  intro Γ Θ hΓ hΘ
+  constructor
+  · exact hforward hΓ hΘ
+  · intro h
+    exact nmmsDerivable_of_base base h
+
+/--
+If a background-indexed base family is exactly conservative at each background
+member, then each fixed-background specialization inherits exact
+conservativity.
+-/
+theorem nmmsExactlyConservativeOverBaseAt_of_forward
+    {β : Type u}
+    (B : BackgroundIndexedBaseRel β)
+    (b : β)
+    (hforward :
+      ∀ {Γ Θ : Multiset MyProp},
+        IsBaseMultiset Γ →
+        IsBaseMultiset Θ →
+        NMMSDerivableAt B b Γ Θ →
+        B b Γ Θ) :
+    NMMSExactlyConservativeOverBaseAt B b := by
+  exact nmmsExactlyConservativeOverBase_of_forward (B b) hforward
+
+/-!
+Summary of the distinction:
+
+- `FixedBaseInternallyNonmonotone base`:
+  a single fixed background already exhibits nonmonotonicity under premise
+  extension.
+- `BackgroundSensitive Ext B`:
+  changing the background itself destroys an inference.
+
+The current proof-tree/Hopf development mainly fixes one `base : BaseRel` and
+works in the first regime.  The second regime is recorded here so that later
+generalizations can be expressed without changing the existing coalgebraic code.
+-/
+
 /-! ## Extended derivation system NM-MS[M] (`|∼[M]`) -/
 
 /--
